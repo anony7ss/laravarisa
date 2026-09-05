@@ -1501,3 +1501,255 @@ h2 {
     font-size: 38px;
   }
 }
+
+/* Full-width style navigation and readable panels at every breakpoint. */
+.style-tabs {
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+}
+.style-tabs [data-slot='tabs-content'] {
+  width: 100%;
+  min-width: 0;
+}
+.style-tabs [data-slot='tabs-content'][hidden] {
+  display: none !important;
+}
+.style-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100% !important;
+  height: auto !important;
+  margin-bottom: 22px;
+  padding: 0 !important;
+  background: transparent !important;
+}
+.style-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  flex: none;
+}
+.style-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  min-height: 330px;
+  width: 100%;
+  border-radius: 32px;
+  overflow: hidden;
+  background: var(--color-limestone);
+}
+.style-info {
+  min-width: 0;
+  padding: 42px;
+  align-items: flex-start;
+  justify-content: center;
+}
+.style-kicker {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: #6c4d3b;
+  line-height: 1.5;
+}
+.style-info h3 {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.17;
+  letter-spacing: -0.025em;
+  white-space: normal;
+  text-wrap: balance;
+  margin: 18px 0 16px;
+}
+.style-info > p {
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 350px;
+  margin-bottom: 25px;
+}
+.style-choose {
+  font-size: 15px;
+  min-height: 50px;
+  gap: 28px;
+  padding: 13px 22px;
+}
+.style-summary {
+  min-width: 0;
+  margin: 34px 0;
+  padding: 8px 40px;
+  border-left: 1px solid #deded6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.summary-label {
+  font-size: 12px;
+  letter-spacing: 0.09em;
+  margin: 0 0 16px;
+  color: #62625b;
+}
+.style-summary dl {
+  margin: 0;
+}
+.style-summary dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e0e0d9;
+}
+.style-summary dt {
+  font-size: 14px;
+  color: #606058;
+  flex-shrink: 0;
+}
+.style-summary dd {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  text-align: right;
+}
+.style-summary .intensity {
+  align-items: center;
+  font-size: 14px;
+}
+.style-summary .intensity span {
+  margin-left: 6px;
+}
+.style-summary .intensity i {
+  width: 7px;
+  height: 7px;
+}
+.summary-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #62625b;
+  margin: 19px 0 0;
+  max-width: 320px;
+}
+.hero-art {
+  background: #d6d1c9;
+  isolation: isolate;
+  height: 540px;
+}
+.hero-art img {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 58%;
+  transform: none;
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .style-info {
+    padding: 32px;
+  }
+  .style-summary {
+    padding: 8px 28px;
+  }
+  .style-summary dl > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .style-summary dd {
+    text-align: left;
+  }
+  .hero-art {
+    height: 460px;
+  }
+}
+@media (max-width: 760px) {
+  .style-list {
+    gap: 5px;
+    margin-bottom: 16px;
+    padding: 4px !important;
+    background: #d3d3cd !important;
+  }
+  .style-trigger {
+    min-height: 46px;
+    font-size: 14px !important;
+  }
+  .style-panel {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: 24px;
+    min-height: 0;
+  }
+  .style-info {
+    padding: 28px 24px 26px;
+    min-height: 0;
+  }
+  .style-kicker {
+    font-size: 13px;
+  }
+  .style-info h3 {
+    font-size: 30px;
+    line-height: 1.2;
+    margin: 14px 0 13px;
+  }
+  .style-info > p {
+    font-size: 16px;
+    margin-bottom: 23px;
+    max-width: none;
+  }
+  .style-choose {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 15px;
+    min-height: 50px;
+  }
+  .style-summary {
+    margin: 0 24px 26px;
+    padding: 23px 0 0;
+    border-left: 0;
+    border-top: 1px solid #dcdcd4;
+  }
+  .summary-label {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .style-summary dl > div {
+    padding: 14px 0;
+    gap: 14px;
+  }
+  .style-summary dt {
+    font-size: 13px;
+    max-width: 42%;
+  }
+  .style-summary dd {
+    font-size: 14px;
+    max-width: 58%;
+    text-wrap: balance;
+  }
+  .summary-note {
+    font-size: 13px;
+    margin-top: 16px;
+  }
+  .hero-art {
+    height: auto;
+    aspect-ratio: 1.1;
+    border-radius: 24px;
+  }
+  .hero-art img {
+    object-position: 50% 58%;
+  }
+}
+@media (max-width: 350px) {
+  .style-info {
+    padding: 25px 20px;
+  }
+  .style-summary {
+    margin-inline: 20px;
+  }
+  .style-info h3 {
+    font-size: 27px;
+  }
+  .style-summary dl > div {
+    gap: 10px;
+  }
+  .style-trigger {
+    font-size: 13px !important;
+  }
+}

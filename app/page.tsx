@@ -17,29 +17,35 @@ const styles = [
   {
     id: 'natural',
     name: 'Natural',
-    title: 'LEVE E NATURAL.',
+    title: 'Leve, como você.',
     tag: 'LEVE & DELICADO',
     text: 'Fios delicados para realçar o olhar com sutileza.',
     tech: 'Fio a fio',
     level: 1,
+    finish: 'Sutil e delicado',
+    preference: 'Realçar os fios com discrição',
   },
   {
     id: 'marcante',
     name: 'Marcante',
-    title: 'DEFINIÇÃO NA MEDIDA.',
+    title: 'Definição na medida.',
     tag: 'TEXTURA & EQUILÍBRIO',
     text: 'Textura e volume equilibrados para um olhar mais definido.',
     tech: 'Volume híbrido',
     level: 2,
+    finish: 'Textura e definição',
+    preference: 'Equilibrar naturalidade e volume',
   },
   {
     id: 'intenso',
     name: 'Intenso',
-    title: 'VOLUME EM DESTAQUE.',
+    title: 'Um olhar de presença.',
     tag: 'VOLUME & ATITUDE',
     text: 'Mais preenchimento para quem prefere um efeito expressivo.',
     tech: 'Volume brasileiro',
     level: 3,
+    finish: 'Cheio e expressivo',
+    preference: 'Dar mais destaque ao olhar',
   },
 ];
 const faqs = [
@@ -93,16 +99,6 @@ export default function Home() {
           duration: 1.2,
           ease: 'power2.out',
         });
-        gsap.to('.hero-art img', {
-          yPercent: 9,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: '.hero',
-            start: 'top top',
-            end: 'bottom top',
-            scrub: 1,
-          },
-        });
         gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
           gsap.from(el, {
             y: 36,
@@ -130,9 +126,7 @@ export default function Home() {
             height="48"
             alt=""
           />
-          <span className="brand-wordmark">
-            Lara Varisa<span className="brand-specialty">LASH DESIGNER</span>
-          </span>
+          <span className="brand-wordmark">Lara Varisa</span>
         </a>
         <nav
           aria-label="Navegação principal"
@@ -184,10 +178,10 @@ export default function Home() {
           </div>
           <div className="hero-art">
             <img
-              src="/lash-art.webp"
-              width="1254"
-              height="1254"
-              alt="Arte gráfica de um olhar com cílios alongados, em laranja e violeta"
+              src="/lara-lashes.webp"
+              width="1080"
+              height="1440"
+              alt="Detalhe dos cílios alongados em uma foto de atendimento"
               fetchPriority="high"
             />
           </div>
@@ -223,38 +217,49 @@ export default function Home() {
             {styles.map((s) => (
               <TabsContent key={s.id} value={s.id}>
                 <div className="style-panel">
-                  <div className={'style-visual ' + s.id}>
-                    <img
-                      src="/lash-art.webp"
-                      width="1254"
-                      height="1254"
-                      alt="Ilustração conceitual de cílios; não representa resultado de procedimento"
-                      loading="lazy"
-                    />
-                    <span className="concept">Ilustração conceitual</span>
-                  </div>
                   <div className="style-info">
-                    <span className="tag">{s.tag}</span>
+                    <span className="style-kicker">
+                      {s.name} / {s.tech}
+                    </span>
                     <h3>{s.title}</h3>
                     <p>{s.text}</p>
-                    <div className="style-detail">
-                      <span>{s.tech}</span>
-                      <span
-                        className="intensity"
-                        aria-label={'Intensidade ' + s.level + ' de 3'}
-                      >
-                        {[1, 2, 3].map((n) => (
-                          <i key={n} className={n <= s.level ? 'active' : ''} />
-                        ))}{' '}
-                        intensidade
-                      </span>
-                    </div>
                     <button
-                      className="text-link"
+                      className="button style-choose"
                       onClick={() => setBooking(true)}
                     >
-                      Escolher este estilo <ArrowUpRight size={20} />
+                      Quero esse estilo <ArrowUpRight size={19} />
                     </button>
+                  </div>
+                  <div className="style-summary">
+                    <p className="summary-label">OS DETALHES DO SEU OLHAR</p>
+                    <dl>
+                      <div>
+                        <dt>Acabamento</dt>
+                        <dd>{s.finish}</dd>
+                      </div>
+                      <div>
+                        <dt>Para quem busca</dt>
+                        <dd>{s.preference}</dd>
+                      </div>
+                      <div>
+                        <dt>Intensidade</dt>
+                        <dd
+                          className="intensity"
+                          aria-label={s.level + ' de 3'}
+                        >
+                          {[1, 2, 3].map((n) => (
+                            <i
+                              key={n}
+                              className={n <= s.level ? 'active' : ''}
+                            />
+                          ))}
+                          <span>{s.name}</span>
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="summary-note">
+                      O desenho final é ajustado aos seus fios na avaliação.
+                    </p>
                   </div>
                 </div>
               </TabsContent>
@@ -349,9 +354,7 @@ export default function Home() {
             height="48"
             alt=""
           />
-          <span className="brand-wordmark">
-            Lara Varisa<span className="brand-specialty">LASH DESIGNER</span>
-          </span>
+          <span className="brand-wordmark">Lara Varisa</span>
         </a>
         <p>Lash design, do seu jeito.</p>
         <a href="#conteudo">De volta ao topo ↑</a>
