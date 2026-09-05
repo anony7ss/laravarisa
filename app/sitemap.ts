@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { supabaseClient } from '@/lib/supabase-client';
+
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://laravarisa.com.br';

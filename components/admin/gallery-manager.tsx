@@ -9,10 +9,11 @@ const emptyGallery = {
   title: '',
   subtitle: '',
   image_path: '',
-  alt_text: '',
+  before_image_path: null,
+  alt_text: 'Detalhe dos cílios',
   object_position: '50% 50%',
   zoom: 1,
-  sort_order: 0,
+  sort_order: 10,
   active: true,
 };
 

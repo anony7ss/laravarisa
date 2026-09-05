@@ -14,9 +14,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "types": [
-      "node",
-      "@cloudflare/workers-types",
-      "vinext/types"
+      "node"
     ],
     "resolveJsonModule": true,
     "isolatedModules": true,
