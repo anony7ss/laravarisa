@@ -17,9 +17,11 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import createAutoScroll from 'embla-carousel-auto-scroll';
-import { services, serviceWhatsAppUrl } from '@/lib/services';
+import { serviceWhatsAppUrl } from '@/lib/services';
+import { usePublicServices } from '@/lib/public-content';
 
 export function ServiceCarousel() {
+  const services = usePublicServices();
   const [api, setApi] = useState<CarouselApi>();
   const [playing, setPlaying] = useState(true);
   const userPaused = useRef(false);

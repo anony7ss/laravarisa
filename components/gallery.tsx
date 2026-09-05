@@ -24,9 +24,95 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import createAutoScroll from 'embla-carousel-auto-scroll';
-import { galleryPhotos } from '@/lib/gallery';
+import { usePublicGallery } from '@/lib/public-content';
+
+function BeforeAfterSlider({ beforeSrc, afterSrc, alt }: { beforeSrc: string; afterSrc: string; alt: string }) {
+  const [position, setPosition] = useState(50);
+  return (
+    <div className="before-after-slider" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+      {/* After image (background) */}
+      <img
+        src={afterSrc}
+        alt={`${alt} (Depois)`}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+      {/* Before image (foreground, clipped) */}
+      <img
+        src={beforeSrc}
+        alt={`${alt} (Antes)`}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: 'block',
+          clipPath: `inset(0 ${100 - position}% 0 0)`
+        }}
+      />
+      {/* Slider input */}
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value={position}
+        onChange={(e) => setPosition(Number(e.target.value))}
+        className="before-after-input"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
+          cursor: 'ew-resize',
+          zIndex: 10
+        }}
+      />
+      {/* Slider handle visual */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: `${position}%`,
+          bottom: 0,
+          width: '2px',
+          backgroundColor: '#fff',
+          transform: 'translateX(-50%)',
+          pointerEvents: 'none',
+          boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+          zIndex: 5
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '32px',
+          height: '32px',
+          backgroundColor: '#fff',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          color: '#000'
+        }}>
+          <ArrowLeft size={14} style={{ marginRight: '-2px' }} />
+          <ArrowRight size={14} style={{ marginLeft: '-2px' }} />
+        </div>
+      </div>
+      {/* Labels */}
+      <span style={{ position: 'absolute', bottom: '16px', left: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>ANTES</span>
+      <span style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>DEPOIS</span>
+    </div>
+  );
+}
 
 export function Gallery({ full = false }: { full?: boolean }) {
+  const galleryPhotos = usePublicGallery();
   const [active, setActive] = useState<number | null>(null);
   const [api, setApi] = useState<CarouselApi>();
   const [playing, setPlaying] = useState(!full);
@@ -45,9 +131,12 @@ export function Gallery({ full = false }: { full?: boolean }) {
   );
   useEffect(() => {
     if (!api || full) return;
+    const autoScrollPlugin = api.plugins().autoScroll;
+    if (!autoScrollPlugin) return;
+    
     const sync = () => {
-      if (!document.hidden && !userPaused.current) autoScroll.play(0);
-      else autoScroll.stop();
+      if (!document.hidden && !userPaused.current) autoScrollPlugin.play(0);
+      else autoScrollPlugin.stop();
     };
     const onPlay = () => setPlaying(true);
     const onStop = () => setPlaying(false);
@@ -55,20 +144,20 @@ export function Gallery({ full = false }: { full?: boolean }) {
     document.addEventListener('visibilitychange', sync);
     sync();
     return () => {
-      autoScroll.stop();
+      autoScrollPlugin.stop();
       api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);
     };
-  }, [api, autoScroll, full]);
+  }, [api, full]);
   function pause() {
     userPaused.current = true;
-    autoScroll.stop();
+    api?.plugins().autoScroll?.stop();
   }
   function toggle() {
     if (playing) pause();
     else {
       userPaused.current = false;
-      autoScroll.play(0);
+      api?.plugins().autoScroll?.play(0);
     }
   }
   function open(index: number) {
@@ -94,6 +183,11 @@ export function Gallery({ full = false }: { full?: boolean }) {
               transform: `scale(${item.zoom})`,
             }}
           />
+          {item.beforeSrc && (
+            <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', zIndex: 2 }}>
+              ANTES / DEPOIS
+            </span>
+          )}
           <span className="gallery-expand">
             <Expand size={19} />
           </span>
@@ -180,13 +274,21 @@ export function Gallery({ full = false }: { full?: boolean }) {
               <DialogDescription className="sr-only">
                 {galleryPhotos[active].subtitle}. Foto ampliada do atendimento.
               </DialogDescription>
-              <img
-                className="lightbox-image"
-                src={galleryPhotos[active].src}
-                width="1080"
-                height="1440"
-                alt={galleryPhotos[active].title}
-              />
+              {galleryPhotos[active].beforeSrc ? (
+                <BeforeAfterSlider 
+                  beforeSrc={galleryPhotos[active].beforeSrc} 
+                  afterSrc={galleryPhotos[active].src} 
+                  alt={galleryPhotos[active].title} 
+                />
+              ) : (
+                <img
+                  className="lightbox-image"
+                  src={galleryPhotos[active].src}
+                  width="1080"
+                  height="1440"
+                  alt={galleryPhotos[active].title}
+                />
+              )}
               <div className="lightbox-bar">
                 <button
                   className="icon-button"

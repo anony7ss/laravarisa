@@ -1,4 +1,15 @@
-export const galleryPhotos = [
+export type GalleryPhoto = {
+  id: string;
+  src: string;
+  beforeSrc?: string | null;
+  title: string;
+  subtitle: string;
+  alt: string;
+  position: string;
+  zoom: number;
+};
+
+export const galleryPhotos: GalleryPhoto[] = [
   {
     id: 'olhar',
     title: 'O olhar completo',
@@ -24,4 +35,3 @@ export const galleryPhotos = [
     src: '/lara-lashes-optimized.webp',
   },
 ];
-

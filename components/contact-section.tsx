@@ -1,22 +1,22 @@
 'use client';
-import { useState, type SyntheticEvent } from 'react';
-import { ArrowUpRight, Mail, MessageCircle, X } from 'lucide-react';
+import { useCallback, useState, type SyntheticEvent } from 'react';
+import { ArrowUpRight, Check, Mail, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { composeMessage, contactUrl, type ContactMessage } from '@/lib/studio';
+import { Turnstile } from '@/components/turnstile';
 export function ContactSection() {
-  const [draft, setDraft] = useState<ContactMessage | null>(null);
   const [error, setError] = useState('');
-  function submit(event: SyntheticEvent<HTMLFormElement>) {
+  const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const onTurnstileToken = useCallback(
+    (token: string) => setTurnstileToken(token),
+    [],
+  );
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const field = (key: string) => {
       const value = data.get(key);
       return typeof value === 'string' ? value.trim() : '';
@@ -26,6 +26,8 @@ export function ContactSection() {
       email: field('email'),
       phone: field('phone'),
       message: field('message'),
+      website: field('website'),
+      turnstileToken,
     };
     if (message.name.length < 2 || message.message.length < 10) {
       setError(
@@ -34,9 +36,28 @@ export function ContactSection() {
       return;
     }
     setError('');
-    setDraft(message);
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(message),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok)
+        throw new Error(result.error || 'Não foi possível enviar.');
+      form.reset();
+      setSent(true);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Não foi possível enviar agora.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
-  const url = draft ? contactUrl(draft) : null;
   return (
     <section id="contato" className="contact-section wrap section">
       <div className="contact-copy reveal">
@@ -66,99 +87,97 @@ export function ContactSection() {
           <span>Fale com a Lara</span>
           <ArrowUpRight size={25} />
         </div>
-        <div className="form-grid">
-          <label htmlFor="contact-name">
-            Seu nome
-            <Input
-              id="contact-name"
-              name="name"
-              autoComplete="name"
-              placeholder="Como podemos chamar você?"
-              required
-              minLength={2}
-              maxLength={80}
-            />
-          </label>
-          <label htmlFor="contact-email">
-            E-mail
-            <Input
-              id="contact-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="voce@email.com"
-              required
-              maxLength={120}
-            />
-          </label>
-        </div>
-        <label htmlFor="contact-phone">
-          WhatsApp <span className="optional">(opcional)</span>
-          <Input
-            id="contact-phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="(DDD) número"
-            maxLength={24}
-          />
-        </label>
-        <label htmlFor="contact-message">
-          O que você tem em mente?
-          <Textarea
-            id="contact-message"
-            name="message"
-            placeholder="Quero saber mais sobre os estilos e o agendamento…"
-            required
-            minLength={10}
-            maxLength={1500}
-            rows={4}
-          />
-        </label>
-        {error && (
-          <p className="form-error" role="alert">
-            {error}
-          </p>
+        {!sent ? (
+          <>
+            <div className="form-grid">
+              <label htmlFor="contact-name">
+                Seu nome
+                <Input
+                  id="contact-name"
+                  name="name"
+                  autoComplete="name"
+                  placeholder="Como podemos chamar você?"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                />
+              </label>
+              <label htmlFor="contact-email">
+                E-mail
+                <Input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="voce@email.com"
+                  required
+                  maxLength={120}
+                />
+              </label>
+            </div>
+            <label htmlFor="contact-phone">
+              WhatsApp <span className="optional">(opcional)</span>
+              <Input
+                id="contact-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="(11) 99999-9999"
+                maxLength={15}
+                onChange={(e) => {
+                  let value = e.target.value.replace(/\D/g, '');
+                  if (value.length > 11) value = value.slice(0, 11);
+                  if (value.length > 2) {
+                    value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                  }
+                  if (value.length > 9) {
+                    value = `${value.slice(0, 10)}-${value.slice(10)}`;
+                  }
+                  e.target.value = value;
+                }}
+              />
+            </label>
+            <label htmlFor="contact-message">
+              O que você tem em mente?
+              <Textarea
+                id="contact-message"
+                name="message"
+                placeholder="Quero saber mais sobre os estilos e o agendamento…"
+                required
+                minLength={10}
+                maxLength={1500}
+                rows={4}
+              />
+            </label>
+            <Turnstile onToken={onTurnstileToken} />
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+            <p className="form-privacy">
+              Seus dados serão usados apenas para responder sua solicitação.
+            </p>
+            <button className="button" type="submit" disabled={submitting}>
+              {submitting ? 'Enviando sua mensagem…' : 'Enviar dúvida'}
+              {!submitting && <ArrowUpRight size={19} />}
+            </button>
+          </>
+        ) : (
+          <div className="form-success-state" role="status" style={{ animation: 'fade-in 0.5s ease-out' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f6f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#ff5100' }}>
+              <Check size={24} />
+            </div>
+            <h3 style={{ fontSize: '24px', fontWeight: '500', marginBottom: '8px' }}>Mensagem enviada!</h3>
+            <p style={{ color: '#71716a', lineHeight: '1.5' }}>
+              Obrigado por entrar em contato. A Lara responderá o mais breve possível pelo contato informado.
+            </p>
+            <button className="button" style={{ marginTop: '24px', background: 'transparent', color: '#ff5100', border: '1px solid #ff5100' }} type="button" onClick={() => setSent(false)}>
+              Enviar outra mensagem
+            </button>
+          </div>
         )}
-        <p className="form-privacy">
-          Seus dados ficam apenas nesta página até você decidir continuar no
-          canal de contato.
-        </p>
-        <button className="button" type="submit">
-          Enviar dúvida
-          <ArrowUpRight size={19} />
-        </button>
       </form>
-      <Dialog
-        open={draft !== null}
-        onOpenChange={(open) => {
-          if (!open) setDraft(null);
-        }}
-      >
-        <DialogContent className="contact-dialog" showCloseButton={false}>
-          <DialogClose className="dialog-x" aria-label="Fechar">
-            <X />
-          </DialogClose>
-          <DialogTitle className="booking-title">Sua mensagem</DialogTitle>
-          <DialogDescription className="booking-description">
-            Confira os dados antes de continuar. O envio será concluído no
-            WhatsApp.
-          </DialogDescription>
-          <pre className="message-preview">
-            {draft ? composeMessage(draft) : ''}
-          </pre>
-          {url && (
-            <a
-              className="button"
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Continuar no WhatsApp <ArrowUpRight size={18} />
-            </a>
-          )}
-        </DialogContent>
-      </Dialog>
     </section>
   );
 }

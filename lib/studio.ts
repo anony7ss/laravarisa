@@ -14,13 +14,13 @@ export const studio = {
   instagramUrl: 'https://www.instagram.com/laravarisa.lashes/',
   email: 'contato@laravarisa.com.br',
   emailUrl: 'mailto:contato@laravarisa.com.br',
-  address: 'Atendimento presencial em São Paulo',
-  city: 'Endereço completo enviado após o agendamento',
+  address: 'Atendimento presencial na Zona Norte',
+  city: 'Porto Alegre, RS — Endereço completo enviado no agendamento',
   hours: 'Segunda a sábado · com agendamento',
   mapEmbedUrl:
-    'https://www.google.com/maps?q=S%C3%A3o%20Paulo%2C%20SP&output=embed',
+    'https://www.google.com/maps?q=Zona%20Norte%2C%20Porto%20Alegre%20-%20RS&output=embed',
   directionsUrl:
-    'https://www.google.com/maps/search/?api=1&query=S%C3%A3o+Paulo%2C+SP',
+    'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS',
 };
 export type ContactMessage = {
   name: string;

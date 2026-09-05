@@ -8,9 +8,11 @@ import {
   List,
   RefreshCw,
 } from 'lucide-react';
-import { services, serviceWhatsAppUrl } from '@/lib/services';
+import { serviceWhatsAppUrl } from '@/lib/services';
+import { usePublicServices } from '@/lib/public-content';
 
 export function ServiceCatalog() {
+  const services = usePublicServices();
   const [view, setView] = useState<'cards' | 'list'>('cards');
 
   return (

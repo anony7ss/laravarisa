@@ -6,6 +6,7 @@ import { Gallery } from '@/components/gallery';
 import { SiteFooter } from '@/components/site-footer';
 import { ContactSection } from '@/components/contact-section';
 import { ServiceCarousel } from '@/components/service-carousel';
+import { Testimonials } from '@/components/testimonials';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Plus, Minus, Menu, X } from 'lucide-react';
 import gsap from 'gsap';
@@ -43,7 +44,6 @@ export default function Home() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const mm = gsap.matchMedia();
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
       const ctx = gsap.context(() => {
         gsap.from('.hero-title > span', {
           y: 65,
@@ -137,7 +137,6 @@ export default function Home() {
         alive = false;
         ctx.revert();
       };
-    });
     return () => mm.revert();
   }, []);
   return (
@@ -202,7 +201,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="hero-description">
-              Cílios que realçam sua beleza, com um desenho pensado para você.
+              Extensão de Cílios e Lash Lift pensados para você, realçando a beleza do seu olhar. Atendimento exclusivo na Zona Norte de Porto Alegre.
             </p>
             <div className="hero-actions">
               <a
@@ -319,6 +318,7 @@ export default function Home() {
             ))}
           </div>
         </section>
+        <Testimonials />
         <ContactSection />
       </main>
       <SiteFooter />

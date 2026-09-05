@@ -30,7 +30,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="wrap">
         <div className="footer-intro">
-          <p>Seu olhar, com a sua essência.</p>
+          <p>Realçando a beleza do seu olhar.</p>
           <Link href="/#contato" className="footer-talk">
             Vamos conversar <ArrowUpRight size={20} />
           </Link>
