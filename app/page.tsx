@@ -5,46 +5,11 @@ import { studio } from '@/lib/studio';
 import { Gallery } from '@/components/gallery';
 import { SiteFooter } from '@/components/site-footer';
 import { ContactSection } from '@/components/contact-section';
+import { ServiceCarousel } from '@/components/service-carousel';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Plus, Minus, Menu, X } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-const styles = [
-  {
-    id: 'natural',
-    name: 'Natural',
-    title: 'Leve, como você.',
-    tag: 'LEVE & DELICADO',
-    text: 'Fios delicados para realçar o olhar com sutileza.',
-    tech: 'Fio a fio',
-    level: 1,
-    finish: 'Sutil e delicado',
-    preference: 'Realçar os fios com discrição',
-  },
-  {
-    id: 'marcante',
-    name: 'Marcante',
-    title: 'Definição na medida.',
-    tag: 'TEXTURA & EQUILÍBRIO',
-    text: 'Textura e volume equilibrados para um olhar mais definido.',
-    tech: 'Volume híbrido',
-    level: 2,
-    finish: 'Textura e definição',
-    preference: 'Equilibrar naturalidade e volume',
-  },
-  {
-    id: 'intenso',
-    name: 'Intenso',
-    title: 'Um olhar de presença.',
-    tag: 'VOLUME & ATITUDE',
-    text: 'Mais preenchimento para quem prefere um efeito expressivo.',
-    tech: 'Volume brasileiro',
-    level: 3,
-    finish: 'Cheio e expressivo',
-    preference: 'Dar mais destaque ao olhar',
-  },
-];
 const faqs = [
   [
     'Como escolher meu efeito?',
@@ -66,7 +31,6 @@ const faqs = [
 export default function Home() {
   const root = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState(false);
-  const [style, setStyle] = useState('natural');
   const [faq, setFaq] = useState<number | null>(null);
   useEffect(() => {
     if (!menu) return;
@@ -183,7 +147,7 @@ export default function Home() {
         Pular para conteúdo
       </a>
       <header className="header wrap">
-        <a href="#conteudo" className="brand" aria-label="Lara Varisa — início">
+        <Link href="/" className="brand" aria-label="Lara Varisa — início">
           <img
             className="brand-monogram"
             src="/lv-monogram.svg"
@@ -192,7 +156,7 @@ export default function Home() {
             alt=""
           />
           <span className="brand-wordmark">Lara Varisa</span>
-        </a>
+        </Link>
         <nav
           aria-label="Navegação principal"
           className={menu ? 'nav open' : 'nav'}
@@ -273,78 +237,9 @@ export default function Home() {
                 ENCONTRE SEU <em>ESTILO.</em>
               </h2>
             </div>
-            <p>Três propostas. O seu jeito de olhar.</p>
+            <p>Conheça alguns dos serviços disponíveis.</p>
           </div>
-          <Tabs
-            value={style}
-            onValueChange={(v) => setStyle(String(v))}
-            className="style-tabs reveal"
-          >
-            <TabsList
-              className="style-list"
-              aria-label="Escolha seu estilo de cílios"
-            >
-              {styles.map((s, i) => (
-                <TabsTrigger key={s.id} value={s.id} className="style-trigger">
-                  <span>0{i + 1}</span>
-                  {s.name}
-                  <ArrowUpRight size={20} />
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {styles.map((s) => (
-              <TabsContent key={s.id} value={s.id}>
-                <div className="style-panel">
-                  <div className="style-info">
-                    <span className="style-kicker">
-                      {s.name} / {s.tech}
-                    </span>
-                    <h3>{s.title}</h3>
-                    <p>{s.text}</p>
-                    <a
-                      className="button style-choose"
-                      href={studio.bookingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Agendar este estilo <ArrowUpRight size={19} />
-                    </a>
-                  </div>
-                  <div className="style-summary">
-                    <p className="summary-label">OS DETALHES DO SEU OLHAR</p>
-                    <dl>
-                      <div>
-                        <dt>Acabamento</dt>
-                        <dd>{s.finish}</dd>
-                      </div>
-                      <div>
-                        <dt>Para quem busca</dt>
-                        <dd>{s.preference}</dd>
-                      </div>
-                      <div>
-                        <dt>Intensidade</dt>
-                        <dd
-                          className="intensity"
-                          aria-label={s.level + ' de 3'}
-                        >
-                          {[1, 2, 3].map((n) => (
-                            <i
-                              key={n}
-                              className={n <= s.level ? 'active' : ''}
-                            />
-                          ))}
-                          <span>{s.name}</span>
-                        </dd>
-                      </div>
-                    </dl>
-                    <p className="summary-note">
-                      O desenho final é ajustado aos seus fios na avaliação.
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+          <ServiceCarousel />
         </section>
         <section id="experiencia" className="experience wrap section">
           <div className="experience-heading reveal">

@@ -25,3 +25,7 @@ A rota /galeria exibe a foto fornecida e dois recortes identificados da mesma fo
 lib/studio.ts concentra Instagram, WhatsApp, endereço e horários. O formulário valida os campos, permite revisar a dúvida e abre o WhatsApp com a mensagem pronta. O visitante confirma o envio no aplicativo; não há armazenamento de mensagens no servidor.
 
 GSAP/ScrollTrigger controlam entrada do hero, revelação das seções, zoom na imagem, assinatura do rodapé e progresso da rolagem. prefers-reduced-motion desativa as animações automáticas.
+
+## Serviços
+
+A página `/servicos` reúne o catálogo completo. Preços, duração e manutenção ficam centralizados em `lib/services.ts`; cada serviço gera uma mensagem específica para o WhatsApp. Revise esses valores antes de usar o site comercialmente.

@@ -1,10 +1,15 @@
+const WHATSAPP_NUMBER = '';
+
+export function whatsappUrl(message: string) {
+  const number = WHATSAPP_NUMBER.replace(/\D/g, '');
+  const recipient = /^\d{10,15}$/.test(number) ? number : '';
+  return `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`;
+}
+
 export const studio = {
-  bookingUrl:
-    'https://wa.me/?text=Ol%C3%A1%2C%20Lara!%20Quero%20agendar%20meu%20hor%C3%A1rio.',
-  instagram: 'Instagram',
-  instagramUrl: 'https://www.instagram.com/',
+  bookingUrl: whatsappUrl('Olá, Lara! Quero agendar meu horário.'),
   whatsapp: 'Agendar pelo WhatsApp',
-  whatsappNumber: '',
+  whatsappNumber: WHATSAPP_NUMBER,
   email: '',
   address: 'Atendimento presencial',
   city: 'Local confirmado no agendamento',
@@ -20,8 +25,5 @@ export function composeMessage(data: ContactMessage) {
   return `Olá, Lara! Meu nome é ${data.name.trim()}.\nE-mail: ${data.email.trim()}${data.phone.trim() ? `\nTelefone: ${data.phone.trim()}` : ''}\n\n${data.message.trim()}`;
 }
 export function contactUrl(data: ContactMessage) {
-  const message = composeMessage(data);
-  const number = studio.whatsappNumber.replace(/\D/g, '');
-  const recipient = /^\d{10,15}$/.test(number) ? number : '';
-  return `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`;
+  return whatsappUrl(composeMessage(data));
 }

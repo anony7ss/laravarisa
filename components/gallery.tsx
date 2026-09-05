@@ -29,7 +29,7 @@ import { galleryPhotos } from '@/lib/gallery';
 export function Gallery({ full = false }: { full?: boolean }) {
   const [active, setActive] = useState<number | null>(null);
   const [api, setApi] = useState<CarouselApi>();
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(!full);
   const userPaused = useRef(false);
   const host = useRef<HTMLDivElement>(null);
   const autoScroll = useMemo(
@@ -37,49 +37,26 @@ export function Gallery({ full = false }: { full?: boolean }) {
       createAutoScroll({
         speed: 0.7,
         startDelay: 600,
-        playOnInit: false,
-        stopOnInteraction: true,
-        stopOnFocusIn: true,
+        playOnInit: true,
+        stopOnInteraction: false,
+        stopOnFocusIn: false,
       }),
     [],
   );
   useEffect(() => {
     if (!api || full) return;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let visible = false;
     const sync = () => {
-      if (!media.matches && visible && !document.hidden && !userPaused.current)
-        autoScroll.play();
+      if (!document.hidden && !userPaused.current) autoScroll.play(0);
       else autoScroll.stop();
     };
     const onPlay = () => setPlaying(true);
     const onStop = () => setPlaying(false);
-    const onPointer = () => {
-      userPaused.current = true;
-      autoScroll.stop();
-    };
-    api
-      .on('autoScroll:play', onPlay)
-      .on('autoScroll:stop', onStop)
-      .on('pointerDown', onPointer);
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        visible = entry.isIntersecting;
-        sync();
-      },
-      { threshold: 0.1 },
-    );
-    if (host.current) observer.observe(host.current);
-    media.addEventListener('change', sync);
+    api.on('autoScroll:play', onPlay).on('autoScroll:stop', onStop);
     document.addEventListener('visibilitychange', sync);
+    sync();
     return () => {
-      observer.disconnect();
       autoScroll.stop();
-      api
-        .off('autoScroll:play', onPlay)
-        .off('autoScroll:stop', onStop)
-        .off('pointerDown', onPointer);
-      media.removeEventListener('change', sync);
+      api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);
     };
   }, [api, autoScroll, full]);
@@ -95,7 +72,6 @@ export function Gallery({ full = false }: { full?: boolean }) {
     }
   }
   function open(index: number) {
-    pause();
     setActive(index % galleryPhotos.length);
   }
   const card = (index: number) => {
@@ -148,8 +124,6 @@ export function Gallery({ full = false }: { full?: boolean }) {
             plugins={[autoScroll]}
             setApi={setApi}
             aria-label="Galeria de cílios"
-            onClickCapture={pause}
-            onFocusCapture={pause}
           >
             <CarouselContent className="gallery-track">
               {[...galleryPhotos, ...galleryPhotos].map((item, i) => (
@@ -160,14 +134,11 @@ export function Gallery({ full = false }: { full?: boolean }) {
             </CarouselContent>
           </Carousel>
           <div className="gallery-controls">
-            <p>Toque em uma foto para pausar e ampliar.</p>
+            <p>Toque em uma foto para ampliar.</p>
             <div className="gallery-buttons">
               <button
                 className="icon-button"
-                onClick={() => {
-                  pause();
-                  api?.scrollPrev();
-                }}
+                onClick={() => api?.scrollPrev()}
                 aria-label="Foto anterior"
               >
                 <ArrowLeft size={19} />
@@ -182,10 +153,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
               </button>
               <button
                 className="icon-button"
-                onClick={() => {
-                  pause();
-                  api?.scrollNext();
-                }}
+                onClick={() => api?.scrollNext()}
                 aria-label="Próxima foto"
               >
                 <ArrowRight size={19} />

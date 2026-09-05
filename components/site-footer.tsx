@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import {
   ArrowUpRight,
-  Camera,
   MessageCircle,
   MapPin,
   ArrowUp,
@@ -35,12 +34,6 @@ export function SiteFooter() {
         </div>
         <div className="footer-columns">
           <div className="footer-column">
-            <h3>Acompanhe</h3>
-            {social('Instagram', studio.instagramUrl, <Camera size={19} />)}
-            {social('WhatsApp', studio.bookingUrl, <MessageCircle size={19} />)}
-            <span className="footer-handle">{studio.instagram}</span>
-          </div>
-          <div className="footer-column">
             <h3>Encontre a Lara</h3>
             <address>
               <MapPin size={18} />
@@ -66,13 +59,14 @@ export function SiteFooter() {
           <nav className="footer-column" aria-label="Links do rodapé">
             <h3>Explore</h3>
             <Link href="/#estilos">Estilos</Link>
+            <Link href="/servicos">Serviços e valores</Link>
             <Link href="/galeria">Galeria completa</Link>
             <Link href="/#duvidas">Dúvidas frequentes</Link>
             <Link href="/#contato">Fale com a Lara</Link>
           </nav>
         </div>
         <div className="footer-signature" aria-hidden="true">
-          Lara Varisa<span>LV</span>
+          Lara Varisa
         </div>
         <div className="footer-legal">
           <span>© {new Date().getFullYear()} Lara Varisa</span>

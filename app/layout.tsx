@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@fontsource/anton/latin-400.css';
+import '@fontsource/anton/latin-ext-400.css';
 import '@fontsource/dm-sans/latin-500.css';
 import './globals.css';
 export const metadata: Metadata = {
