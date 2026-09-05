@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ArrowUpRight, Clock3, RefreshCw } from 'lucide-react';
-import { services, serviceWhatsAppUrl } from '@/lib/services';
+import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { SiteFooter } from '@/components/site-footer';
+import { ServiceCatalog } from '@/components/service-catalog';
 
 export const metadata: Metadata = {
   title: 'Serviços e valores — Lara Varisa',
@@ -40,44 +40,7 @@ export default function ServicesPage() {
             já abre pronta no WhatsApp.
           </p>
         </div>
-        <div className="catalog-grid">
-          {services.map((service, index) => (
-            <article className="catalog-card" id={service.id} key={service.id}>
-              <div className="catalog-index">
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <span>{service.category}</span>
-              </div>
-              <h2>{service.name}</h2>
-              <p>{service.description}</p>
-              <dl>
-                <div>
-                  <dt>Valor</dt>
-                  <dd>{service.price}</dd>
-                </div>
-                <div>
-                  <dt>
-                    <Clock3 size={16} /> Duração
-                  </dt>
-                  <dd>{service.duration}</dd>
-                </div>
-                <div>
-                  <dt>
-                    <RefreshCw size={15} /> Retorno
-                  </dt>
-                  <dd>{service.maintenance}</dd>
-                </div>
-              </dl>
-              <a
-                className="button"
-                href={serviceWhatsAppUrl(service)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Agendar {service.name} <ArrowUpRight size={19} />
-              </a>
-            </article>
-          ))}
-        </div>
+        <ServiceCatalog />
         <div className="catalog-note">
           <p>
             O desenho e a técnica podem ser ajustados após a avaliação dos fios

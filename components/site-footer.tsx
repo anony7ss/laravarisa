@@ -7,6 +7,9 @@ import {
   MapPin,
   ArrowUp,
   Clock,
+  Camera,
+  Mail,
+  Navigation,
 } from 'lucide-react';
 import { studio } from '@/lib/studio';
 export function SiteFooter() {
@@ -47,6 +50,11 @@ export function SiteFooter() {
               <Clock size={18} />
               {studio.hours}
             </p>
+            <Link className="social-link" href="/localizacao">
+              <Navigation size={18} />
+              Ver localização e como chegar
+              <ArrowUpRight size={16} />
+            </Link>
           </div>
           <div className="footer-column">
             <h3>Contato</h3>
@@ -55,12 +63,19 @@ export function SiteFooter() {
               studio.bookingUrl,
               <MessageCircle size={18} />,
             )}
+            {social(
+              studio.instagram,
+              studio.instagramUrl,
+              <Camera size={18} />,
+            )}
+            {social(studio.email, studio.emailUrl, <Mail size={18} />)}
           </div>
           <nav className="footer-column" aria-label="Links do rodapé">
             <h3>Explore</h3>
             <Link href="/#estilos">Estilos</Link>
             <Link href="/servicos">Serviços e valores</Link>
             <Link href="/galeria">Galeria completa</Link>
+            <Link href="/localizacao">Localização</Link>
             <Link href="/#duvidas">Dúvidas frequentes</Link>
             <Link href="/#contato">Fale com a Lara</Link>
           </nav>

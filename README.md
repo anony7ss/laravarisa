@@ -29,3 +29,5 @@ GSAP/ScrollTrigger controlam entrada do hero, revelação das seções, zoom na 
 ## Serviços
 
 A página `/servicos` reúne o catálogo completo. Preços, duração e manutenção ficam centralizados em `lib/services.ts`; cada serviço gera uma mensagem específica para o WhatsApp. Revise esses valores antes de usar o site comercialmente.
+
+A página `/localizacao` reúne mapa, horário, região de atendimento e atalhos para rotas e confirmação do endereço.
