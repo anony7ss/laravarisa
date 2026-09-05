@@ -255,7 +255,7 @@ export default function Home() {
           </div>
           <div className="hero-art">
             <img
-              src="/lara-lashes.webp"
+              src="/lara-lashes-optimized.webp"
               width="1080"
               height="1440"
               alt="Detalhe dos cílios alongados em uma foto de atendimento"
@@ -469,3 +469,4 @@ export default function Home() {
     </div>
   );
 }
+
