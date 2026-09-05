@@ -1,5 +1,5 @@
 'use client';
-/* oxlint-disable next/no-img-element -- Vector wordmark rendered at intrinsic dimensions. */
+
 import Link from 'next/link';
 import { useState } from 'react';
 import {
@@ -45,20 +45,6 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="wrap">
         <div className="footer-intro">
-          <Link
-            href="/#conteudo"
-            className="brand"
-            aria-label="Lara Varisa início"
-          >
-            <img
-              className="brand-monogram"
-              src="/lv-monogram.svg"
-              width="48"
-              height="48"
-              alt=""
-            />
-            <span className="brand-wordmark">Lara Varisa</span>
-          </Link>
           <p>Seu olhar, com a sua essência.</p>
           <Link href="/#contato" className="footer-talk">
             Vamos conversar <ArrowUpRight size={20} />
@@ -155,3 +141,4 @@ export function SiteFooter() {
     </footer>
   );
 }
+
