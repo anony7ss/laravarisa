@@ -6,15 +6,8 @@ import { Gallery } from '@/components/gallery';
 import { SiteFooter } from '@/components/site-footer';
 import { ContactSection } from '@/components/contact-section';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Plus, Minus, Menu, X, CalendarDays } from 'lucide-react';
+import { ArrowUpRight, Plus, Minus, Menu, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '@/components/ui/dialog';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 const styles = [
@@ -73,7 +66,6 @@ const faqs = [
 export default function Home() {
   const root = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState(false);
-  const [booking, setBooking] = useState(false);
   const [style, setStyle] = useState('natural');
   const [faq, setFaq] = useState<number | null>(null);
   useEffect(() => {
@@ -84,7 +76,6 @@ export default function Home() {
     window.addEventListener('keydown', dismiss);
     return () => window.removeEventListener('keydown', dismiss);
   }, [menu]);
-  const selected = styles.find((s) => s.id === style)!;
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
     const mm = gsap.matchMedia();
@@ -219,9 +210,14 @@ export default function Home() {
             Dúvidas
           </a>
         </nav>
-        <button className="button header-cta" onClick={() => setBooking(true)}>
-          Consultar agenda <ArrowUpRight size={18} />
-        </button>
+        <a
+          className="button header-cta"
+          href={studio.bookingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Agendar agora <ArrowUpRight size={18} />
+        </a>
         <button
           className="menu-toggle"
           aria-label={menu ? 'Fechar menu' : 'Abrir menu'}
@@ -245,9 +241,14 @@ export default function Home() {
               Cílios que realçam sua beleza, com um desenho pensado para você.
             </p>
             <div className="hero-actions">
-              <button className="button" onClick={() => setBooking(true)}>
-                Consultar agenda <ArrowUpRight size={20} />
-              </button>
+              <a
+                className="button"
+                href={studio.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Agendar agora <ArrowUpRight size={20} />
+              </a>
               <a className="secondary-link" href="#estilos">
                 Explorar estilos <ArrowUpRight size={17} />
               </a>
@@ -300,12 +301,14 @@ export default function Home() {
                     </span>
                     <h3>{s.title}</h3>
                     <p>{s.text}</p>
-                    <button
+                    <a
                       className="button style-choose"
-                      onClick={() => setBooking(true)}
+                      href={studio.bookingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      Quero esse estilo <ArrowUpRight size={19} />
-                    </button>
+                      Agendar este estilo <ArrowUpRight size={19} />
+                    </a>
                   </div>
                   <div className="style-summary">
                     <p className="summary-label">OS DETALHES DO SEU OLHAR</p>
@@ -424,49 +427,6 @@ export default function Home() {
         <ContactSection />
       </main>
       <SiteFooter />
-      <Dialog open={booking} onOpenChange={setBooking}>
-        <DialogContent className="booking-dialog" showCloseButton={false}>
-          <DialogClose className="dialog-x" aria-label="Fechar">
-            <X />
-          </DialogClose>
-          <span className="eyebrow">SEU MOMENTO DE CUIDADO</span>
-          <DialogTitle className="booking-title">VAMOS CONVERSAR?</DialogTitle>
-          <DialogDescription className="booking-description">
-            Estilo {selected.name.toLowerCase()}. Os detalhes são definidos na
-            avaliação.
-          </DialogDescription>
-          {studio.bookingUrl ? (
-            <a
-              className="button"
-              href={studio.bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Consultar disponibilidade <ArrowUpRight size={18} />
-            </a>
-          ) : (
-            <div className="booking-status">
-              <CalendarDays size={20} />
-              <p>
-                Contato demonstrativo.
-                <br />
-                <span>
-                  Use o formulário para preparar sua mensagem. Os canais reais
-                  serão ativados depois.
-                </span>
-              </p>
-            </div>
-          )}
-          <a
-            className="button"
-            href="#contato"
-            onClick={() => setBooking(false)}
-          >
-            Ir para o formulário <ArrowUpRight size={18} />
-          </a>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
-

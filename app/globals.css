@@ -629,26 +629,6 @@ h2 {
   font-size: 16px !important;
   line-height: 1.6;
 }
-.booking-status {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  border-block: 1px dotted #92928b;
-  padding: 20px 0;
-  margin: 6px 0;
-}
-.booking-status svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-.booking-status p {
-  margin: 0;
-  font-size: 15px;
-}
-.booking-status span {
-  color: #66665f;
-  font-size: 14px;
-}
 @media (min-width: 1500px) {
   .hero {
     padding-top: 40px;
@@ -2018,13 +1998,6 @@ h2 {
   color: #c64308;
   flex-shrink: 0;
 }
-.contact-copy .contact-demo {
-  font-size: 12px !important;
-  line-height: 1.7;
-  max-width: 350px;
-  border-top: 1px dotted #a7a79d;
-  padding-top: 19px;
-}
 .contact-form {
   border-radius: 32px;
   background: #f7f6f2;
@@ -2239,16 +2212,6 @@ h2 {
   display: flex;
   gap: 10px;
   align-items: center;
-}
-.demo-badge {
-  font-size: 11px;
-  color: #aaa999;
-  border: 1px solid #49493e;
-  border-radius: 10px;
-  padding: 7px 10px;
-  line-height: 1.5;
-  margin-top: 3px;
-  align-self: flex-start;
 }
 .footer-signature {
   font-family: Georgia, 'Times New Roman', serif;
@@ -2540,10 +2503,6 @@ h2 {
   .footer-handle {
     font-size: 11px;
   }
-  .demo-badge {
-    font-size: 10px;
-    padding: 6px 8px;
-  }
   .footer-signature {
     font-size: clamp(45px, 11.8vw, 85px);
     gap: 13px;
@@ -2657,7 +2616,7 @@ h2 {
     gap: 24px;
   }
   .experience {
-    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     gap: clamp(40px, 6vw, 140px);
     align-items: start;
   }
@@ -2672,7 +2631,7 @@ h2 {
     max-width: 52ch;
   }
   .faq-section {
-    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: clamp(40px, 6vw, 140px);
     padding-bottom: clamp(68px, 6vw, 112px);
   }
@@ -2693,7 +2652,7 @@ h2 {
     height: clamp(340px, 36vw, 660px);
   }
   .contact-section {
-    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     gap: clamp(40px, 6vw, 140px);
     padding-top: 12px;
     padding-bottom: clamp(64px, 5vw, 96px);
@@ -2772,6 +2731,6 @@ h2 {
     grid-template-columns: 1fr 1fr;
   }
   .footer-columns {
-    grid-template-columns: 1fr 1.4fr 1.25fr .85fr;
+    grid-template-columns: 1fr 1.4fr 1.25fr 0.85fr;
   }
 }

@@ -10,12 +10,7 @@ import {
   DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  studio,
-  composeMessage,
-  contactUrl,
-  type ContactMessage,
-} from '@/lib/studio';
+import { composeMessage, contactUrl, type ContactMessage } from '@/lib/studio';
 export function ContactSection() {
   const [draft, setDraft] = useState<ContactMessage | null>(null);
   const [error, setError] = useState('');
@@ -65,12 +60,6 @@ export function ContactSection() {
             Sua mensagem, com atenção aos detalhes.
           </span>
         </div>
-        {studio.demo && (
-          <p className="contact-demo">
-            Prévia demonstrativa: o formulário prepara a mensagem, mas ainda não
-            envia.
-          </p>
-        )}
       </div>
       <form className="contact-form reveal" onSubmit={submit}>
         <div className="form-heading">
@@ -136,7 +125,7 @@ export function ContactSection() {
           canal de contato.
         </p>
         <button className="button" type="submit">
-          {studio.demo ? 'Prévia da mensagem' : 'Preparar mensagem'}
+          Enviar dúvida
           <ArrowUpRight size={19} />
         </button>
       </form>
@@ -152,27 +141,21 @@ export function ContactSection() {
           </DialogClose>
           <DialogTitle className="booking-title">Sua mensagem</DialogTitle>
           <DialogDescription className="booking-description">
-            {studio.demo
-              ? 'Demonstração: nada foi enviado. Veja como sua mensagem ficará.'
-              : 'Confira os dados antes de continuar. O envio será concluído no canal escolhido.'}
+            Confira os dados antes de continuar. O envio será concluído no
+            WhatsApp.
           </DialogDescription>
           <pre className="message-preview">
             {draft ? composeMessage(draft) : ''}
           </pre>
-          {url ? (
+          {url && (
             <a
               className="button"
               href={url}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {studio.contactMode === 'whatsapp'
-                ? 'Continuar no WhatsApp'
-                : 'Abrir no e-mail'}
-              <ArrowUpRight size={18} />
+              Continuar no WhatsApp <ArrowUpRight size={18} />
             </a>
-          ) : (
-            <DialogClose className="button">Voltar ao formulário</DialogClose>
           )}
         </DialogContent>
       </Dialog>

@@ -1,35 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import {
   ArrowUpRight,
   Camera,
   MessageCircle,
-  Mail,
   MapPin,
   ArrowUp,
   Clock,
-  X,
 } from 'lucide-react';
 import { studio } from '@/lib/studio';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '@/components/ui/dialog';
 export function SiteFooter() {
-  const [demo, setDemo] = useState(false);
   const social = (label: string, href: string, icon: React.ReactNode) =>
-    studio.demo || !href ? (
-      <button onClick={() => setDemo(true)} className="social-link">
-        {icon}
-        {label}
-        <ArrowUpRight size={16} />
-      </button>
-    ) : (
+    href ? (
       <a
         href={href}
         target="_blank"
@@ -40,7 +23,7 @@ export function SiteFooter() {
         {label}
         <ArrowUpRight size={16} />
       </a>
-    );
+    ) : null;
   return (
     <footer className="site-footer">
       <div className="wrap">
@@ -54,13 +37,7 @@ export function SiteFooter() {
           <div className="footer-column">
             <h3>Acompanhe</h3>
             {social('Instagram', studio.instagramUrl, <Camera size={19} />)}
-            {social(
-              'WhatsApp',
-              studio.whatsappNumber
-                ? `https://wa.me/${studio.whatsappNumber}`
-                : '',
-              <MessageCircle size={19} />,
-            )}
+            {social('WhatsApp', studio.bookingUrl, <MessageCircle size={19} />)}
             <span className="footer-handle">{studio.instagram}</span>
           </div>
           <div className="footer-column">
@@ -77,31 +54,13 @@ export function SiteFooter() {
               <Clock size={18} />
               {studio.hours}
             </p>
-            {studio.mapsUrl && !studio.demo && (
-              <a
-                className="footer-map"
-                href={studio.mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Ver no mapa <ArrowUpRight size={16} />
-              </a>
-            )}
           </div>
           <div className="footer-column">
             <h3>Contato</h3>
-            {social(studio.email, `mailto:${studio.email}`, <Mail size={18} />)}
             {social(
               studio.whatsapp,
-              studio.whatsappNumber
-                ? `https://wa.me/${studio.whatsappNumber}`
-                : '',
+              studio.bookingUrl,
               <MessageCircle size={18} />,
-            )}
-            {studio.demo && (
-              <span className="demo-badge">
-                Contatos e endereço demonstrativos
-              </span>
             )}
           </div>
           <nav className="footer-column" aria-label="Links do rodapé">
@@ -123,22 +82,6 @@ export function SiteFooter() {
           </a>
         </div>
       </div>
-      <Dialog open={demo} onOpenChange={setDemo}>
-        <DialogContent className="booking-dialog" showCloseButton={false}>
-          <DialogClose className="dialog-x" aria-label="Fechar">
-            <X />
-          </DialogClose>
-          <DialogTitle className="booking-title">
-            Contato de exemplo
-          </DialogTitle>
-          <DialogDescription className="booking-description">
-            Os canais e o endereço desta prévia são demonstrativos. Os links
-            serão ativados com os dados reais da Lara.
-          </DialogDescription>
-          <DialogClose className="button">Entendi</DialogClose>
-        </DialogContent>
-      </Dialog>
     </footer>
   );
 }
-
