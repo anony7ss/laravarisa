@@ -1,6 +1,10 @@
 'use client';
 /* oxlint-disable next/no-img-element -- Artwork is precompressed to WebP with explicit intrinsic dimensions. */
+import Link from 'next/link';
 import { studio } from '@/lib/studio';
+import { Gallery } from '@/components/gallery';
+import { SiteFooter } from '@/components/site-footer';
+import { ContactSection } from '@/components/contact-section';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Plus, Minus, Menu, X, CalendarDays } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -101,19 +105,89 @@ export default function Home() {
         });
         gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
           gsap.from(el, {
-            y: 36,
+            y: 55,
             opacity: 0,
-            duration: 0.8,
-            scrollTrigger: { trigger: el, start: 'top 92%', once: true },
+            duration: 1,
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 86%',
+              toggleActions: 'play none none reverse',
+            },
           }),
         );
+        gsap.fromTo(
+          '.scroll-progress',
+          { scaleX: 0 },
+          {
+            scaleX: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: root.current,
+              start: 'top top',
+              end: 'bottom bottom',
+              scrub: 0.25,
+            },
+          },
+        );
+        gsap.fromTo(
+          '.hero-art img',
+          { scale: 1.12, yPercent: -3 },
+          {
+            scale: 1.02,
+            yPercent: 3,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.hero',
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 1,
+            },
+          },
+        );
+        gsap.fromTo(
+          '.footer-signature',
+          { xPercent: -5, opacity: 0.35 },
+          {
+            xPercent: 0,
+            opacity: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.site-footer',
+              start: 'top 95%',
+              end: 'bottom bottom',
+              scrub: 1,
+            },
+          },
+        );
+        gsap.fromTo(
+          '.gallery-heading h2',
+          { x: -35 },
+          {
+            x: 0,
+            duration: 1.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: '.gallery-heading',
+              start: 'top 85%',
+              toggleActions: 'play none none reverse',
+            },
+          },
+        );
       }, root);
-      return () => ctx.revert();
+      let alive = true;
+      void document.fonts.ready.then(() => {
+        if (alive) ScrollTrigger.refresh();
+      });
+      return () => {
+        alive = false;
+        ctx.revert();
+      };
     });
     return () => mm.revert();
   }, []);
   return (
     <div ref={root}>
+      <div className="scroll-progress" aria-hidden="true" />
       <a href="#conteudo" className="skip">
         Pular para conteúdo
       </a>
@@ -135,8 +209,11 @@ export default function Home() {
           <a href="#estilos" onClick={() => setMenu(false)}>
             Seu estilo
           </a>
-          <a href="#experiencia" onClick={() => setMenu(false)}>
-            A experiência
+          <a href="#galeria" onClick={() => setMenu(false)}>
+            Galeria
+          </a>
+          <a href="#contato" onClick={() => setMenu(false)}>
+            Contato
           </a>
           <a href="#duvidas" onClick={() => setMenu(false)}>
             Dúvidas
@@ -301,9 +378,25 @@ export default function Home() {
             ))}
           </div>
         </section>
+        <section id="galeria" className="gallery-section wrap section">
+          <div className="section-top gallery-heading reveal">
+            <div>
+              <p className="eyebrow">03 / DE PERTO</p>
+              <h2>
+                DETALHES QUE
+                <br />
+                <em>ENCANTAM.</em>
+              </h2>
+            </div>
+            <Link href="/galeria" className="gallery-all">
+              Ver galeria completa <ArrowUpRight size={20} />
+            </Link>
+          </div>
+          <Gallery />
+        </section>
         <section id="duvidas" className="faq-section wrap section">
           <div className="reveal">
-            <p className="eyebrow">03 / DÚVIDAS</p>
+            <p className="eyebrow">04 / DÚVIDAS</p>
             <h2>
               BOM <em>SABER.</em>
             </h2>
@@ -328,43 +421,9 @@ export default function Home() {
             ))}
           </div>
         </section>
-        <section className="closing wrap reveal">
-          <span className="eyebrow">SEU MOMENTO DE CUIDADO</span>
-          <div className="closing-row">
-            <h2>
-              SEU NOVO OLHAR
-              <br />
-              <span>COMEÇA AQUI.</span>
-            </h2>
-            <button
-              className="button closing-cta"
-              onClick={() => setBooking(true)}
-            >
-              Consultar agenda <ArrowUpRight size={20} />
-            </button>
-          </div>
-        </section>
+        <ContactSection />
       </main>
-      <footer className="wrap footer">
-        <a className="brand" href="#conteudo">
-          <img
-            className="brand-monogram"
-            src="/lv-monogram.svg"
-            width="48"
-            height="48"
-            alt=""
-          />
-          <span className="brand-wordmark">Lara Varisa</span>
-        </a>
-        <p>Lash design, do seu jeito.</p>
-        <a href="#conteudo">De volta ao topo ↑</a>
-        <div className="footer-bottom">
-          <span>
-            © {new Date().getFullYear()} Lara Varisa. Todos os direitos
-            reservados.
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
       <Dialog open={booking} onOpenChange={setBooking}>
         <DialogContent className="booking-dialog" showCloseButton={false}>
           <DialogClose className="dialog-x" aria-label="Fechar">
@@ -389,15 +448,22 @@ export default function Home() {
             <div className="booking-status">
               <CalendarDays size={20} />
               <p>
-                Agendamento online em breve.
+                Contato demonstrativo.
                 <br />
-                <span>O contato do studio estará disponível aqui.</span>
+                <span>
+                  Use o formulário para preparar sua mensagem. Os canais reais
+                  serão ativados depois.
+                </span>
               </p>
             </div>
           )}
-          <DialogClose className="button">
-            Voltar ao site <ArrowUpRight size={18} />
-          </DialogClose>
+          <a
+            className="button"
+            href="#contato"
+            onClick={() => setBooking(false)}
+          >
+            Ir para o formulário <ArrowUpRight size={18} />
+          </a>
         </DialogContent>
       </Dialog>
     </div>
