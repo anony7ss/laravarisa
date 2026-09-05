@@ -1404,3 +1404,100 @@ h2 {
     font-size: 13px;
   }
 }
+
+/* Lara Varisa: a bespoke LV monogram and restrained wordmark. */
+.brand {
+  gap: 13px;
+  letter-spacing: 0;
+  flex-shrink: 0;
+}
+.brand-monogram {
+  width: 48px;
+  height: 48px;
+  display: block;
+  flex-shrink: 0;
+}
+.brand-wordmark {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+.brand-specialty {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: 0.24em;
+  margin-top: 7px;
+  color: #595952;
+}
+.hero-title {
+  font-size: clamp(54px, 6.2vw, 88px);
+}
+@media (min-width: 1500px) {
+  .hero-title {
+    font-size: 90px;
+  }
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .header {
+    gap: 12px;
+  }
+  .header .brand {
+    gap: 8px;
+  }
+  .header .brand-monogram {
+    width: 37px;
+    height: 42px;
+  }
+  .header .brand-wordmark {
+    font-size: 24px;
+  }
+  .header .nav a {
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+  .header-cta {
+    font-size: 13px;
+    padding-inline: 14px;
+  }
+  .hero-title {
+    font-size: 6.1vw;
+  }
+}
+@media (max-width: 760px) {
+  .brand,
+  .header .brand,
+  .footer .brand {
+    gap: 10px;
+  }
+  .brand-monogram {
+    width: 39px;
+    height: 43px;
+  }
+  .brand-wordmark {
+    font-size: 27px;
+  }
+  .brand-specialty {
+    font-size: 9px;
+    margin-top: 5px;
+    letter-spacing: 0.2em;
+  }
+  .hero-title {
+    font-size: clamp(39px, 10.4vw, 68px);
+  }
+  .footer .brand-wordmark {
+    font-size: 25px;
+  }
+}
+@media (max-width: 350px) {
+  .brand-wordmark {
+    font-size: 24px;
+  }
+  .hero-title {
+    font-size: 38px;
+  }
+}

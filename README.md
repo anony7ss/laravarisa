@@ -1,4 +1,4 @@
-# Astra
+# Lara Varisa
 
 React 19 + TypeScript + Vinext/Vite, GSAP e ScrollTrigger. Arte original otimizada em WebP, fontes locais e tokens fornecidos preservados.
 

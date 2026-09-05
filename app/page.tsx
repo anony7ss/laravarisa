@@ -103,16 +103,14 @@ export default function Home() {
             scrub: 1,
           },
         });
-        gsap.utils
-          .toArray<HTMLElement>('.reveal')
-          .forEach((el) =>
-            gsap.from(el, {
-              y: 36,
-              opacity: 0,
-              duration: 0.8,
-              scrollTrigger: { trigger: el, start: 'top 92%', once: true },
-            }),
-          );
+        gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
+          gsap.from(el, {
+            y: 36,
+            opacity: 0,
+            duration: 0.8,
+            scrollTrigger: { trigger: el, start: 'top 92%', once: true },
+          }),
+        );
       }, root);
       return () => ctx.revert();
     });
@@ -124,8 +122,17 @@ export default function Home() {
         Pular para conteúdo
       </a>
       <header className="header wrap">
-        <a href="#conteudo" className="brand" aria-label="Astra início">
-          <span className="brand-star">✳</span> astra
+        <a href="#conteudo" className="brand" aria-label="Lara Varisa — início">
+          <img
+            className="brand-monogram"
+            src="/lv-monogram.svg"
+            width="48"
+            height="48"
+            alt=""
+          />
+          <span className="brand-wordmark">
+            Lara Varisa<span className="brand-specialty">LASH DESIGNER</span>
+          </span>
         </a>
         <nav
           aria-label="Navegação principal"
@@ -160,7 +167,7 @@ export default function Home() {
             <h1 className="hero-title">
               <span>SEU OLHAR.</span>
               <span>
-                SUA <em>ÓRBITA.</em>
+                SUA <em>ESSÊNCIA.</em>
               </span>
             </h1>
             <p className="hero-description">
@@ -177,7 +184,7 @@ export default function Home() {
           </div>
           <div className="hero-art">
             <img
-              src="/astra-eye.webp"
+              src="/lash-art.webp"
               width="1254"
               height="1254"
               alt="Arte gráfica de um olhar com cílios alongados, em laranja e violeta"
@@ -218,7 +225,7 @@ export default function Home() {
                 <div className="style-panel">
                   <div className={'style-visual ' + s.id}>
                     <img
-                      src="/astra-eye.webp"
+                      src="/lash-art.webp"
                       width="1254"
                       height="1254"
                       alt="Ilustração conceitual de cílios; não representa resultado de procedimento"
@@ -317,7 +324,7 @@ export default function Home() {
           </div>
         </section>
         <section className="closing wrap reveal">
-          <span className="eyebrow">SEU MOMENTO ASTRA</span>
+          <span className="eyebrow">SEU MOMENTO DE CUIDADO</span>
           <div className="closing-row">
             <h2>
               SEU NOVO OLHAR
@@ -335,13 +342,23 @@ export default function Home() {
       </main>
       <footer className="wrap footer">
         <a className="brand" href="#conteudo">
-          <span className="brand-star">✳</span> astra
+          <img
+            className="brand-monogram"
+            src="/lv-monogram.svg"
+            width="48"
+            height="48"
+            alt=""
+          />
+          <span className="brand-wordmark">
+            Lara Varisa<span className="brand-specialty">LASH DESIGNER</span>
+          </span>
         </a>
         <p>Lash design, do seu jeito.</p>
         <a href="#conteudo">De volta ao topo ↑</a>
         <div className="footer-bottom">
           <span>
-            © {new Date().getFullYear()} Astra. Todos os direitos reservados.
+            © {new Date().getFullYear()} Lara Varisa. Todos os direitos
+            reservados.
           </span>
         </div>
       </footer>
@@ -350,7 +367,7 @@ export default function Home() {
           <DialogClose className="dialog-x" aria-label="Fechar">
             <X />
           </DialogClose>
-          <span className="eyebrow">SEU MOMENTO ASTRA</span>
+          <span className="eyebrow">SEU MOMENTO DE CUIDADO</span>
           <DialogTitle className="booking-title">VAMOS CONVERSAR?</DialogTitle>
           <DialogDescription className="booking-description">
             Estilo {selected.name.toLowerCase()}. Os detalhes são definidos na
