@@ -3429,6 +3429,8 @@ h2 {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.03em;
+  min-height: 41px;
+  box-sizing: border-box;
 }
 
 .promo-banner-inner {
