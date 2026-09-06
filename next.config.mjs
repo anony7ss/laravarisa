@@ -9,6 +9,15 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Set-Cookie',
+            value: 'nl-hud:public:v1=hidden; Path=/; Max-Age=31536000; SameSite=Lax',
+          },
+        ],
+      },
+      {
         source: '/:all*(svg|jpg|png|webp|avif|woff2|woff)',
         headers: [
           {

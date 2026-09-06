@@ -35,6 +35,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         <PromoBanner />
         {children}
