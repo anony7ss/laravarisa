@@ -178,6 +178,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
             width="1080"
             height="1440"
             loading="lazy"
+            decoding="async"
             style={{
               objectPosition: item.position,
               transform: `scale(${item.zoom})`,

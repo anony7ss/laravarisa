@@ -153,6 +153,8 @@ export default function Home() {
             width="48"
             height="48"
             alt=""
+            loading="eager"
+            decoding="async"
           />
           <span className="brand-wordmark">Lara Varisa</span>
         </Link>
@@ -224,6 +226,7 @@ export default function Home() {
               height="1440"
               alt="Detalhe dos cílios alongados em uma foto de atendimento"
               fetchPriority="high"
+              decoding="async"
             />
           </div>
         </section>
