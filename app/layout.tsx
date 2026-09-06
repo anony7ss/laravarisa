@@ -7,8 +7,6 @@ import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
 
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
@@ -42,8 +40,6 @@ export default function RootLayout({
         {children}
         <CookieBanner />
         <WhatsAppButton />
-        <Analytics />
-        <SpeedInsights />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
