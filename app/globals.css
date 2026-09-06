@@ -177,7 +177,7 @@ h2,
 }
 em {
   font-style: normal;
-  color: var(--color-ember);
+  color: #c73800;
 }
 .hero-description {
   font-size: 17px;
@@ -3510,17 +3510,30 @@ h2 {
 .testimonials-dots {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 8px;
   margin-top: 40px;
 }
 .testimonial-dot {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.testimonial-dot::after {
+  content: '';
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--border);
   transition: background 0.3s, transform 0.3s;
 }
-.testimonial-dot.active {
+.testimonial-dot.active::after {
   background: var(--accent);
   transform: scale(1.3);
 }

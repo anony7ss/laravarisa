@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
 import '@fontsource/anton/latin-400.css';
-import '@fontsource/anton/latin-ext-400.css';
 import '@fontsource/dm-sans/latin-500.css';
 import './globals.css';
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
-
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
@@ -35,14 +33,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <head>
+      <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
             __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");}catch(e){}`,
           }}
         />
-      </head>
-      <body>
         <PromoBanner />
         {children}
         <CookieBanner />

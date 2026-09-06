@@ -101,6 +101,7 @@ export function ServiceCarousel() {
                   href={serviceWhatsAppUrl(service)}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={`Quero agendar ${service.name}`}
                 >
                   Quero este serviço <ArrowUpRight size={19} />
                 </a>

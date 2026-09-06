@@ -42,9 +42,13 @@ export default function Home() {
     return () => window.removeEventListener('keydown', dismiss);
   }, [menu]);
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    const mm = gsap.matchMedia();
-      const ctx = gsap.context(() => {
+    let ctx: gsap.Context | null = null;
+    let alive = true;
+
+    const setupAnimations = () => {
+      if (!alive || !root.current) return;
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
         gsap.from('.hero-title > span', {
           y: 65,
           opacity: 0,
@@ -129,15 +133,27 @@ export default function Home() {
           },
         );
       }, root);
-      let alive = true;
+
       void document.fonts.ready.then(() => {
         if (alive) ScrollTrigger.refresh();
       });
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(setupAnimations, { timeout: 200 });
       return () => {
         alive = false;
-        ctx.revert();
+        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle);
+        ctx?.revert();
       };
-    return () => mm.revert();
+    } else {
+      const timer = setTimeout(setupAnimations, 60);
+      return () => {
+        alive = false;
+        clearTimeout(timer);
+        ctx?.revert();
+      };
+    }
   }, []);
   return (
     <div ref={root}>
@@ -222,6 +238,8 @@ export default function Home() {
           <div className="hero-art">
             <img
               src="/lara-lashes-optimized.webp"
+              srcSet="/lara-lashes-540.webp 540w, /lara-lashes-optimized.webp 1080w"
+              sizes="(max-width: 768px) 100vw, 540px"
               width="1080"
               height="1440"
               alt="Detalhe dos cílios alongados em uma foto de atendimento"
