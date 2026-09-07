@@ -70,28 +70,33 @@ export const gallerySchema = z.object({
   active: z.boolean().default(true),
 });
 
-export const appointmentSchema = z
-  .object({
-    client_id: z.string().uuid().nullable().optional(),
-    lead_id: z.string().uuid().nullable().optional(),
-    service_id: z.string().uuid().nullable().optional(),
-    client_name: cleanText(80).min(2),
-    client_phone: z.string().trim().max(24).default(''),
-    starts_at: z.string().datetime({ offset: true }),
-    ends_at: z.string().datetime({ offset: true }),
-    status: z.enum([
-      'scheduled',
-      'confirmed',
-      'completed',
-      'cancelled',
-      'no_show',
-    ]),
-    notes: z.string().trim().max(2000).default(''),
-  })
-  .refine((data) => new Date(data.ends_at) > new Date(data.starts_at), {
+export const appointmentBaseSchema = z.object({
+  client_id: z.string().uuid().nullable().optional(),
+  lead_id: z.string().uuid().nullable().optional(),
+  service_id: z.string().uuid().nullable().optional(),
+  client_name: cleanText(80).min(2),
+  client_phone: z.string().trim().max(24).default(''),
+  starts_at: z.string().datetime({ offset: true }),
+  ends_at: z.string().datetime({ offset: true }),
+  status: z.enum([
+    'scheduled',
+    'confirmed',
+    'completed',
+    'cancelled',
+    'no_show',
+  ]),
+  notes: z.string().trim().max(2000).default(''),
+});
+
+export const appointmentSchema = appointmentBaseSchema.refine(
+  (data) => new Date(data.ends_at) > new Date(data.starts_at),
+  {
     message: 'O horário final deve ser posterior ao inicial.',
     path: ['ends_at'],
-  });
+  },
+);
+
+export const appointmentUpdateSchema = appointmentBaseSchema.partial();
 
 export const anamnesisSchema = z.object({
   client_name: cleanText(100).min(2),

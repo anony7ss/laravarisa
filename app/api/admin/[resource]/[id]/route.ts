@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getStaffContext } from '@/lib/admin-auth';
 import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 import {
-  appointmentSchema,
+  appointmentUpdateSchema,
   clientSchema,
   gallerySchema,
   leadUpdateSchema,
@@ -11,10 +11,10 @@ import {
 
 const resources = {
   leads: { table: 'leads', schema: leadUpdateSchema },
-  clients: { table: 'clients', schema: clientSchema },
-  appointments: { table: 'appointments', schema: appointmentSchema },
-  services: { table: 'services', schema: serviceSchema },
-  gallery: { table: 'gallery_items', schema: gallerySchema },
+  clients: { table: 'clients', schema: clientSchema.partial() },
+  appointments: { table: 'appointments', schema: appointmentUpdateSchema },
+  services: { table: 'services', schema: serviceSchema.partial() },
+  gallery: { table: 'gallery_items', schema: gallerySchema.partial() },
 } as const;
 
 export async function PATCH(

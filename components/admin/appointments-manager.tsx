@@ -11,6 +11,10 @@ import {
   Trash2,
   X,
   MessageCircle,
+  Kanban,
+  CheckCircle2,
+  RotateCcw,
+  Check,
 } from 'lucide-react';
 import { adminRequest } from './api';
 import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
@@ -22,6 +26,80 @@ const statusLabels: Record<AppointmentRow['status'], string> = {
   cancelled: 'Cancelado',
   no_show: 'Não compareceu',
 };
+
+type KanbanColId = 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+
+const KANBAN_COLUMNS: {
+  id: KanbanColId;
+  title: string;
+  subtitle: string;
+  dotClass: string;
+  targetStatus: AppointmentRow['status'];
+  acceptStatuses: AppointmentRow['status'][];
+}[] = [
+  {
+    id: 'scheduled',
+    title: 'Aguardando',
+    subtitle: 'Confirmação pendente',
+    dotClass: 'scheduled',
+    targetStatus: 'scheduled',
+    acceptStatuses: ['scheduled'],
+  },
+  {
+    id: 'confirmed',
+    title: 'Confirmados',
+    subtitle: 'Presença confirmada',
+    dotClass: 'confirmed',
+    targetStatus: 'confirmed',
+    acceptStatuses: ['confirmed'],
+  },
+  {
+    id: 'completed',
+    title: 'Concluídos',
+    subtitle: 'Atendimento finalizado',
+    dotClass: 'completed',
+    targetStatus: 'completed',
+    acceptStatuses: ['completed'],
+  },
+  {
+    id: 'cancelled',
+    title: 'Cancelados / Faltas',
+    subtitle: 'Cancelados ou faltas',
+    dotClass: 'cancelled',
+    targetStatus: 'cancelled',
+    acceptStatuses: ['cancelled', 'no_show'],
+  },
+];
+
+function formatAppointmentSchedule(startsAt: string) {
+  const d = new Date(startsAt);
+  const now = new Date();
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow =
+    d.getDate() === tomorrow.getDate() &&
+    d.getMonth() === tomorrow.getMonth() &&
+    d.getFullYear() === tomorrow.getFullYear();
+
+  const timeStr = d.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  if (isToday) return `Hoje às ${timeStr}`;
+  if (isTomorrow) return `Amanhã às ${timeStr}`;
+
+  const dateStr = d.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+  return `${dateStr} às ${timeStr}`;
+}
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
@@ -265,6 +343,108 @@ export function AppointmentsManager({
   }
 
   const [deletingAppointment, setDeletingAppointment] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'calendar' | 'kanban'>('calendar');
+  const [kanbanScope, setKanbanScope] = useState<'today' | 'next7' | 'month' | 'all'>('next7');
+  const [dragOverColumn, setDragOverColumn] = useState<KanbanColId | null>(null);
+
+  const serviceMap = useMemo(() => {
+    const map = new Map<string, ServiceRow>();
+    for (const s of services) {
+      map.set(s.id, s);
+    }
+    return map;
+  }, [services]);
+
+  const kanbanCounts = useMemo(() => {
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+    const next7End = todayStart + 7 * 24 * 60 * 60 * 1000;
+
+    let todayCount = 0;
+    let next7 = 0;
+    let inMonth = 0;
+
+    for (const item of items) {
+      const t = new Date(item.starts_at).getTime();
+      if (t >= todayStart && t <= todayEnd) todayCount++;
+      if (t >= todayStart && t <= next7End) next7++;
+      const d = new Date(item.starts_at);
+      if (
+        d.getFullYear() === month.getFullYear() &&
+        d.getMonth() === month.getMonth()
+      ) {
+        inMonth++;
+      }
+    }
+
+    return {
+      today: todayCount,
+      next7,
+      month: inMonth,
+    };
+  }, [items, month, today]);
+
+  const kanbanFilteredItems = useMemo(() => {
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000 - 1;
+    const next7End = todayStart + 7 * 24 * 60 * 60 * 1000;
+
+    return items
+      .filter((item) => {
+        const t = new Date(item.starts_at).getTime();
+        if (kanbanScope === 'today') {
+          return t >= todayStart && t <= todayEnd;
+        }
+        if (kanbanScope === 'next7') {
+          return t >= todayStart && t <= next7End;
+        }
+        if (kanbanScope === 'month') {
+          const d = new Date(item.starts_at);
+          return (
+            d.getFullYear() === month.getFullYear() &&
+            d.getMonth() === month.getMonth()
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  }, [items, kanbanScope, month, today]);
+
+  async function updateStatus(id: string, newStatus: AppointmentRow['status']) {
+    const previous = items;
+    setItems((list) =>
+      list.map((item) =>
+        item.id === id ? { ...item, status: newStatus } : item,
+      ),
+    );
+    try {
+      const saved = await adminRequest<AppointmentRow>(
+        `/api/admin/appointments/${id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        },
+      );
+      setItems((list) =>
+        list.map((item) => (item.id === saved.id ? saved : item)),
+      );
+    } catch (caught) {
+      setItems(previous);
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : 'Não foi possível atualizar o status.',
+      );
+    }
+  }
 
   async function remove(id: string) {
     try {
@@ -313,218 +493,490 @@ export function AppointmentsManager({
     <>
       <section className="admin-calendar-toolbar">
         <div className="admin-calendar-period">
-          <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
-            <ChevronLeft size={18} />
-          </button>
-          <div>
-            <small>CALENDÁRIO</small>
-            <h2>
-              {month.toLocaleDateString('pt-BR', {
-                month: 'long',
-                year: 'numeric',
-              })}
-            </h2>
-          </div>
-          <button onClick={() => changeMonth(1)} aria-label="Próximo mês">
-            <ChevronRight size={18} />
-          </button>
-          <button className="admin-today-button" onClick={goToday}>
-            Hoje
-          </button>
+          {viewMode === 'calendar' ? (
+            <>
+              <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
+                <ChevronLeft size={18} />
+              </button>
+              <div>
+                <small>CALENDÁRIO</small>
+                <h2>
+                  {month.toLocaleDateString('pt-BR', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </h2>
+              </div>
+              <button onClick={() => changeMonth(1)} aria-label="Próximo mês">
+                <ChevronRight size={18} />
+              </button>
+              <button className="admin-today-button" onClick={goToday}>
+                Hoje
+              </button>
+            </>
+          ) : (
+            <div style={{ width: 'auto' }}>
+              <small>QUADRO</small>
+              <h2>Kanban da Agenda</h2>
+            </div>
+          )}
         </div>
-        {role !== 'viewer' && (
-          <button className="admin-primary" onClick={() => openCreate()}>
-            <Plus size={17} /> Novo horário
-          </button>
-        )}
+        <div className="admin-toolbar-actions">
+          <div className="admin-mode-toggle" role="group" aria-label="Modo de visualização">
+            <button
+              type="button"
+              className={viewMode === 'calendar' ? 'active' : ''}
+              onClick={() => setViewMode('calendar')}
+              aria-pressed={viewMode === 'calendar'}
+            >
+              <CalendarDays size={15} />
+              <span>Calendário</span>
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'kanban' ? 'active' : ''}
+              onClick={() => setViewMode('kanban')}
+              aria-pressed={viewMode === 'kanban'}
+            >
+              <Kanban size={15} />
+              <span>Kanban</span>
+            </button>
+          </div>
+          {role !== 'viewer' && (
+            <button className="admin-primary" onClick={() => openCreate()}>
+              <Plus size={17} /> Novo horário
+            </button>
+          )}
+        </div>
       </section>
 
-      <div className="admin-calendar-summary" aria-label="Filtros rápidos e resumo">
-        <button
-          type="button"
-          className={`admin-filter-pill ${quickFilter === 'selected' ? 'active' : ''}`}
-          onClick={() => setQuickFilter('selected')}
-        >
-          Dia ({selectedItems.length})
-        </button>
-        <button
-          type="button"
-          className={`admin-filter-pill ${quickFilter === 'today' ? 'active' : ''}`}
-          onClick={() => goToday()}
-        >
-          Hoje
-        </button>
-        <button
-          type="button"
-          className={`admin-filter-pill ${quickFilter === 'next7' ? 'active' : ''}`}
-          onClick={() => setQuickFilter('next7')}
-        >
-          Próximos 7 dias ({next7Count})
-        </button>
-        <button
-          type="button"
-          className={`admin-filter-pill ${quickFilter === 'scheduled' ? 'active' : ''}`}
-          onClick={() => setQuickFilter('scheduled')}
-        >
-          <i className="scheduled" />
-          <strong>{pending}</strong> aguardando
-        </button>
-        <button
-          type="button"
-          className={`admin-filter-pill ${quickFilter === 'confirmed' ? 'active' : ''}`}
-          onClick={() => setQuickFilter('confirmed')}
-        >
-          <i className="confirmed" />
-          <strong>{confirmed}</strong> confirmados
-        </button>
-      </div>
+      {viewMode === 'kanban' ? (
+        <div className="admin-calendar-summary" aria-label="Filtros do Kanban">
+          <button
+            type="button"
+            className={`admin-filter-pill ${kanbanScope === 'today' ? 'active' : ''}`}
+            onClick={() => setKanbanScope('today')}
+          >
+            Hoje ({kanbanCounts.today})
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${kanbanScope === 'next7' ? 'active' : ''}`}
+            onClick={() => setKanbanScope('next7')}
+          >
+            Próximos 7 dias ({kanbanCounts.next7})
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${kanbanScope === 'month' ? 'active' : ''}`}
+            onClick={() => setKanbanScope('month')}
+          >
+            Este mês ({kanbanCounts.month})
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${kanbanScope === 'all' ? 'active' : ''}`}
+            onClick={() => setKanbanScope('all')}
+          >
+            Todos ({items.length})
+          </button>
+        </div>
+      ) : (
+        <div className="admin-calendar-summary" aria-label="Filtros rápidos e resumo">
+          <button
+            type="button"
+            className={`admin-filter-pill ${quickFilter === 'selected' ? 'active' : ''}`}
+            onClick={() => setQuickFilter('selected')}
+          >
+            Dia ({selectedItems.length})
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${quickFilter === 'today' ? 'active' : ''}`}
+            onClick={() => goToday()}
+          >
+            Hoje
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${quickFilter === 'next7' ? 'active' : ''}`}
+            onClick={() => setQuickFilter('next7')}
+          >
+            Próximos 7 dias ({next7Count})
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${quickFilter === 'scheduled' ? 'active' : ''}`}
+            onClick={() => setQuickFilter('scheduled')}
+          >
+            <i className="scheduled" />
+            <strong>{pending}</strong> aguardando
+          </button>
+          <button
+            type="button"
+            className={`admin-filter-pill ${quickFilter === 'confirmed' ? 'active' : ''}`}
+            onClick={() => setQuickFilter('confirmed')}
+          >
+            <i className="confirmed" />
+            <strong>{confirmed}</strong> confirmados
+          </button>
+        </div>
+      )}
 
       {error && !creating && !editing && (
         <p className="admin-form-error">{error}</p>
       )}
 
-      <div className="admin-calendar-layout admin-calendar-workspace">
-        <section className="admin-month" aria-label="Calendário mensal">
-          <div className="admin-calendar-weekdays">
-            {weekDays.map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-          <div className="admin-calendar-days">
-            {days.map((day) => {
-              const key = dateKey(day);
-              const dayItems = groupedItems.get(key) ?? [];
-              const outside = day.getMonth() !== month.getMonth();
-              const isToday = key === dateKey(today);
-              const selected = key === selectedDate;
-              return (
-                <div
-                  className={`admin-calendar-day ${outside ? 'outside' : ''} ${selected ? 'selected' : ''}`}
-                  key={key}
-                >
-                  <button
-                    className="admin-calendar-day-hit"
-                    onClick={() => {
-                      if (outside)
-                        setMonth(
-                          new Date(day.getFullYear(), day.getMonth(), 1),
-                        );
-                      setSelectedDate(key);
-                      setQuickFilter('selected');
-                    }}
-                    aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayItems.length} horários`}
-                    aria-pressed={selected}
-                  >
-                    <span className={isToday ? 'today' : ''}>
-                      {day.getDate()}
-                    </span>
-                    {dayItems.length > 0 && <i>{dayItems.length}</i>}
-                  </button>
-                  <div className="admin-calendar-events">
-                    {dayItems.slice(0, 3).map((item) => (
-                      <button
+      {viewMode === 'kanban' ? (
+        <div className="admin-kanban-board" role="region" aria-label="Quadro Kanban de agendamentos">
+          {KANBAN_COLUMNS.map((col) => {
+            const colItems = kanbanFilteredItems.filter((item) =>
+              col.acceptStatuses.includes(item.status),
+            );
+            const isDragTarget = dragOverColumn === col.id;
+
+            return (
+              <section
+                key={col.id}
+                className={`admin-kanban-column ${isDragTarget ? 'drag-over' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }}
+                onDragEnter={() => setDragOverColumn(col.id)}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setDragOverColumn(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverColumn(null);
+                  const id = e.dataTransfer.getData('text/plain');
+                  if (id) {
+                    updateStatus(id, col.targetStatus);
+                  }
+                }}
+              >
+                <header className="admin-kanban-column-header">
+                  <div className="admin-kanban-column-title">
+                    <span className={`admin-kanban-dot ${col.dotClass}`} />
+                    <h3>{col.title}</h3>
+                    <span className="admin-kanban-badge">{colItems.length}</span>
+                  </div>
+                  <p>{col.subtitle}</p>
+                </header>
+
+                <div className="admin-kanban-cards">
+                  {colItems.map((item) => {
+                    const service = item.service_id
+                      ? serviceMap.get(item.service_id)
+                      : null;
+                    const waLink = getWhatsAppLink(item);
+                    return (
+                      <article
                         key={item.id}
-                        className={`admin-calendar-event ${item.status}`}
-                        onClick={() => {
-                          setSelectedDate(key);
-                          setQuickFilter('selected');
-                          if (role !== 'viewer') setEditing(item);
+                        className={`admin-kanban-card ${item.status}`}
+                        draggable={role !== 'viewer'}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', item.id);
+                          e.dataTransfer.effectAllowed = 'move';
                         }}
                       >
-                        <time>{timeLabel(item.starts_at)}</time>
-                        <span>{item.client_name}</span>
-                      </button>
-                    ))}
-                    {dayItems.length > 3 && (
-                      <small>+{dayItems.length - 3} horários</small>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                        <div className="admin-kanban-card-top">
+                          <span className="admin-kanban-time">
+                            <Clock3 size={13} />
+                            {formatAppointmentSchedule(item.starts_at)}
+                          </span>
+                          {service && (
+                            <span className="admin-kanban-service-tag">
+                              {service.name}
+                            </span>
+                          )}
+                        </div>
 
-        <aside className="admin-day-panel">
-          <div className="admin-day-panel-head">
-            <span>
-              <CalendarDays size={18} />
-            </span>
-            <div>
-              <small>{quickFilter === 'selected' ? 'SELECIONADO' : 'FILTRO ATIVO'}</small>
-              <h3>{panelTitle}</h3>
+                        <div className="admin-kanban-card-body">
+                          <strong className="admin-kanban-client-name">
+                            {item.client_name}
+                          </strong>
+                          {item.client_phone && (
+                            <div className="admin-kanban-client-phone">
+                              <span>{item.client_phone}</span>
+                              {waLink && (
+                                <a
+                                  href={waLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="admin-kanban-wa-link"
+                                  title="Enviar confirmação no WhatsApp"
+                                  aria-label={`WhatsApp para ${item.client_name}`}
+                                >
+                                  <MessageCircle size={13} />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {item.notes && (
+                            <p className="admin-kanban-notes">
+                              &ldquo;{item.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="admin-kanban-card-footer">
+                          <div className="admin-kanban-quick-actions">
+                            {item.status === 'scheduled' && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="admin-kanban-btn confirm"
+                                  onClick={() => updateStatus(item.id, 'confirmed')}
+                                  title="Confirmar presença"
+                                >
+                                  <Check size={13} /> Confirmar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-kanban-btn cancel"
+                                  onClick={() => updateStatus(item.id, 'cancelled')}
+                                  title="Cancelar horário"
+                                >
+                                  <X size={13} /> Cancelar
+                                </button>
+                              </>
+                            )}
+                            {item.status === 'confirmed' && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="admin-kanban-btn complete"
+                                  onClick={() => updateStatus(item.id, 'completed')}
+                                  title="Marcar como concluído"
+                                >
+                                  <CheckCircle2 size={13} /> Concluir
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-kanban-btn no-show"
+                                  onClick={() => updateStatus(item.id, 'no_show')}
+                                  title="Marcar cliente como falta"
+                                >
+                                  Falta
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-kanban-btn reopen"
+                                  onClick={() => updateStatus(item.id, 'scheduled')}
+                                  title="Voltar para aguardando confirmação"
+                                >
+                                  Voltar
+                                </button>
+                              </>
+                            )}
+                            {item.status === 'completed' && (
+                              <button
+                                type="button"
+                                className="admin-kanban-btn reopen"
+                                onClick={() => updateStatus(item.id, 'confirmed')}
+                                title="Reabrir atendimento"
+                              >
+                                <RotateCcw size={12} /> Reabrir
+                              </button>
+                            )}
+                            {(item.status === 'cancelled' || item.status === 'no_show') && (
+                              <button
+                                type="button"
+                                className="admin-kanban-btn reopen"
+                                onClick={() => updateStatus(item.id, 'scheduled')}
+                                title="Restaurar para aguardando confirmação"
+                              >
+                                <RotateCcw size={12} /> Restaurar
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="admin-kanban-icon-actions">
+                            {role !== 'viewer' && (
+                              <button
+                                type="button"
+                                className="admin-icon-button"
+                                onClick={() => setEditing(item)}
+                                aria-label="Editar horário"
+                                title="Editar"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                            )}
+                            {role === 'admin' && (
+                              <button
+                                type="button"
+                                className="admin-icon-button admin-danger"
+                                onClick={() => remove(item.id)}
+                                aria-label="Excluir horário"
+                                title="Excluir"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {colItems.length === 0 && (
+                    <div className="admin-kanban-empty">
+                      <p>Nenhum agendamento</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="admin-calendar-layout admin-calendar-workspace">
+          <section className="admin-month" aria-label="Calendário mensal">
+            <div className="admin-calendar-weekdays">
+              {weekDays.map((day) => (
+                <span key={day}>{day}</span>
+              ))}
             </div>
-          </div>
-          <div className="admin-day-list">
-            {displayedItems.length ? (
-              displayedItems.map((item) => {
-                const waLink = getWhatsAppLink(item);
+            <div className="admin-calendar-days">
+              {days.map((day) => {
+                const key = dateKey(day);
+                const dayItems = groupedItems.get(key) ?? [];
+                const outside = day.getMonth() !== month.getMonth();
+                const isToday = key === dateKey(today);
+                const selected = key === selectedDate;
                 return (
-                  <article
-                    className={`admin-appointment ${item.status}`}
-                    key={item.id}
+                  <div
+                    className={`admin-calendar-day ${outside ? 'outside' : ''} ${selected ? 'selected' : ''}`}
+                    key={key}
                   >
-                    <div className="admin-appointment-time">
-                      <Clock3 size={15} />
-                      <time>{timeLabel(item.starts_at)}</time>
-                    </div>
-                    <div>
-                      <strong>{item.client_name}</strong>
-                      <p>{statusLabels[item.status]}</p>
-                    </div>
-                    <div className="admin-row-actions">
-                      {waLink && (
-                        <a
-                          href={waLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="admin-icon-button admin-wa-btn"
-                          style={{ color: '#25D366' }}
-                          title="Enviar confirmação no WhatsApp"
-                          aria-label={`Enviar WhatsApp para ${item.client_name}`}
-                        >
-                          <MessageCircle size={15} />
-                        </a>
-                      )}
-                      {role !== 'viewer' && (
+                    <button
+                      className="admin-calendar-day-hit"
+                      onClick={() => {
+                        if (outside)
+                          setMonth(
+                            new Date(day.getFullYear(), day.getMonth(), 1),
+                          );
+                        setSelectedDate(key);
+                        setQuickFilter('selected');
+                      }}
+                      aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayItems.length} horários`}
+                      aria-pressed={selected}
+                    >
+                      <span className={isToday ? 'today' : ''}>
+                        {day.getDate()}
+                      </span>
+                      {dayItems.length > 0 && <i>{dayItems.length}</i>}
+                    </button>
+                    <div className="admin-calendar-events">
+                      {dayItems.slice(0, 3).map((item) => (
                         <button
-                          className="admin-icon-button"
-                          onClick={() => setEditing(item)}
-                          aria-label="Editar horário"
+                          key={item.id}
+                          className={`admin-calendar-event ${item.status}`}
+                          onClick={() => {
+                            setSelectedDate(key);
+                            setQuickFilter('selected');
+                            if (role !== 'viewer') setEditing(item);
+                          }}
                         >
-                          <Edit3 size={15} />
+                          <time>{timeLabel(item.starts_at)}</time>
+                          <span>{item.client_name}</span>
                         </button>
-                      )}
-                      {role === 'admin' && (
-                        <button
-                          className="admin-icon-button admin-danger"
-                          onClick={() => remove(item.id)}
-                          aria-label="Excluir horário"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                      ))}
+                      {dayItems.length > 3 && (
+                        <small>+{dayItems.length - 3} horários</small>
                       )}
                     </div>
-                  </article>
+                  </div>
                 );
-              })
-            ) : (
-              <div className="admin-day-empty">
-                <span>
-                  <CalendarDays size={22} />
-                </span>
-                <strong>Dia livre</strong>
-                <p>Nenhum atendimento marcado.</p>
-                {role !== 'viewer' && (
-                  <button onClick={() => openCreate(selectedDate)}>
-                    Adicionar horário
-                  </button>
-                )}
+              })}
+            </div>
+          </section>
+
+          <aside className="admin-day-panel">
+            <div className="admin-day-panel-head">
+              <span>
+                <CalendarDays size={18} />
+              </span>
+              <div>
+                <small>{quickFilter === 'selected' ? 'SELECIONADO' : 'FILTRO ATIVO'}</small>
+                <h3>{panelTitle}</h3>
               </div>
-            )}
-          </div>
-        </aside>
-      </div>
+            </div>
+            <div className="admin-day-list">
+              {displayedItems.length ? (
+                displayedItems.map((item) => {
+                  const waLink = getWhatsAppLink(item);
+                  return (
+                    <article
+                      className={`admin-appointment ${item.status}`}
+                      key={item.id}
+                    >
+                      <div className="admin-appointment-time">
+                        <Clock3 size={15} />
+                        <time>{timeLabel(item.starts_at)}</time>
+                      </div>
+                      <div>
+                        <strong>{item.client_name}</strong>
+                        <p>{statusLabels[item.status]}</p>
+                      </div>
+                      <div className="admin-row-actions">
+                        {waLink && (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="admin-icon-button admin-wa-btn"
+                            style={{ color: '#25D366' }}
+                            title="Enviar confirmação no WhatsApp"
+                            aria-label={`Enviar WhatsApp para ${item.client_name}`}
+                          >
+                            <MessageCircle size={15} />
+                          </a>
+                        )}
+                        {role !== 'viewer' && (
+                          <button
+                            className="admin-icon-button"
+                            onClick={() => setEditing(item)}
+                            aria-label="Editar horário"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        )}
+                        {role === 'admin' && (
+                          <button
+                            className="admin-icon-button admin-danger"
+                            onClick={() => remove(item.id)}
+                            aria-label="Excluir horário"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <div className="admin-day-empty">
+                  <span>
+                    <CalendarDays size={22} />
+                  </span>
+                  <strong>Dia livre</strong>
+                  <p>Nenhum atendimento marcado.</p>
+                  {role !== 'viewer' && (
+                    <button onClick={() => openCreate(selectedDate)}>
+                      Adicionar horário
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
 
       {(creating || editing) && (
         <div className="admin-modal-backdrop" role="presentation">
