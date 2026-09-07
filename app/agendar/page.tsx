@@ -2,31 +2,48 @@
 
 import { useState, useEffect } from 'react';
 import {
-  ArrowUpRight,
+  ArrowLeft,
+  ArrowRight,
   Clock3,
   CalendarDays,
   Loader2,
   AlertCircle,
   MapPin,
   Check,
+  Sparkles,
+  MessageCircle,
+  ArrowUpRight,
+  RotateCcw,
 } from 'lucide-react';
 import { ServiceSelector, type ServiceItem } from '@/components/booking/service-selector';
 import { DateTimePicker, type TimeSlot } from '@/components/booking/datetime-picker';
 import { ClientForm, type ClientFormData } from '@/components/booking/client-form';
 import { StudioCard } from '@/components/booking/studio-card';
-import { BookingSuccessModal, type BookingResult } from '@/components/booking/booking-success-modal';
 import { MyAppointmentsSheet } from '@/components/booking/my-appointments-sheet';
 import { services as defaultFallbackServices } from '@/lib/services';
+import { whatsappUrl } from '@/lib/studio';
 
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
 
+export type BookingResult = {
+  id: string;
+  service_name: string;
+  service_price: string;
+  duration_label: string;
+  starts_at: string;
+  ends_at: string;
+  client_name: string;
+  client_phone: string;
+};
+
 export default function AgendarPage() {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
 
-  // Tomorrow by default
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -100,33 +117,40 @@ export default function AgendarPage() {
     };
   }, []);
 
-  // Form Submit
+  // Scroll to top whenever step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
+  // Submit Booking
   async function handleSubmitBooking() {
     setSubmitError('');
 
     if (!selectedService) {
-      setSubmitError('Por favor, escolha um procedimento no Passo 01.');
+      setSubmitError('Por favor, selecione um procedimento.');
+      setStep(1);
       return;
     }
 
     if (!selectedSlot) {
-      setSubmitError('Por favor, escolha um horário disponível no Passo 02.');
+      setSubmitError('Por favor, selecione um horário.');
+      setStep(2);
       return;
     }
 
     if (!clientData.name.trim() || clientData.name.trim().length < 2) {
-      setSubmitError('Por favor, digite seu nome completo.');
+      setSubmitError('Por favor, informe seu nome completo.');
       return;
     }
 
     const cleanPhone = clientData.phone.replace(/\D/g, '');
     if (cleanPhone.length < 10) {
-      setSubmitError('Por favor, digite seu WhatsApp com DDD.');
+      setSubmitError('Por favor, informe seu WhatsApp com DDD.');
       return;
     }
 
     if (clientData.isVip && !clientData.email.trim()) {
-      setSubmitError('Para ativar seu desconto de 10% VIP, informe seu e-mail.');
+      setSubmitError('Para ativar o desconto de 10% VIP, informe seu e-mail.');
       return;
     }
 
@@ -165,31 +189,43 @@ export default function AgendarPage() {
       }
 
       setSuccessBooking(data.data);
+      setStep(4); // Advance to confirmation screen
     } catch {
-      setSubmitError('Erro de comunicação. Por favor, tente novamente.');
+      setSubmitError('Erro de conexão com o servidor. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
   }
 
+  // Google Calendar Link generator
+  function getGoogleCalLink(b: BookingResult) {
+    const startDate = new Date(b.starts_at);
+    const toGCalIso = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const gcalDates = `${toGCalIso(startDate)}/${toGCalIso(new Date(b.ends_at))}`;
+    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'VIP';
+    const gcalTitle = encodeURIComponent(`Lara Varisa · ${b.service_name}`);
+    const gcalDetails = encodeURIComponent(`Agendamento de Cílios com Lara Varisa (Reserva #${code}).`);
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${encodeURIComponent('Zona Norte, Porto Alegre - RS')}`;
+  }
+
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[var(--color-pumice)] text-[var(--color-obsidian)]">
-      {/* Editorial Header */}
-      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-30 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      {/* Header */}
+      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 py-3.5">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/lv-monogram.svg"
-              width="36"
-              height="36"
+              width="34"
+              height="34"
               alt="Lara Varisa"
-              className="w-9 h-9"
+              className="w-8 h-8 md:w-9 md:h-9"
             />
             <div className="flex items-baseline gap-1.5">
-              <span className="font-[family-name:var(--font-display)] text-2xl uppercase tracking-tight text-[var(--color-obsidian)]">
+              <span className="font-[family-name:var(--font-display)] text-xl md:text-2xl uppercase tracking-tight text-[var(--color-obsidian)]">
                 Lara Varisa
               </span>
-              <span className="text-[11px] font-mono text-[var(--color-ember)] font-bold">
+              <span className="text-[10px] md:text-[11px] font-mono text-[var(--color-ember)] font-bold">
                 · AGENDAMENTO
               </span>
             </div>
@@ -198,167 +234,365 @@ export default function AgendarPage() {
           <button
             type="button"
             onClick={() => setShowMyAppointments(true)}
-            className="text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-4 py-2 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-3.5 py-1.5 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <CalendarDays size={14} />
+            <CalendarDays size={13} />
             <span>Meus agendamentos</span>
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 md:py-12 space-y-10">
-        {/* Editorial Hero Intro */}
-        <section className="space-y-2">
-          <p className="text-[12px] font-mono font-bold tracking-[0.2em] text-[var(--color-ember)] uppercase">
-            ATELIER EXCLUSIVO · ZONA NORTE DE PORTO ALEGRE
-          </p>
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-[family-name:var(--font-display)] uppercase tracking-tight leading-[0.95] text-[var(--color-obsidian)]">
-            Agendar Horário
-          </h1>
-          <p className="text-[#595952] text-sm md:text-base max-w-lg">
-            Escolha seu procedimento e reserve seu horário em poucos cliques. Atendimento individualizado e personalizado.
-          </p>
-        </section>
+      {/* Main Multi-Step Wizard */}
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 md:py-10 space-y-8">
+        {/* Progress Bar (Visible on Steps 1, 2, 3) */}
+        {step < 4 && (
+          <div className="space-y-3">
+            {/* Step indicators */}
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                  step === 1 ? 'text-[var(--color-obsidian)] font-bold' : 'text-[#8c8c84] hover:text-[var(--color-obsidian)]'
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  step === 1 ? 'bg-[var(--color-obsidian)] text-white' : step > 1 ? 'bg-[var(--color-ember)] text-white' : 'bg-[#cfcfc9] text-white'
+                }`}>
+                  {step > 1 ? <Check size={11} strokeWidth={3} /> : '1'}
+                </span>
+                <span>Procedimento</span>
+              </button>
 
-        {/* Step 1: Services */}
-        <section>
-          {loadingServices ? (
-            <div className="py-12 flex items-center justify-center gap-2 text-xs text-[#595952]">
-              <Loader2 size={18} className="animate-spin text-[var(--color-ember)]" />
-              <span>Carregando opções...</span>
+              <div className="h-px flex-1 mx-3 bg-[#cfcfc9]" />
+
+              <button
+                type="button"
+                disabled={!selectedService}
+                onClick={() => setStep(2)}
+                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                  step === 2 ? 'text-[var(--color-obsidian)] font-bold' : step > 2 ? 'text-[#8c8c84]' : 'text-[#8c8c84] opacity-60'
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  step === 2 ? 'bg-[var(--color-obsidian)] text-white' : step > 2 ? 'bg-[var(--color-ember)] text-white' : 'bg-[#cfcfc9] text-white'
+                }`}>
+                  {step > 2 ? <Check size={11} strokeWidth={3} /> : '2'}
+                </span>
+                <span>Data & Hora</span>
+              </button>
+
+              <div className="h-px flex-1 mx-3 bg-[#cfcfc9]" />
+
+              <button
+                type="button"
+                disabled={!selectedSlot}
+                onClick={() => setStep(3)}
+                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                  step === 3 ? 'text-[var(--color-obsidian)] font-bold' : 'text-[#8c8c84] opacity-60'
+                }`}
+              >
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                  step === 3 ? 'bg-[var(--color-obsidian)] text-white' : 'bg-[#cfcfc9] text-white'
+                }`}>
+                  3
+                </span>
+                <span>Seus Dados</span>
+              </button>
             </div>
-          ) : (
+
+            {/* Back button & Selected Summary Chip */}
+            {step > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#595952] hover:text-[var(--color-obsidian)] cursor-pointer"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Voltar etapa</span>
+                </button>
+
+                {selectedService && (
+                  <div className="text-xs text-[#595952] bg-[var(--color-limestone)] px-3 py-1.5 rounded-full border border-[#d6d6cf] flex items-center gap-2">
+                    <span className="font-semibold text-[var(--color-obsidian)]">
+                      {selectedService.name}
+                    </span>
+                    <span>·</span>
+                    <span className="text-[var(--color-ember)] font-bold">
+                      {selectedService.price}
+                    </span>
+                    {step === 3 && selectedSlot && (
+                      <>
+                        <span>·</span>
+                        <span>{selectedDateStr.split('-').reverse().slice(0, 2).join('/')} às {selectedSlot.time}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 1: Escolha o Procedimento */}
+        {step === 1 && (
+          <div className="space-y-6 animate-in fade-in duration-200">
             <ServiceSelector
               services={services}
               selectedService={selectedService}
-              onSelectService={(s) => setSelectedService(s)}
+              onSelectService={(s) => {
+                setSelectedService(s);
+              }}
             />
-          )}
-        </section>
 
-        {/* Step 2: Date & Time */}
-        <section>
-          <DateTimePicker
-            durationMinutes={selectedService?.durationMinutes || 120}
-            selectedDateStr={selectedDateStr}
-            selectedSlot={selectedSlot}
-            onSelectDate={(d) => {
-              setSelectedDateStr(d);
-              setSelectedSlot(null);
-            }}
-            onSelectSlot={(slot) => setSelectedSlot(slot)}
-          />
-        </section>
+            {/* Bottom Action for Step 1 */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#cfcfc9]">
+              <div>
+                <p className="text-xs text-[#595952]">
+                  Procedimento selecionado:
+                </p>
+                <p className="text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
+                  {selectedService ? `${selectedService.name} (${selectedService.price})` : 'Escolha um serviço acima'}
+                </p>
+              </div>
 
-        {/* Step 3: Client Info */}
-        <section>
-          <ClientForm
-            formData={clientData}
-            onChange={(newData) => setClientData(newData)}
-          />
-        </section>
+              <button
+                type="button"
+                disabled={!selectedService}
+                onClick={() => setStep(2)}
+                className="w-full sm:w-auto py-3.5 px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+              >
+                <span>ESCOLHER DATA E HORA</span>
+                <ArrowRight size={17} />
+              </button>
+            </div>
+          </div>
+        )}
 
-        {/* Studio Location & Policies */}
-        <section>
-          <StudioCard />
-        </section>
+        {/* STEP 2: Escolha Data e Horário */}
+        {step === 2 && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <DateTimePicker
+              durationMinutes={selectedService?.durationMinutes || 120}
+              selectedDateStr={selectedDateStr}
+              selectedSlot={selectedSlot}
+              onSelectDate={(d) => {
+                setSelectedDateStr(d);
+                setSelectedSlot(null);
+              }}
+              onSelectSlot={(slot) => {
+                setSelectedSlot(slot);
+              }}
+            />
 
-        {/* Floating / Sticky Order Summary & CTA */}
-        <section className="bg-[var(--color-obsidian)] text-[var(--color-limestone)] p-6 md:p-8 rounded-[36px] shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-            <div>
-              <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--color-sulfur)] font-mono block">
-                Resumo do Agendamento
-              </span>
-              <h3 className="text-xl md:text-2xl font-[family-name:var(--font-display)] uppercase tracking-tight text-white mt-0.5">
-                {selectedService ? selectedService.name : 'Selecione um serviço'}
-              </h3>
-              <div className="flex items-center gap-3 text-xs text-[#c2c2bc] mt-1">
-                {selectedSlot ? (
-                  <span className="flex items-center gap-1.5 text-white font-medium">
-                    <CalendarDays size={13} className="text-[var(--color-ember)]" />
-                    {selectedDateStr.split('-').reverse().join('/')} às {selectedSlot.time}
+            {/* Bottom Action for Step 2 */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#cfcfc9]">
+              <div>
+                <p className="text-xs text-[#595952]">
+                  Horário selecionado:
+                </p>
+                <p className="text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
+                  {selectedSlot ? `${selectedDateStr.split('-').reverse().join('/')} às ${selectedSlot.time}` : 'Clique em um horário acima'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={!selectedSlot}
+                onClick={() => setStep(3)}
+                className="w-full sm:w-auto py-3.5 px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+              >
+                <span>CONTINUAR PARA SEUS DADOS</span>
+                <ArrowRight size={17} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Seus Dados & Confirmação Final */}
+        {step === 3 && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <ClientForm
+              formData={clientData}
+              onChange={(newData) => setClientData(newData)}
+            />
+
+            {/* Studio location & rules reminder */}
+            <StudioCard />
+
+            {/* Final Order Summary Card & Confirm Button */}
+            <div className="bg-[var(--color-obsidian)] text-[var(--color-limestone)] p-6 md:p-8 rounded-[36px] shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--color-sulfur)] font-mono block">
+                    Resumo do Agendamento
                   </span>
+                  <h3 className="text-xl md:text-2xl font-[family-name:var(--font-display)] uppercase tracking-tight text-white mt-0.5">
+                    {selectedService?.name}
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs text-[#c2c2bc] mt-1">
+                    <span className="flex items-center gap-1 text-white">
+                      <CalendarDays size={13} className="text-[var(--color-ember)]" />
+                      {selectedDateStr.split('-').reverse().join('/')} às {selectedSlot?.time}
+                    </span>
+                    <span className="flex items-center gap-1 text-[#8c8c84]">
+                      <Clock3 size={13} />
+                      {selectedService?.duration}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="sm:text-right">
+                  <span className="text-[11px] text-[#8c8c84] block uppercase">
+                    {clientData.isVip ? 'Valor (10% OFF aplicado)' : 'Investimento'}
+                  </span>
+                  <span className="text-2xl md:text-3xl font-[family-name:var(--font-display)] font-bold text-[var(--color-sulfur)]">
+                    {selectedService?.price}
+                  </span>
+                </div>
+              </div>
+
+              {submitError && (
+                <div className="p-3.5 rounded-2xl bg-[#3d1109] border border-rose-600/40 text-rose-200 text-xs flex items-center gap-2">
+                  <AlertCircle size={16} className="shrink-0 text-rose-400" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSubmitBooking}
+                className="w-full py-4 px-6 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-base md:text-lg tracking-wide flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Gravando seu agendamento no atelier...</span>
+                  </>
                 ) : (
-                  <span className="text-amber-300">
-                    Selecione um horário acima
-                  </span>
+                  <>
+                    <span>CONFIRMAR AGENDAMENTO</span>
+                    <ArrowUpRight size={20} />
+                  </>
                 )}
-                {selectedService && (
-                  <span className="flex items-center gap-1 text-[#8c8c84]">
-                    <Clock3 size={13} />
-                    {selectedService.duration}
-                  </span>
-                )}
+              </button>
+
+              <p className="text-center text-[11px] text-[#8c8c84]">
+                Você paga apenas no dia do atendimento. Cancelamento gratuito com até 24h de antecedência.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Tela de Sucesso / Comprovante do Agendamento */}
+        {step === 4 && successBooking && (
+          <div className="bg-[var(--color-limestone)] p-6 md:p-10 rounded-[36px] border border-[#d6d6cf] shadow-xl text-center space-y-6 max-w-xl mx-auto animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 mx-auto rounded-full bg-[var(--color-ember)] text-white flex items-center justify-center shadow-md">
+              <Check size={30} strokeWidth={3} />
+            </div>
+
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-ember)] font-mono block">
+                Reserva Realizada com Sucesso
+              </span>
+              <h2 className="text-3xl md:text-4xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-1">
+                Aguardamos você, {successBooking.client_name.split(' ')[0]}!
+              </h2>
+              <p className="text-xs text-[#595952] max-w-sm mx-auto mt-1">
+                Seu horário foi agendado no sistema do atelier. Confirme pelo WhatsApp para receber o endereço exato.
+              </p>
+            </div>
+
+            {/* Voucher Details */}
+            <div className="p-5 rounded-[24px] bg-white border border-[#d6d6cf] space-y-3 text-xs text-left">
+              <div className="flex items-center justify-between pb-3 border-b border-[#e2e2df]">
+                <span className="text-[#595952]">Código da Reserva</span>
+                <span className="font-mono font-bold text-sm text-[var(--color-obsidian)]">
+                  #{successBooking.id.slice(0, 8).toUpperCase()}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[#595952]">Procedimento</span>
+                <strong className="text-[var(--color-obsidian)] text-sm">{successBooking.service_name}</strong>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[#595952]">Data & Horário</span>
+                <span className="font-semibold text-[var(--color-obsidian)] capitalize">
+                  {new Date(successBooking.starts_at).toLocaleDateString('pt-BR', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                  })} às {new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[#595952]">Duração estimada</span>
+                <span className="text-[#595952]">{successBooking.duration_label}</span>
+              </div>
+
+              <div className="pt-2 border-t border-[#e2e2df] text-[11px] text-[#595952] flex items-center gap-1.5">
+                <MapPin size={13} className="text-[var(--color-ember)] shrink-0" />
+                <span>Atelier Zona Norte, Porto Alegre - RS (Instruções no WhatsApp)</span>
               </div>
             </div>
 
-            <div className="sm:text-right">
-              <span className="text-[11px] text-[#8c8c84] block uppercase">
-                {clientData.isVip ? 'Valor com 10% OFF' : 'Valor'}
-              </span>
-              <span className="text-2xl md:text-3xl font-[family-name:var(--font-display)] font-bold text-[var(--color-sulfur)]">
-                {selectedService?.price || 'R$ 0'}
-              </span>
+            {/* CTAs */}
+            <div className="space-y-3">
+              <a
+                href={whatsappUrl(`Olá, Lara! Acabei de agendar pelo site o procedimento ${successBooking.service_name} (Reserva #${successBooking.id.slice(0, 8).toUpperCase()}). Aguardo o endereço e orientações!`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 px-6 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-medium text-sm flex items-center justify-center gap-2 shadow-md transition-transform active:scale-[0.99] cursor-pointer"
+              >
+                <MessageCircle size={18} />
+                <span>Confirmar no WhatsApp da Lara</span>
+              </a>
+
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={getGoogleCalLink(successBooking)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-4 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>Google Agenda</span>
+                  <ArrowUpRight size={13} />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep(1);
+                    setSelectedSlot(null);
+                    setSuccessBooking(null);
+                  }}
+                  className="py-2.5 px-4 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RotateCcw size={13} />
+                  <span>Novo Agendamento</span>
+                </button>
+              </div>
             </div>
           </div>
-
-          {submitError && (
-            <div className="p-3.5 rounded-2xl bg-[#3d1109] border border-rose-600/40 text-rose-200 text-xs flex items-center gap-2">
-              <AlertCircle size={16} className="shrink-0 text-rose-400" />
-              <span>{submitError}</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={handleSubmitBooking}
-            className="w-full py-4 px-6 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-base md:text-lg tracking-wide flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={20} className="animate-spin" />
-                <span>Confirmando agendamento...</span>
-              </>
-            ) : (
-              <>
-                <span>CONFIRMAR AGENDAMENTO</span>
-                <ArrowUpRight size={20} />
-              </>
-            )}
-          </button>
-
-          <p className="text-center text-[11px] text-[#8c8c84]">
-            Pagamento somente no dia do atendimento. Cancelamento gratuito com até 24h de antecedência.
-          </p>
-        </section>
+        )}
       </main>
 
-      {/* Editorial Footer */}
+      {/* Footer */}
       <footer className="border-t border-[#cfcfc9] py-8 px-6 text-center text-xs text-[#595952] bg-[var(--color-pumice)]">
-        <div className="max-w-5xl mx-auto space-y-1">
+        <div className="max-w-4xl mx-auto space-y-1">
           <p className="font-[family-name:var(--font-display)] text-sm uppercase tracking-wide text-[var(--color-obsidian)]">
             Lara Varisa Lash Atelier · Porto Alegre, RS
           </p>
           <p className="text-[11px] text-[#7a7a72]">
-            Atendimento exclusivo com hora marcada na Zona Norte.
+            Atendimento com hora marcada na Zona Norte de Porto Alegre.
           </p>
         </div>
       </footer>
-
-      {/* Success Modal */}
-      {successBooking && (
-        <BookingSuccessModal
-          booking={successBooking}
-          onClose={() => setSuccessBooking(null)}
-          onOpenMyAppointments={() => {
-            setSuccessBooking(null);
-            setShowMyAppointments(true);
-          }}
-        />
-      )}
 
       {/* My Appointments Drawer */}
       <MyAppointmentsSheet
