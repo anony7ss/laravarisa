@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { usePublicSettings } from '@/lib/public-content';
-import { Info, X, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Info, X, CheckCircle2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export function PromoBanner() {
@@ -54,10 +54,6 @@ export function PromoBanner() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="promo-modal-header">
-              <div className="promo-modal-badge">
-                <Sparkles size={14} />
-                <span>BENEFÍCIO EXCLUSIVO</span>
-              </div>
               <button
                 type="button"
                 className="promo-modal-close"
