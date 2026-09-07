@@ -50,34 +50,69 @@ export default function Home() {
       if (!alive || !root.current) return;
       gsap.registerPlugin(ScrollTrigger);
       ctx = gsap.context(() => {
-        gsap.from('.hero-title > span', {
-          y: 65,
-          opacity: 0,
-          duration: 1,
-          stagger: 0.12,
-          ease: 'power3.out',
-        });
-        gsap.from('.hero-art', {
-          scale: 0.94,
-          opacity: 0,
-          duration: 1.2,
-          ease: 'power2.out',
-        });
+        // High-end editorial entrance
+        const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+        heroTl
+          .fromTo(
+            '.hero-copy .eyebrow',
+            { opacity: 0, y: 12, letterSpacing: '0.2em' },
+            { opacity: 1, y: 0, letterSpacing: '0.1em', duration: 0.8 },
+          )
+          .fromTo(
+            '.hero-title > span',
+            { yPercent: 100, opacity: 0 },
+            {
+              yPercent: 0,
+              opacity: 1,
+              duration: 1.1,
+              stagger: 0.12,
+              ease: 'power4.out',
+            },
+            '-=0.5',
+          )
+          .fromTo(
+            '.hero-description',
+            { y: 18, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.9 },
+            '-=0.7',
+          )
+          .fromTo(
+            '.hero-actions',
+            { y: 16, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.8 },
+            '-=0.6',
+          )
+          .fromTo(
+            '.hero-art img',
+            { scale: 1.06 },
+            { scale: 1, duration: 1.5, ease: 'power2.out' },
+            0,
+          );
 
         const setupScrollTriggers = () => {
           if (!alive || !root.current) return;
+
+          // Silky, non-jittery section reveal
           gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
-            gsap.from(el, {
-              y: 55,
-              opacity: 0,
-              duration: 1,
-              scrollTrigger: {
-                trigger: el,
-                start: 'top 86%',
-                toggleActions: 'play none none reverse',
+            gsap.fromTo(
+              el,
+              { y: 28, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 1.1,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: el,
+                  start: 'top 88%',
+                  toggleActions: 'play none none none',
+                },
               },
-            }),
+            ),
           );
+
+          // Subtle progress bar
           gsap.fromTo(
             '.scroll-progress',
             { scaleX: 0 },
@@ -92,50 +127,40 @@ export default function Home() {
               },
             },
           );
+
+          // Subtle hero parallax on scroll
           gsap.fromTo(
             '.hero-art img',
-            { scale: 1.12, yPercent: -3 },
+            { yPercent: 0 },
             {
-              scale: 1.02,
-              yPercent: 3,
+              yPercent: 6,
               ease: 'none',
               scrollTrigger: {
                 trigger: '.hero',
                 start: 'top top',
                 end: 'bottom top',
-                scrub: 1,
+                scrub: 1.2,
               },
             },
           );
+
+          // Signature reveal in footer
           gsap.fromTo(
             '.footer-signature',
-            { xPercent: -5, opacity: 0.35 },
+            { y: 30, opacity: 0.2 },
             {
-              xPercent: 0,
+              y: 0,
               opacity: 1,
-              ease: 'none',
+              ease: 'power2.out',
+              duration: 1.2,
               scrollTrigger: {
                 trigger: '.site-footer',
-                start: 'top 95%',
-                end: 'bottom bottom',
-                scrub: 1,
+                start: 'top 90%',
+                toggleActions: 'play none none none',
               },
             },
           );
-          gsap.fromTo(
-            '.gallery-heading h2',
-            { x: -35 },
-            {
-              x: 0,
-              duration: 1.1,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: '.gallery-heading',
-                start: 'top 85%',
-                toggleActions: 'play none none reverse',
-              },
-            },
-          );
+
           void document.fonts.ready.then(() => {
             if (alive) ScrollTrigger.refresh();
           });

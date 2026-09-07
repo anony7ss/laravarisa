@@ -47,6 +47,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${anton.variable} ${dmSans.variable}`}>
+      <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/lara-lashes-400.webp"
+          type="image/webp"
+          media="(max-width: 640px)"
+          fetchPriority="high"
+        />
+      </head>
       <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
