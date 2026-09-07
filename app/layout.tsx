@@ -1,7 +1,20 @@
 import type { Metadata } from 'next';
-import '@fontsource/anton/latin-400.css';
-import '@fontsource/dm-sans/latin-500.css';
+import { Anton, DM_Sans } from 'next/font/google';
 import './globals.css';
+
+const anton = Anton({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+});
+
+const dmSans = DM_Sans({
+  weight: ['400', '500'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+});
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
@@ -32,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={`${anton.variable} ${dmSans.variable}`}>
       <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{

@@ -235,16 +235,18 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-art">
-            <img
-              src="/lara-lashes-optimized.webp"
-              srcSet="/lara-lashes-400.webp 400w, /lara-lashes-720.webp 720w, /lara-lashes-optimized.webp 960w"
-              sizes="(max-width: 640px) 380px, (max-width: 1024px) 520px, 600px"
-              width="960"
-              height="1280"
-              alt="Detalhe dos cílios alongados em uma foto de atendimento"
-              fetchPriority="high"
-              decoding="async"
-            />
+            <picture>
+              <source media="(max-width: 640px)" srcSet="/lara-lashes-400.webp" />
+              <source media="(max-width: 1024px)" srcSet="/lara-lashes-720.webp" />
+              <img
+                src="/lara-lashes-optimized.webp"
+                width="960"
+                height="1280"
+                alt="Detalhe dos cílios alongados em uma foto de atendimento"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
           </div>
         </section>
 

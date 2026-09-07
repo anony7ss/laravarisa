@@ -1,16 +1,16 @@
 @import 'tailwindcss';
 @import './design-tokens.css';
 :root {
-  --font-display: 'Anton', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-display: var(--font-display), 'Anton', sans-serif;
+  --font-body: var(--font-body), 'DM Sans', sans-serif;
   --background: #e2e2df;
   --foreground: #070607;
   --popover: #f7f6f2;
   --popover-foreground: #070607;
-  --muted-foreground: #555550;
-  --accent: #b03200;
+  --muted-foreground: #4b4b46;
+  --accent: #a02c00;
   --fg: #070607;
-  --fg-muted: #555550;
+  --fg-muted: #4b4b46;
   --border: #b5b5ac;
 }
 * {
@@ -181,7 +181,7 @@ h2,
 }
 em {
   font-style: normal;
-  color: #b03200;
+  color: #a02c00;
 }
 .hero-description {
   font-size: 17px;
@@ -226,6 +226,9 @@ em {
   position: relative;
   overflow: hidden;
   background: #524ae9;
+}
+.hero-art picture {
+  display: contents;
 }
 .hero-art img {
   width: 100%;
@@ -479,7 +482,7 @@ h2 {
   margin-bottom: 13px;
 }
 .step p {
-  color: #555550;
+  color: #4b4b46;
   max-width: 380px;
   margin: 0;
 }
@@ -519,7 +522,7 @@ h2 {
 }
 .faq p {
   font-size: 15px;
-  color: #555550;
+  color: #4b4b46;
   padding: 0 35px 20px 0;
   margin: 0;
 }
@@ -1833,7 +1836,7 @@ h2 {
 .gallery-caption small {
   display: block;
   font-size: 12px;
-  color: #65655d;
+  color: #4b4b46;
   margin-top: 5px;
 }
 .gallery-controls {
@@ -1845,7 +1848,7 @@ h2 {
 }
 .gallery-controls > p {
   font-size: 13px;
-  color: #62625b;
+  color: #4b4b46;
   margin: 0;
 }
 .gallery-buttons {
@@ -2059,17 +2062,17 @@ h2 {
 }
 .contact-form input::placeholder,
 .contact-form textarea::placeholder {
-  color: #76766e;
+  color: #4b4b46;
   font-size: 14px;
 }
 .optional {
-  color: #696960;
+  color: #4b4b46;
   font-size: 12px;
 }
 .form-privacy {
   font-size: 12px;
   line-height: 1.65;
-  color: #6b6b61;
+  color: #4b4b46;
   margin: 0;
 }
 .contact-form .button {
@@ -2207,7 +2210,7 @@ h2 {
   align-items: flex-start;
   font-size: 12px;
   line-height: 1.7;
-  color: #9e9e94;
+  color: #b5b5ac;
   margin: 0;
 }
 .footer-hours svg {
@@ -2252,7 +2255,7 @@ h2 {
   justify-content: space-between;
   gap: 25px;
   font-size: 12px;
-  color: #9e9e94;
+  color: #b5b5ac;
   align-items: center;
   padding-top: 23px;
 }

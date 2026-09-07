@@ -4,6 +4,7 @@
 
 [build.environment]
   SECRETS_SCAN_ENABLED = "false"
+  NETLIFY_ENABLE_DRAWER = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
