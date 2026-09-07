@@ -44,8 +44,8 @@ export function ClientForm({
         </h2>
       </div>
 
-      <div className="bg-[var(--color-limestone)] p-5 md:p-7 rounded-[32px] border border-[#d6d6cf] space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="bg-[var(--color-limestone)] p-4 sm:p-7 rounded-[24px] sm:rounded-[32px] border border-[#d6d6cf] space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           {/* Name */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952] mb-1.5">
@@ -59,7 +59,7 @@ export function ClientForm({
                 value={formData.name}
                 onChange={(e) => onChange({ ...formData, name: e.target.value })}
                 placeholder="Como quer ser chamada"
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
               />
             </div>
           </div>
@@ -77,7 +77,7 @@ export function ClientForm({
                 value={formData.phone}
                 onChange={handlePhoneChange}
                 placeholder="(51) 99999-9999"
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors font-mono"
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors font-mono"
               />
             </div>
           </div>
@@ -118,7 +118,7 @@ export function ClientForm({
                 value={formData.email}
                 onChange={(e) => onChange({ ...formData, email: e.target.value })}
                 placeholder="seuemail@exemplo.com"
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
+                className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-sm focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ export function ClientForm({
             value={formData.notes}
             onChange={(e) => onChange({ ...formData, notes: e.target.value })}
             placeholder="Ex: Primeira vez com extensão, olhos sensíveis..."
-            className="w-full px-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-xs focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
+            className="w-full px-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-xs focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
           />
         </div>
       </div>

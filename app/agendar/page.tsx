@@ -211,21 +211,21 @@ export default function AgendarPage() {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[var(--color-pumice)] text-[var(--color-obsidian)]">
       {/* Header */}
-      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 py-3.5">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/95 backdrop-blur-md sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3.5">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <img
               src="/lv-monogram.svg"
-              width="34"
-              height="34"
+              width="32"
+              height="32"
               alt="Lara Varisa"
-              className="w-8 h-8 md:w-9 md:h-9"
+              className="w-7 h-7 sm:w-9 sm:h-9"
             />
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-[family-name:var(--font-display)] text-xl md:text-2xl uppercase tracking-tight text-[var(--color-obsidian)]">
+            <div className="flex items-baseline gap-1 sm:gap-1.5">
+              <span className="font-[family-name:var(--font-display)] text-lg sm:text-2xl uppercase tracking-tight text-[var(--color-obsidian)]">
                 Lara Varisa
               </span>
-              <span className="text-[10px] md:text-[11px] font-mono text-[var(--color-ember)] font-bold">
+              <span className="text-[9px] sm:text-[11px] font-mono text-[var(--color-ember)] font-bold">
                 · AGENDAMENTO
               </span>
             </div>
@@ -234,98 +234,102 @@ export default function AgendarPage() {
           <button
             type="button"
             onClick={() => setShowMyAppointments(true)}
-            className="text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-3.5 py-1.5 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="text-[11px] sm:text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-3 py-1.5 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
-            <CalendarDays size={13} />
-            <span>Meus agendamentos</span>
+            <CalendarDays size={12} className="shrink-0" />
+            <span className="hidden xs:inline sm:inline">Meus agendamentos</span>
+            <span className="xs:hidden sm:hidden">Horários</span>
           </button>
         </div>
       </header>
 
       {/* Main Multi-Step Wizard */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 md:py-10 space-y-8">
+      <main className={`flex-1 max-w-4xl mx-auto w-full px-3.5 sm:px-6 py-4 sm:py-8 md:py-10 space-y-6 sm:space-y-8 ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}>
         {/* Progress Bar (Visible on Steps 1, 2, 3) */}
         {step < 4 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5 sm:space-y-3">
             {/* Step indicators */}
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-[11px] sm:text-xs">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 font-semibold transition-colors cursor-pointer ${
                   step === 1 ? 'text-[var(--color-obsidian)] font-bold' : 'text-[#8c8c84] hover:text-[var(--color-obsidian)]'
                 }`}
               >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
                   step === 1 ? 'bg-[var(--color-obsidian)] text-white' : step > 1 ? 'bg-[var(--color-ember)] text-white' : 'bg-[#cfcfc9] text-white'
                 }`}>
                   {step > 1 ? <Check size={11} strokeWidth={3} /> : '1'}
                 </span>
-                <span>Procedimento</span>
+                <span className="hidden sm:inline">Procedimento</span>
+                <span className="sm:hidden">Serviço</span>
               </button>
 
-              <div className="h-px flex-1 mx-3 bg-[#cfcfc9]" />
+              <div className="h-px flex-1 mx-1.5 sm:mx-3 bg-[#cfcfc9]" />
 
               <button
                 type="button"
                 disabled={!selectedService}
                 onClick={() => setStep(2)}
-                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 font-semibold transition-colors cursor-pointer ${
                   step === 2 ? 'text-[var(--color-obsidian)] font-bold' : step > 2 ? 'text-[#8c8c84]' : 'text-[#8c8c84] opacity-60'
                 }`}
               >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
                   step === 2 ? 'bg-[var(--color-obsidian)] text-white' : step > 2 ? 'bg-[var(--color-ember)] text-white' : 'bg-[#cfcfc9] text-white'
                 }`}>
                   {step > 2 ? <Check size={11} strokeWidth={3} /> : '2'}
                 </span>
-                <span>Data & Hora</span>
+                <span className="hidden sm:inline">Data & Hora</span>
+                <span className="sm:hidden">Horário</span>
               </button>
 
-              <div className="h-px flex-1 mx-3 bg-[#cfcfc9]" />
+              <div className="h-px flex-1 mx-1.5 sm:mx-3 bg-[#cfcfc9]" />
 
               <button
                 type="button"
                 disabled={!selectedSlot}
                 onClick={() => setStep(3)}
-                className={`flex items-center gap-1.5 font-semibold transition-colors cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 font-semibold transition-colors cursor-pointer ${
                   step === 3 ? 'text-[var(--color-obsidian)] font-bold' : 'text-[#8c8c84] opacity-60'
                 }`}
               >
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
                   step === 3 ? 'bg-[var(--color-obsidian)] text-white' : 'bg-[#cfcfc9] text-white'
                 }`}>
                   3
                 </span>
-                <span>Seus Dados</span>
+                <span className="hidden sm:inline">Seus Dados</span>
+                <span className="sm:hidden">Dados</span>
               </button>
             </div>
 
             {/* Back button & Selected Summary Chip */}
             {step > 1 && (
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between pt-1 sm:pt-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#595952] hover:text-[var(--color-obsidian)] cursor-pointer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#595952] hover:text-[var(--color-obsidian)] cursor-pointer shrink-0"
                 >
-                  <ArrowLeft size={14} />
-                  <span>Voltar etapa</span>
+                  <ArrowLeft size={13} />
+                  <span>Voltar</span>
                 </button>
 
                 {selectedService && (
-                  <div className="text-xs text-[#595952] bg-[var(--color-limestone)] px-3 py-1.5 rounded-full border border-[#d6d6cf] flex items-center gap-2">
-                    <span className="font-semibold text-[var(--color-obsidian)]">
+                  <div className="text-[11px] sm:text-xs text-[#595952] bg-[var(--color-limestone)] px-2.5 sm:px-3 py-1 rounded-full border border-[#d6d6cf] flex items-center gap-1.5 truncate">
+                    <span className="font-semibold text-[var(--color-obsidian)] truncate">
                       {selectedService.name}
                     </span>
                     <span>·</span>
-                    <span className="text-[var(--color-ember)] font-bold">
+                    <span className="text-[var(--color-ember)] font-bold shrink-0">
                       {selectedService.price}
                     </span>
                     {step === 3 && selectedSlot && (
                       <>
                         <span>·</span>
-                        <span>{selectedDateStr.split('-').reverse().slice(0, 2).join('/')} às {selectedSlot.time}</span>
+                        <span className="shrink-0">{selectedSlot.time}</span>
                       </>
                     )}
                   </div>
@@ -347,13 +351,13 @@ export default function AgendarPage() {
             />
 
             {/* Bottom Action for Step 1 */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#cfcfc9]">
-              <div>
-                <p className="text-xs text-[#595952]">
-                  Procedimento selecionado:
+            <div className="fixed sm:static bottom-0 left-0 right-0 z-20 bg-[var(--color-pumice)]/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-[#cfcfc9] p-3.5 sm:p-0 sm:pt-4 flex flex-row items-center justify-between gap-3 shadow-lg sm:shadow-none">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#595952] truncate">
+                  Procedimento:
                 </p>
-                <p className="text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
-                  {selectedService ? `${selectedService.name} (${selectedService.price})` : 'Escolha um serviço acima'}
+                <p className="text-xs sm:text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)] truncate">
+                  {selectedService ? `${selectedService.name} (${selectedService.price})` : 'Escolha um serviço'}
                 </p>
               </div>
 
@@ -361,10 +365,10 @@ export default function AgendarPage() {
                 type="button"
                 disabled={!selectedService}
                 onClick={() => setStep(2)}
-                className="w-full sm:w-auto py-3.5 px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+                className="py-3 px-5 sm:py-3.5 sm:px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer shrink-0"
               >
-                <span>ESCOLHER DATA E HORA</span>
-                <ArrowRight size={17} />
+                <span>CONTINUAR</span>
+                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -387,13 +391,13 @@ export default function AgendarPage() {
             />
 
             {/* Bottom Action for Step 2 */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#cfcfc9]">
-              <div>
-                <p className="text-xs text-[#595952]">
-                  Horário selecionado:
+            <div className="fixed sm:static bottom-0 left-0 right-0 z-20 bg-[var(--color-pumice)]/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-t-0 border-[#cfcfc9] p-3.5 sm:p-0 sm:pt-4 flex flex-row items-center justify-between gap-3 shadow-lg sm:shadow-none">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-[#595952] truncate">
+                  Horário:
                 </p>
-                <p className="text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
-                  {selectedSlot ? `${selectedDateStr.split('-').reverse().join('/')} às ${selectedSlot.time}` : 'Clique em um horário acima'}
+                <p className="text-xs sm:text-lg font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)] truncate">
+                  {selectedSlot ? `${selectedDateStr.split('-').reverse().slice(0, 2).join('/')} às ${selectedSlot.time}` : 'Escolha um horário'}
                 </p>
               </div>
 
@@ -401,10 +405,10 @@ export default function AgendarPage() {
                 type="button"
                 disabled={!selectedSlot}
                 onClick={() => setStep(3)}
-                className="w-full sm:w-auto py-3.5 px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+                className="py-3 px-5 sm:py-3.5 sm:px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer shrink-0"
               >
-                <span>CONTINUAR PARA SEUS DADOS</span>
-                <ArrowRight size={17} />
+                <span>CONTINUAR</span>
+                <ArrowRight size={15} />
               </button>
             </div>
           </div>

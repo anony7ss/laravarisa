@@ -126,22 +126,22 @@ export function DateTimePicker({
         </h2>
       </div>
 
-      <div className="bg-[var(--color-limestone)] p-5 md:p-7 rounded-[32px] border border-[#d6d6cf] space-y-6">
+      <div className="bg-[var(--color-limestone)] p-4 sm:p-7 rounded-[24px] sm:rounded-[32px] border border-[#d6d6cf] space-y-5 sm:space-y-6">
         {/* Month & Year header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-obsidian)]">
-            <CalendarDays size={18} className="text-[var(--color-ember)]" />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
+            <CalendarDays size={16} className="text-[var(--color-ember)] shrink-0" />
             <span className="capitalize">
               {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
             </span>
           </div>
-          <span className="text-xs text-[#595952]">
-            Segunda a Sábado · 09:00 às 19:00
+          <span className="text-[11px] sm:text-xs text-[#595952] text-right">
+            Seg a Sáb · 09h às 19h
           </span>
         </div>
 
         {/* Horizontal Days Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
             const disabled = item.isSunday;
@@ -157,12 +157,12 @@ export function DateTimePicker({
                   color: isSelected ? '#ffffff' : '#070607',
                   borderColor: isSelected ? '#070607' : '#d6d6cf',
                 }}
-                className={`flex-shrink-0 w-16 py-3 rounded-[18px] text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
-                  disabled ? 'opacity-30 cursor-not-allowed border-transparent' : 'shadow-sm'
+                className={`flex-shrink-0 w-14 sm:w-16 py-2.5 sm:py-3 rounded-[16px] sm:rounded-[18px] text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
+                  disabled ? 'opacity-30 cursor-not-allowed border-transparent' : 'shadow-sm active:scale-95'
                 }`}
               >
                 <span
-                  className="text-[11px] font-semibold uppercase tracking-wider"
+                  className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider"
                   style={{ color: isSelected ? '#f5f28e' : '#595952' }}
                 >
                   {item.weekDayShort}
