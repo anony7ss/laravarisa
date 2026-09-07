@@ -1107,9 +1107,11 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
-.admin-calendar-summary span {
+.admin-calendar-summary span,
+.admin-calendar-summary .admin-filter-pill {
   min-height: 33px;
   display: inline-flex;
   align-items: center;
@@ -1121,6 +1123,25 @@ a.admin-stat-card:hover {
   color: var(--admin-muted);
   font-size: 11px;
   white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.admin-calendar-summary .admin-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--admin-ink);
+  border-color: rgba(28, 25, 23, 0.25);
+}
+
+.admin-calendar-summary .admin-filter-pill.active {
+  background: var(--admin-ink, #161614);
+  color: #fff;
+  border-color: var(--admin-ink, #161614);
+}
+
+.admin-calendar-summary .admin-filter-pill.active strong {
+  color: #fff;
 }
 
 .admin-calendar-summary strong {
@@ -1139,6 +1160,78 @@ a.admin-stat-card:hover {
 }
 .admin-calendar-summary i.scheduled {
   background: var(--admin-orange);
+}
+
+.admin-nav-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--admin-orange, #fc5000);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 0 8px rgba(252, 80, 0, 0.6);
+  animation: pulse-badge 2s infinite ease-in-out;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.admin-bell-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.admin-bell-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.admin-bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--admin-orange, #fc5000);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 0 6px rgba(252, 80, 0, 0.7);
+}
+
+.admin-wa-btn {
+  border-color: rgba(37, 211, 102, 0.3) !important;
+  background: rgba(37, 211, 102, 0.08) !important;
+}
+
+.admin-wa-btn:hover {
+  background: rgba(37, 211, 102, 0.18) !important;
+  border-color: rgba(37, 211, 102, 0.6) !important;
 }
 
 .admin-calendar-workspace {

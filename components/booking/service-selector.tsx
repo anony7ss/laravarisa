@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, Clock3 } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
 
 export type ServiceItem = {
   id: string;
@@ -49,7 +50,10 @@ export function ServiceSelector({
             <button
               key={service.id}
               type="button"
-              onClick={() => onSelectService(service)}
+              onClick={() => {
+                triggerHaptic('light');
+                onSelectService(service);
+              }}
               className={`text-left p-5 rounded-[24px] transition-all duration-200 flex flex-col justify-between cursor-pointer border ${
                 isSelected
                   ? 'bg-[var(--color-obsidian)] text-white border-[var(--color-obsidian)] shadow-md scale-[1.01]'

@@ -17,9 +17,46 @@ import {
   Sun,
   X,
   Settings,
-  HeartHandshake
+  HeartHandshake,
+  Bell,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
+function playAppointmentChime() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+
+    // Harmonic luxury two-tone chime (E5 -> B5)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.5);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(987.77, ctx.currentTime + 0.12);
+    gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.8);
+  } catch {
+    // AudioContext blocked by browser autoplay policy until user interacts
+  }
+}
 
 const links = [
   ['/admin/dashboard', 'Visão geral', LayoutDashboard],
@@ -57,6 +94,44 @@ export function AdminShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    let initialRun = true;
+
+    async function checkAppointments() {
+      try {
+        const res = await fetch('/api/admin/appointments');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.ok || !Array.isArray(json.data)) return;
+
+        const count = json.data.filter(
+          (item: { status: string }) => item.status === 'scheduled',
+        ).length;
+
+        if (!isMounted) return;
+
+        setPendingCount((prev) => {
+          if (!initialRun && count > prev) {
+            playAppointmentChime();
+          }
+          return count;
+        });
+        initialRun = false;
+      } catch {
+        // network or auth error
+      }
+    }
+
+    checkAppointments();
+    const interval = setInterval(checkAppointments, 25000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('admin-theme');
@@ -121,7 +196,18 @@ export function AdminShell({
                 <Icon size={18} />
               </span>
               <span>{label}</span>
-              {pathname === href && <span className="admin-active-dot" />}
+              {href === '/admin/dashboard/agenda' && pendingCount > 0 && (
+                <span
+                  className="admin-nav-badge"
+                  title={`${pendingCount} aguardando`}
+                >
+                  {pendingCount}
+                </span>
+              )}
+              {pathname === href &&
+                (href !== '/admin/dashboard/agenda' || pendingCount === 0) && (
+                  <span className="admin-active-dot" />
+                )}
             </Link>
           ))}
         </nav>
@@ -139,11 +225,25 @@ export function AdminShell({
             <strong>{name || 'Conta administrativa'}</strong>
             <small>{roleLabel}</small>
           </span>
+          <Link
+            href="/admin/dashboard/agenda"
+            className="admin-bell-btn"
+            title={
+              pendingCount > 0
+                ? `${pendingCount} agendamento(s) aguardando`
+                : 'Notificações (nenhum pendente)'
+            }
+            aria-label="Agendamentos pendentes"
+          >
+            <Bell size={16} />
+            {pendingCount > 0 && (
+              <span className="admin-bell-badge">{pendingCount}</span>
+            )}
+          </Link>
           <button
             onClick={() => setDarkMode(!darkMode)}
             aria-label="Alternar tema"
             title="Alternar tema"
-            style={{ marginRight: '4px' }}
           >
             {darkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -165,9 +265,22 @@ export function AdminShell({
             <small>PAINEL</small>
             <strong>{pageNames[pathname] || 'Lara Varisa'}</strong>
           </span>
-          <Link href="/" aria-label="Abrir o site">
-            <ExternalLink size={19} />
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Link
+              href="/admin/dashboard/agenda"
+              className="admin-bell-btn"
+              title={`${pendingCount} agendamentos pendentes`}
+              aria-label="Agendamentos pendentes"
+            >
+              <Bell size={18} />
+              {pendingCount > 0 && (
+                <span className="admin-bell-badge">{pendingCount}</span>
+              )}
+            </Link>
+            <Link href="/" aria-label="Abrir o site">
+              <ExternalLink size={19} />
+            </Link>
+          </div>
         </header>
         {children}
         <nav className="admin-mobile-nav" aria-label="Navegação rápida">
@@ -177,9 +290,24 @@ export function AdminShell({
               key={href}
               className={pathname === href ? 'active' : ''}
               aria-current={pathname === href ? 'page' : undefined}
+              style={{ position: 'relative' }}
             >
               <Icon size={19} />
               <span>{label}</span>
+              {href === '/admin/dashboard/agenda' && pendingCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: 'calc(50% - 14px)',
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: 'var(--admin-orange, #fc5000)',
+                    boxShadow: '0 0 6px rgba(252, 80, 0, 0.8)',
+                  }}
+                />
+              )}
             </Link>
           ))}
           <button onClick={() => setOpen(true)}>

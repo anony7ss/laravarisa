@@ -10,6 +10,7 @@ import {
   Plus,
   Trash2,
   X,
+  MessageCircle,
 } from 'lucide-react';
 import { adminRequest } from './api';
 import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
@@ -102,6 +103,10 @@ export function AppointmentsManager({
       }
     : emptyAppointment(selectedDate);
 
+  const [quickFilter, setQuickFilter] = useState<
+    'selected' | 'today' | 'next7' | 'scheduled' | 'confirmed'
+  >('selected');
+
   const monthItems = useMemo(
     () =>
       items
@@ -137,6 +142,70 @@ export function AppointmentsManager({
     (item) => item.status === 'scheduled',
   ).length;
 
+  const next7Count = useMemo(() => {
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+    const sevenDaysEnd = todayStart + 7 * 24 * 60 * 60 * 1000;
+    return items.filter((item) => {
+      const t = new Date(item.starts_at).getTime();
+      return t >= todayStart && t <= sevenDaysEnd;
+    }).length;
+  }, [items, today]);
+
+  const displayedItems = useMemo(() => {
+    if (quickFilter === 'selected') {
+      return groupedItems.get(selectedDate) ?? [];
+    }
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+    if (quickFilter === 'today') {
+      const todayStr = dateKey(today);
+      return groupedItems.get(todayStr) ?? [];
+    }
+    if (quickFilter === 'next7') {
+      const sevenDaysEnd = todayStart + 7 * 24 * 60 * 60 * 1000;
+      return items
+        .filter((item) => {
+          const t = new Date(item.starts_at).getTime();
+          return t >= todayStart && t <= sevenDaysEnd;
+        })
+        .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    }
+    if (quickFilter === 'scheduled') {
+      return items
+        .filter((item) => item.status === 'scheduled')
+        .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    }
+    if (quickFilter === 'confirmed') {
+      return items
+        .filter((item) => item.status === 'confirmed')
+        .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    }
+    return groupedItems.get(selectedDate) ?? [];
+  }, [quickFilter, selectedDate, groupedItems, today, items]);
+
+  function getWhatsAppLink(item: AppointmentRow) {
+    const digits = (item.client_phone || '').replace(/\D/g, '');
+    if (!digits) return null;
+    const phone = digits.startsWith('55') ? digits : `55${digits}`;
+    const date = new Date(item.starts_at);
+    const dateFormatted = date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+    });
+    const timeFormatted = timeLabel(item.starts_at);
+    const text = encodeURIComponent(
+      `Olá, ${item.client_name}! ✨ Aqui é da Lara Varisa · Lash Designer. Passando para confirmar seu horário agendado para o dia ${dateFormatted} às ${timeFormatted}. Podemos confirmar sua presença? 💖`,
+    );
+    return `https://wa.me/${phone}?text=${text}`;
+  }
+
   function changeMonth(offset: number) {
     const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
     setMonth(next);
@@ -146,6 +215,7 @@ export function AppointmentsManager({
   function goToday() {
     setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setSelectedDate(dateKey(today));
+    setQuickFilter('today');
   }
 
   function openCreate(day = selectedDate) {
@@ -223,6 +293,22 @@ export function AppointmentsManager({
     { weekday: 'long', day: '2-digit', month: 'long' },
   );
 
+  const panelTitle = useMemo(() => {
+    switch (quickFilter) {
+      case 'today':
+        return 'Hoje';
+      case 'next7':
+        return 'Próximos 7 dias';
+      case 'scheduled':
+        return 'Aguardando confirmação';
+      case 'confirmed':
+        return 'Confirmados';
+      case 'selected':
+      default:
+        return selectedLabel;
+    }
+  }, [quickFilter, selectedLabel]);
+
   return (
     <>
       <section className="admin-calendar-toolbar">
@@ -253,18 +339,44 @@ export function AppointmentsManager({
         )}
       </section>
 
-      <div className="admin-calendar-summary" aria-label="Resumo do mês">
-        <span>
-          <strong>{monthItems.length}</strong> atendimentos
-        </span>
-        <span>
-          <i className="confirmed" />
-          <strong>{confirmed}</strong> confirmados
-        </span>
-        <span>
+      <div className="admin-calendar-summary" aria-label="Filtros rápidos e resumo">
+        <button
+          type="button"
+          className={`admin-filter-pill ${quickFilter === 'selected' ? 'active' : ''}`}
+          onClick={() => setQuickFilter('selected')}
+        >
+          <span>Dia ({selectedItems.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-filter-pill ${quickFilter === 'today' ? 'active' : ''}`}
+          onClick={() => goToday()}
+        >
+          <span>Hoje</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-filter-pill ${quickFilter === 'next7' ? 'active' : ''}`}
+          onClick={() => setQuickFilter('next7')}
+        >
+          <span>Próximos 7 dias ({next7Count})</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-filter-pill ${quickFilter === 'scheduled' ? 'active' : ''}`}
+          onClick={() => setQuickFilter('scheduled')}
+        >
           <i className="scheduled" />
-          <strong>{pending}</strong> aguardando
-        </span>
+          <span><strong>{pending}</strong> aguardando</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-filter-pill ${quickFilter === 'confirmed' ? 'active' : ''}`}
+          onClick={() => setQuickFilter('confirmed')}
+        >
+          <i className="confirmed" />
+          <span><strong>{confirmed}</strong> confirmados</span>
+        </button>
       </div>
 
       {error && !creating && !editing && (
@@ -298,6 +410,7 @@ export function AppointmentsManager({
                           new Date(day.getFullYear(), day.getMonth(), 1),
                         );
                       setSelectedDate(key);
+                      setQuickFilter('selected');
                     }}
                     aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayItems.length} horários`}
                     aria-pressed={selected}
@@ -314,6 +427,7 @@ export function AppointmentsManager({
                         className={`admin-calendar-event ${item.status}`}
                         onClick={() => {
                           setSelectedDate(key);
+                          setQuickFilter('selected');
                           if (role !== 'viewer') setEditing(item);
                         }}
                       >
@@ -337,47 +451,63 @@ export function AppointmentsManager({
               <CalendarDays size={18} />
             </span>
             <div>
-              <small>SELECIONADO</small>
-              <h3>{selectedLabel}</h3>
+              <small>{quickFilter === 'selected' ? 'SELECIONADO' : 'FILTRO ATIVO'}</small>
+              <h3>{panelTitle}</h3>
             </div>
           </div>
           <div className="admin-day-list">
-            {selectedItems.length ? (
-              selectedItems.map((item) => (
-                <article
-                  className={`admin-appointment ${item.status}`}
-                  key={item.id}
-                >
-                  <div className="admin-appointment-time">
-                    <Clock3 size={15} />
-                    <time>{timeLabel(item.starts_at)}</time>
-                  </div>
-                  <div>
-                    <strong>{item.client_name}</strong>
-                    <p>{statusLabels[item.status]}</p>
-                  </div>
-                  <div className="admin-row-actions">
-                    {role !== 'viewer' && (
-                      <button
-                        className="admin-icon-button"
-                        onClick={() => setEditing(item)}
-                        aria-label="Editar horário"
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                    )}
-                    {role === 'admin' && (
-                      <button
-                        className="admin-icon-button admin-danger"
-                        onClick={() => remove(item.id)}
-                        aria-label="Excluir horário"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </div>
-                </article>
-              ))
+            {displayedItems.length ? (
+              displayedItems.map((item) => {
+                const waLink = getWhatsAppLink(item);
+                return (
+                  <article
+                    className={`admin-appointment ${item.status}`}
+                    key={item.id}
+                  >
+                    <div className="admin-appointment-time">
+                      <Clock3 size={15} />
+                      <time>{timeLabel(item.starts_at)}</time>
+                    </div>
+                    <div>
+                      <strong>{item.client_name}</strong>
+                      <p>{statusLabels[item.status]}</p>
+                    </div>
+                    <div className="admin-row-actions">
+                      {waLink && (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="admin-icon-button admin-wa-btn"
+                          style={{ color: '#25D366' }}
+                          title="Enviar confirmação no WhatsApp"
+                          aria-label={`Enviar WhatsApp para ${item.client_name}`}
+                        >
+                          <MessageCircle size={15} />
+                        </a>
+                      )}
+                      {role !== 'viewer' && (
+                        <button
+                          className="admin-icon-button"
+                          onClick={() => setEditing(item)}
+                          aria-label="Editar horário"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                      )}
+                      {role === 'admin' && (
+                        <button
+                          className="admin-icon-button admin-danger"
+                          onClick={() => remove(item.id)}
+                          aria-label="Excluir horário"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
             ) : (
               <div className="admin-day-empty">
                 <span>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { Clock3, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
 
 export type TimeSlot = {
   time: string;
@@ -151,7 +152,10 @@ export function DateTimePicker({
                 key={item.dateStr}
                 type="button"
                 disabled={disabled}
-                onClick={() => onSelectDate(item.dateStr)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onSelectDate(item.dateStr);
+                }}
                 style={{
                   backgroundColor: isSelected ? '#070607' : disabled ? 'transparent' : '#ffffff',
                   color: isSelected ? '#ffffff' : '#070607',
@@ -219,7 +223,10 @@ export function DateTimePicker({
                   <button
                     key={slot.dateTime}
                     type="button"
-                    onClick={() => onSelectSlot(slot)}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      onSelectSlot(slot);
+                    }}
                     style={{
                       backgroundColor: isSlotSelected ? '#fc5000' : '#ffffff',
                       color: isSlotSelected ? '#ffffff' : '#070607',

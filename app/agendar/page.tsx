@@ -14,7 +14,9 @@ import {
   MessageCircle,
   ArrowUpRight,
   RotateCcw,
+  Calendar,
 } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
 import { ServiceSelector, type ServiceItem } from '@/components/booking/service-selector';
 import { DateTimePicker, type TimeSlot } from '@/components/booking/datetime-picker';
 import { ClientForm, type ClientFormData } from '@/components/booking/client-form';
@@ -189,6 +191,7 @@ export default function AgendarPage() {
       }
 
       setSuccessBooking(data.data);
+      triggerHaptic('success');
       setStep(4); // Advance to confirmation screen
     } catch {
       setSubmitError('Erro de conexão com o servidor. Tente novamente.');
@@ -206,6 +209,50 @@ export default function AgendarPage() {
     const gcalTitle = encodeURIComponent(`Lara Varisa · ${b.service_name}`);
     const gcalDetails = encodeURIComponent(`Agendamento de Cílios com Lara Varisa (Reserva #${code}).`);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${encodeURIComponent('Zona Norte, Porto Alegre - RS')}`;
+  }
+
+  // Apple Calendar (.ics) generator
+  function downloadIcsCalendar(b: BookingResult) {
+    triggerHaptic('medium');
+    const toIcsDate = (dStr: string) => {
+      const d = new Date(dStr);
+      return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'VIP';
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Lara Varisa//Lash Designer//PT',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:booking-${b.id}@laravarisa.com.br`,
+      `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
+      `DTSTART:${toIcsDate(b.starts_at)}`,
+      `DTEND:${toIcsDate(b.ends_at)}`,
+      `SUMMARY:Lara Varisa · ${b.service_name}`,
+      `DESCRIPTION:Procedimento de ${b.service_name} com a Lash Designer Lara Varisa.\\nCliente: ${b.client_name}\\nReserva: #${code}\\nChegar sem rímel ou maquiagem nos olhos.`,
+      'LOCATION:Zona Norte - Porto Alegre, RS',
+      'STATUS:CONFIRMED',
+      'BEGIN:VALARM',
+      'TRIGGER:-PT2H',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Lembrete: Atendimento com Lara Varisa em 2 horas',
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reserva-lara-varisa-${code.toLowerCase()}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -364,7 +411,10 @@ export default function AgendarPage() {
               <button
                 type="button"
                 disabled={!selectedService}
-                onClick={() => setStep(2)}
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setStep(2);
+                }}
                 className="py-3 px-5 sm:py-3.5 sm:px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer shrink-0"
               >
                 <span>CONTINUAR</span>
@@ -404,7 +454,10 @@ export default function AgendarPage() {
               <button
                 type="button"
                 disabled={!selectedSlot}
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setStep(3);
+                }}
                 className="py-3 px-5 sm:py-3.5 sm:px-8 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer shrink-0"
               >
                 <span>CONTINUAR</span>
@@ -545,6 +598,19 @@ export default function AgendarPage() {
               </div>
             </div>
 
+            {/* Pre-procedure Care Tips */}
+            <div className="bg-[var(--color-limestone)] p-4 sm:p-5 rounded-[24px] border border-[#d6d6cf] text-left space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--color-obsidian)]">
+                <Sparkles size={14} className="text-[var(--color-ember)]" />
+                <span>Orientações para o seu Atendimento</span>
+              </div>
+              <ul className="text-xs text-[#595952] space-y-1.5 pl-1">
+                <li>• Venha com os olhos 100% livres de rímel, maquiagem ou cosméticos oleosos.</li>
+                <li>• Tolerância máxima de atraso de 15 minutos para preservar o padrão do design.</li>
+                <li>• Evite excesso de café ou energéticos antes da sessão para relaxar o olhar.</li>
+              </ul>
+            </div>
+
             {/* CTAs */}
             <div className="space-y-3">
               <a
@@ -562,7 +628,7 @@ export default function AgendarPage() {
                   href={getGoogleCalLink(successBooking)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-2.5 px-4 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-2.5 px-3 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span>Google Agenda</span>
                   <ArrowUpRight size={13} />
@@ -570,17 +636,27 @@ export default function AgendarPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setStep(1);
-                    setSelectedSlot(null);
-                    setSuccessBooking(null);
-                  }}
-                  className="py-2.5 px-4 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={() => downloadIcsCalendar(successBooking)}
+                  className="py-2.5 px-3 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <RotateCcw size={13} />
-                  <span>Novo Agendamento</span>
+                  <span>Apple / iCal (.ics)</span>
+                  <Calendar size={13} />
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setStep(1);
+                  setSelectedSlot(null);
+                  setSuccessBooking(null);
+                }}
+                className="w-full py-2 px-4 rounded-full bg-transparent hover:bg-black/5 text-xs font-semibold text-[#595952] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw size={13} />
+                <span>Novo Agendamento</span>
+              </button>
             </div>
           </div>
         )}
