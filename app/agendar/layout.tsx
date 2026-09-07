@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Agendamento Exclusivo · Lara Varisa Lash Atelier',
+  title: 'Agendar Horário · Lara Varisa',
   description:
-    'Reserve seu procedimento de extensão de cílios com Lara Varisa na Zona Norte de Porto Alegre. Atendimento exclusivo e individualizado.',
+    'Agendamento online de extensão de cílios e lash lifting no atelier Lara Varisa em Porto Alegre.',
   robots: {
     index: false,
     follow: false,
@@ -16,7 +16,7 @@ export default function AgendarLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-neutral-200 antialiased selection:bg-[#D4AF37] selection:text-black">
+    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] font-[var(--font-body)] antialiased selection:bg-[var(--color-ember)] selection:text-white">
       {children}
     </div>
   );

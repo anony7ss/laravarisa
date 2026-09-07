@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock3, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
 
 export type TimeSlot = {
   time: string;
@@ -10,7 +10,7 @@ export type TimeSlot = {
 
 type DayItem = {
   date: Date;
-  dateStr: string; // YYYY-MM-DD
+  dateStr: string;
   dayNum: number;
   weekDayShort: string;
   isSunday: boolean;
@@ -52,12 +52,10 @@ export function DateTimePicker({
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotError, setSlotError] = useState('');
-  const [daysOffset, setDaysOffset] = useState(0);
 
-  // Generate next 30 days
   const availableDays = useMemo<DayItem[]>(() => {
     const list: DayItem[] = [];
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 21; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const isSunday = d.getDay() === 0;
@@ -74,19 +72,17 @@ export function DateTimePicker({
     return list;
   }, [today]);
 
-  // Selected date object
   const selectedDateObj = useMemo(() => {
     return availableDays.find((d) => d.dateStr === selectedDateStr)?.date || today;
   }, [availableDays, selectedDateStr, today]);
 
-  // Fetch slots whenever selectedDateStr or duration changes
   useEffect(() => {
     if (!selectedDateStr) return;
 
     const dayInfo = availableDays.find((d) => d.dateStr === selectedDateStr);
     if (dayInfo?.isSunday) {
       setSlots([]);
-      setSlotError('O studio não atende aos domingos.');
+      setSlotError('O atelier não realiza atendimentos aos domingos.');
       return;
     }
 
@@ -101,14 +97,14 @@ export function DateTimePicker({
         if (data.ok && Array.isArray(data.slots)) {
           setSlots(data.slots);
           if (data.slots.length === 0) {
-            setSlotError('Nenhum horário disponível para esta data. Escolha outro dia.');
+            setSlotError('Nenhum horário livre nesta data. Por favor, selecione outro dia.');
           }
         } else {
-          setSlotError(data.error || 'Não foi possível carregar os horários.');
+          setSlotError(data.error || 'Erro ao carregar horários.');
         }
       })
       .catch(() => {
-        if (isMounted) setSlotError('Erro ao buscar horários.');
+        if (isMounted) setSlotError('Erro de conexão ao buscar horários.');
       })
       .finally(() => {
         if (isMounted) setLoadingSlots(false);
@@ -120,36 +116,32 @@ export function DateTimePicker({
   }, [selectedDateStr, durationMinutes, availableDays]);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <span className="text-[11px] font-semibold tracking-[0.2em] text-[#D4AF37] uppercase">
-          Etapa 2 de 3
+    <div className="space-y-4">
+      <div className="border-b border-[#cfcfc9] pb-3">
+        <span className="text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
+          Passo 02
         </span>
-        <h2 className="text-xl md:text-2xl font-serif tracking-tight text-white mt-0.5">
-          Data & Horário Disponível
+        <h2 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+          Data & Horário
         </h2>
-        <p className="text-xs text-neutral-400 mt-1">
-          Atendimento de segunda a sábado das 09:00 às 19:00 na Zona Norte de Porto Alegre.
-        </p>
       </div>
 
-      {/* Date Carousel Header */}
-      <div className="bg-neutral-900/80 border border-white/10 rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-            <CalendarIcon size={16} className="text-[#D4AF37]" />
-            <span>
+      <div className="bg-[var(--color-limestone)] p-5 md:p-7 rounded-[32px] border border-[#d6d6cf] space-y-6">
+        {/* Month & Year header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-obsidian)]">
+            <CalendarDays size={18} className="text-[var(--color-ember)]" />
+            <span className="capitalize">
               {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
             </span>
           </div>
-          <div className="text-xs text-neutral-400">
-            {availableDays.find((d) => d.dateStr === selectedDateStr)?.weekDayShort},{' '}
-            {selectedDateObj.getDate()} de {monthsPt[selectedDateObj.getMonth()]}
-          </div>
+          <span className="text-xs text-[#595952]">
+            Segunda a Sábado · 09:00 às 19:00
+          </span>
         </div>
 
-        {/* Days Scroll Area */}
-        <div className="flex gap-2 overflow-x-auto pb-2 pt-1 no-scrollbar scroll-smooth">
+        {/* Horizontal Days Selector */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
             const disabled = item.isSunday;
@@ -159,81 +151,78 @@ export function DateTimePicker({
                 key={item.dateStr}
                 type="button"
                 disabled={disabled}
-                onClick={() => {
-                  onSelectDate(item.dateStr);
-                }}
-                className={`flex-shrink-0 w-14 py-2.5 rounded-xl text-center transition-all duration-200 flex flex-col items-center justify-between border ${
+                onClick={() => onSelectDate(item.dateStr)}
+                className={`flex-shrink-0 w-16 py-3 rounded-[18px] text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
                   isSelected
-                    ? 'bg-gradient-to-b from-[#D4AF37] to-[#B38F25] text-black font-semibold border-[#D4AF37] shadow-[0_0_16px_rgba(212,175,55,0.4)] scale-105'
+                    ? 'bg-[var(--color-obsidian)] text-[var(--color-limestone)] border-[var(--color-obsidian)] shadow-sm'
                     : disabled
-                      ? 'opacity-30 cursor-not-allowed border-transparent bg-neutral-950 text-neutral-600'
-                      : 'bg-neutral-900/90 border-white/5 text-neutral-300 hover:border-neutral-600 hover:bg-neutral-800'
+                      ? 'opacity-30 cursor-not-allowed border-transparent text-[#595952]'
+                      : 'bg-white border-[#d6d6cf] text-[var(--color-obsidian)] hover:border-[var(--color-obsidian)]'
                 }`}
               >
-                <span className={`text-[10px] uppercase font-bold tracking-wider ${isSelected ? 'text-black/80' : 'text-neutral-500'}`}>
+                <span className={`text-[11px] font-semibold uppercase tracking-wider ${isSelected ? 'text-[var(--color-sulfur)]' : 'text-[#595952]'}`}>
                   {item.weekDayShort}
                 </span>
-                <span className={`text-base font-bold my-0.5 ${isSelected ? 'text-black' : 'text-white'}`}>
+                <span className="text-xl font-bold font-[family-name:var(--font-display)] my-0.5">
                   {item.dayNum}
                 </span>
-                <span className={`text-[9px] ${isSelected ? 'text-black/70' : 'text-neutral-500'}`}>
+                <span className="text-[10px] text-[#8c8c84]">
                   {item.isToday ? 'Hoje' : item.isSunday ? 'Fech.' : 'Livre'}
                 </span>
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Available Slots Section */}
-      <div className="bg-neutral-900/60 border border-white/10 rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-[#D4AF37]" />
-            <h3 className="text-sm font-medium text-white">Horários Livres no Studio</h3>
-          </div>
-          {slots.length > 0 && (
-            <span className="text-xs text-neutral-400">
-              {slots.length} opções disponíveis
+        {/* Time Slots Area */}
+        <div className="pt-4 border-t border-[#e2e2df] space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#595952]">
+              Horários Livres no Atelier
             </span>
+            {slots.length > 0 && (
+              <span className="text-xs text-[#595952]">
+                {slots.length} opções disponíveis
+              </span>
+            )}
+          </div>
+
+          {loadingSlots ? (
+            <div className="py-8 flex items-center justify-center gap-2 text-xs text-[#595952]">
+              <Loader2 size={16} className="animate-spin text-[var(--color-ember)]" />
+              <span>Verificando horários disponíveis...</span>
+            </div>
+          ) : slotError ? (
+            <div className="py-6 px-4 text-center rounded-[20px] bg-white border border-[#e2e2df] text-xs text-[#595952] flex items-center justify-center gap-2">
+              <AlertCircle size={16} className="text-[var(--color-ember)] shrink-0" />
+              <span>{slotError}</span>
+            </div>
+          ) : slots.length === 0 ? (
+            <p className="py-6 text-center text-xs text-[#595952]">
+              Selecione um dia acima para visualizar os horários.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {slots.map((slot) => {
+                const isSlotSelected = selectedSlot?.dateTime === slot.dateTime;
+                return (
+                  <button
+                    key={slot.dateTime}
+                    type="button"
+                    onClick={() => onSelectSlot(slot)}
+                    className={`py-2.5 px-3 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
+                      isSlotSelected
+                        ? 'bg-[var(--color-ember)] text-white border-[var(--color-ember)] shadow-sm'
+                        : 'bg-white hover:bg-[#e2e2df] text-[var(--color-obsidian)] border-[#d6d6cf] hover:border-[var(--color-obsidian)]'
+                    }`}
+                  >
+                    {slot.time}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
-
-        {loadingSlots ? (
-          <div className="py-10 flex flex-col items-center justify-center gap-2 text-neutral-400">
-            <Loader2 size={24} className="animate-spin text-[#D4AF37]" />
-            <span className="text-xs">Consultando agenda em tempo real...</span>
-          </div>
-        ) : slotError ? (
-          <div className="py-8 px-4 text-center rounded-xl bg-neutral-950/60 border border-white/5">
-            <AlertCircle size={24} className="mx-auto text-amber-500/80 mb-2" />
-            <p className="text-xs text-neutral-400">{slotError}</p>
-          </div>
-        ) : slots.length === 0 ? (
-          <div className="py-8 text-center text-xs text-neutral-500">
-            Selecione uma data para visualizar os horários disponíveis.
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-            {slots.map((slot) => {
-              const isSlotSelected = selectedSlot?.dateTime === slot.dateTime;
-              return (
-                <button
-                  key={slot.dateTime}
-                  type="button"
-                  onClick={() => onSelectSlot(slot)}
-                  className={`py-2.5 px-3 rounded-lg text-xs font-medium transition-all text-center border ${
-                    isSlotSelected
-                      ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)] scale-105'
-                      : 'bg-neutral-950/80 hover:bg-neutral-800 text-neutral-200 border-white/10 hover:border-neutral-600'
-                  }`}
-                >
-                  {slot.time}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 'use client';
 
-import { Check, Clock, Sparkles, CalendarSync } from 'lucide-react';
-import type { LashService } from '@/lib/services';
+import { Check, Clock3 } from 'lucide-react';
 
 export type ServiceItem = {
   id: string;
@@ -16,16 +15,6 @@ export type ServiceItem = {
   intensity: 1 | 2 | 3;
 };
 
-const categoryBadges: Record<string, string> = {
-  Natural: 'Sutil & Clássico',
-  Marcante: 'Mais Pedido ★',
-  Texturizado: 'Profundidade Leve',
-  Alongado: 'Efeito Delineado',
-  Intenso: 'Densidade Máxima',
-  'Fios naturais': 'Sem Extensão',
-  Cuidado: 'Saúde dos Fios',
-};
-
 export function ServiceSelector({
   services,
   selectedService,
@@ -37,24 +26,23 @@ export function ServiceSelector({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-baseline justify-between border-b border-[#cfcfc9] pb-3">
         <div>
-          <span className="text-[11px] font-semibold tracking-[0.2em] text-[#D4AF37] uppercase">
-            Etapa 1 de 3
+          <span className="text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
+            Passo 01
           </span>
-          <h2 className="text-xl md:text-2xl font-serif tracking-tight text-white mt-0.5">
-            Escolha seu Procedimento
+          <h2 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+            Escolha o Procedimento
           </h2>
         </div>
-        <span className="text-xs text-neutral-400">
-          {services.length} opções disponíveis
+        <span className="text-xs text-[#595952]">
+          {services.length} opções
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {services.map((service) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {services.map((service, index) => {
           const isSelected = selectedService?.id === service.id;
-          const badge = categoryBadges[service.category] || service.category;
           const isPopular = service.category === 'Marcante';
 
           return (
@@ -62,62 +50,39 @@ export function ServiceSelector({
               key={service.id}
               type="button"
               onClick={() => onSelectService(service)}
-              className={`group relative text-left p-4 rounded-xl transition-all duration-300 border flex flex-col justify-between ${
+              className={`text-left p-5 rounded-[24px] transition-all duration-200 flex flex-col justify-between cursor-pointer border ${
                 isSelected
-                  ? 'bg-gradient-to-b from-[#1a1610] to-[#121110] border-[#D4AF37] shadow-[0_0_25px_-5px_rgba(212,175,55,0.25)] ring-1 ring-[#D4AF37]'
-                  : 'bg-neutral-900/60 hover:bg-neutral-900 border-white/10 hover:border-neutral-700 text-neutral-300'
+                  ? 'bg-[var(--color-obsidian)] text-[var(--color-limestone)] border-[var(--color-obsidian)] shadow-md scale-[1.01]'
+                  : 'bg-[var(--color-limestone)] text-[var(--color-obsidian)] border-[#d6d6cf] hover:border-[var(--color-obsidian)] hover:bg-[#ffffff]'
               }`}
             >
-              {/* Top Row: Name & Badge */}
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                      isPopular
-                        ? 'bg-[#D4AF37]/20 text-[#E7C969] border border-[#D4AF37]/40'
-                        : isSelected
-                          ? 'bg-white/10 text-white border border-white/20'
-                          : 'bg-neutral-800 text-neutral-400'
-                    }`}
-                  >
-                    {isPopular && <Sparkles size={11} className="text-[#D4AF37]" />}
-                    {badge}
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <span className={`text-[11px] uppercase font-bold tracking-wider ${isSelected ? 'text-[var(--color-ember)]' : 'text-[#595952]'}`}>
+                    {String(index + 1).padStart(2, '0')} · {service.category}
                   </span>
-
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                      isSelected
-                        ? 'bg-[#D4AF37] text-black scale-110'
-                        : 'border border-neutral-700 text-transparent group-hover:border-neutral-500'
-                    }`}
-                  >
-                    <Check size={12} strokeWidth={3} />
-                  </div>
+                  {isPopular && (
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isSelected ? 'bg-[var(--color-ember)] text-white' : 'bg-[#e2e2df] text-[var(--color-obsidian)]'}`}>
+                      Destaque
+                    </span>
+                  )}
                 </div>
 
-                <h3 className="text-base md:text-lg font-medium text-white group-hover:text-[#F3E5AB] transition-colors">
+                <h3 className={`text-lg md:text-xl font-[family-name:var(--font-display)] uppercase tracking-tight leading-tight ${isSelected ? 'text-white' : 'text-[var(--color-obsidian)]'}`}>
                   {service.name}
                 </h3>
 
-                <p className="text-xs text-neutral-400 line-clamp-2 mt-1 mb-3">
+                <p className={`text-xs mt-1.5 line-clamp-2 ${isSelected ? 'text-[#c2c2bc]' : 'text-[#595952]'}`}>
                   {service.description}
                 </p>
               </div>
 
-              {/* Bottom Row: Metadata & Price */}
-              <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3 text-neutral-400">
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} className="text-[#D4AF37]" />
-                    {service.duration}
-                  </span>
-                  <span className="flex items-center gap-1 hidden sm:inline-flex">
-                    <CalendarSync size={12} className="text-neutral-500" />
-                    {service.maintenance}
-                  </span>
-                </div>
-
-                <span className="text-sm font-semibold text-[#D4AF37] tracking-tight">
+              <div className={`pt-4 mt-4 border-t flex items-center justify-between ${isSelected ? 'border-white/10' : 'border-[#e2e2df]'}`}>
+                <span className={`flex items-center gap-1 text-xs ${isSelected ? 'text-[#c2c2bc]' : 'text-[#595952]'}`}>
+                  <Clock3 size={13} />
+                  {service.duration}
+                </span>
+                <span className={`text-base font-bold font-[family-name:var(--font-display)] tracking-tight ${isSelected ? 'text-[var(--color-sulfur)]' : 'text-[var(--color-ember)]'}`}>
                   {service.price}
                 </span>
               </div>

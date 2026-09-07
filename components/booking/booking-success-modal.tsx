@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Calendar, Clock, MapPin, MessageCircle, Share2, Sparkles, X } from 'lucide-react';
+import { Check, CalendarDays, Clock3, MapPin, MessageCircle, X, ArrowUpRight } from 'lucide-react';
 import { whatsappUrl } from '@/lib/studio';
 
 export type BookingResult = {
@@ -35,98 +35,72 @@ export function BookingSuccessModal({
     minute: '2-digit',
   });
 
-  // Short reservation code
   const code = booking.id ? booking.id.slice(0, 8).toUpperCase() : 'VIP';
 
-  // WhatsApp confirmation message
-  const waMsg = `Olá, Lara! Acabei de agendar meu horário pelo site para ${booking.service_name} no dia ${formattedDate} às ${formattedTime}.\nCódigo da reserva: #${code}.\nPode me enviar o endereço completo e as orientações?`;
+  const waMsg = `Olá, Lara! Acabei de agendar meu horário para ${booking.service_name} no dia ${formattedDate} às ${formattedTime} (Reserva #${code}). Pode me enviar o endereço completo?`;
   const waLink = whatsappUrl(waMsg);
 
-  // Google Calendar Link
-  const gcalTitle = encodeURIComponent(`Cílios: ${booking.service_name} · Lara Varisa`);
-  const gcalDetails = encodeURIComponent(`Agendamento de Extensão de Cílios com Lara Varisa.\nServiço: ${booking.service_name}\nReserva: #${code}`);
-  const gcalLocation = encodeURIComponent('Zona Norte, Porto Alegre - RS');
-  
-  // Format for Google Calendar: YYYYMMDDTHHmmssZ
   const toGCalIso = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   const gcalDates = `${toGCalIso(startDate)}/${toGCalIso(new Date(booking.ends_at))}`;
-  const gcalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${gcalLocation}`;
+  const gcalTitle = encodeURIComponent(`Lara Varisa · ${booking.service_name}`);
+  const gcalDetails = encodeURIComponent(`Agendamento com Lara Varisa (Reserva #${code}).`);
+  const gcalLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${encodeURIComponent('Zona Norte, Porto Alegre - RS')}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-gradient-to-b from-[#141210] to-[#0a0a09] border border-[#D4AF37]/50 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(212,175,55,0.2)] text-white">
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-[var(--color-limestone)] text-[var(--color-obsidian)] border border-[#d6d6cf] rounded-[36px] p-6 md:p-8 shadow-2xl">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 p-2 text-neutral-400 hover:text-white rounded-full bg-neutral-900/60 border border-white/5"
+          className="absolute right-5 top-5 w-9 h-9 rounded-full bg-white border border-[#d6d6cf] flex items-center justify-center text-[#595952] hover:text-[var(--color-obsidian)] cursor-pointer"
           aria-label="Fechar"
         >
           <X size={18} />
         </button>
 
-        {/* Top badge & Title */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-[#D4AF37] to-[#997A15] text-black flex items-center justify-center shadow-lg shadow-[#D4AF37]/25">
-            <CheckCircle2 size={32} strokeWidth={2.5} />
+          <div className="w-12 h-12 mx-auto rounded-full bg-[var(--color-ember)] text-white flex items-center justify-center shadow-md">
+            <Check size={26} strokeWidth={3} />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] block">
-            Agendamento Confirmado
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-ember)] font-mono block">
+            Reserva Confirmada
           </span>
-          <h3 className="text-2xl font-serif text-white tracking-tight">
-            Esperamos você, {booking.client_name.split(' ')[0]}!
+          <h3 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+            Tudo Pronto, {booking.client_name.split(' ')[0]}!
           </h3>
-          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-            Sua reserva foi gravada com sucesso. Salve o comprovante e confirme pelo WhatsApp para receber o endereço detalhado.
+          <p className="text-xs text-[#595952]">
+            Seu horário foi reservado no atelier. Confirmando pelo WhatsApp você já recebe o endereço exato e orientações de chegada.
           </p>
         </div>
 
-        {/* Summary Card */}
-        <div className="my-6 p-4 rounded-2xl bg-neutral-900/80 border border-white/10 space-y-3 text-xs">
-          <div className="flex items-center justify-between pb-3 border-b border-white/5">
-            <span className="text-neutral-400">Código da Reserva</span>
-            <span className="font-mono font-bold text-[#D4AF37] tracking-wider text-sm">
-              #{code}
-            </span>
+        <div className="my-5 p-4 rounded-[24px] bg-white border border-[#d6d6cf] space-y-2.5 text-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-[#e2e2df]">
+            <span className="text-[#595952]">Código da Reserva</span>
+            <span className="font-mono font-bold text-[var(--color-obsidian)]">#{code}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className="text-neutral-500 block text-[10px] uppercase">Procedimento</span>
-              <strong className="text-white text-sm block mt-0.5">{booking.service_name}</strong>
-              <span className="text-neutral-400 text-[11px]">{booking.service_price}</span>
-            </div>
-
-            <div>
-              <span className="text-neutral-500 block text-[10px] uppercase">Duração</span>
-              <div className="flex items-center gap-1 text-neutral-200 mt-0.5">
-                <Clock size={13} className="text-[#D4AF37]" />
-                <span>{booking.duration_label}</span>
-              </div>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#595952]">Procedimento</span>
+            <strong className="text-[var(--color-obsidian)]">{booking.service_name} ({booking.service_price})</strong>
           </div>
 
-          <div className="pt-2 border-t border-white/5">
-            <span className="text-neutral-500 block text-[10px] uppercase">Data & Horário</span>
-            <div className="flex items-center gap-2 text-white font-medium mt-1">
-              <Calendar size={14} className="text-[#D4AF37]" />
-              <span className="capitalize">{formattedDate} às {formattedTime}</span>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#595952]">Data & Hora</span>
+            <span className="font-semibold capitalize text-[var(--color-obsidian)]">{formattedDate} às {formattedTime}</span>
           </div>
 
-          <div className="pt-2 border-t border-white/5 flex items-start gap-2 text-neutral-400 text-[11px]">
-            <MapPin size={14} className="text-[#D4AF37] shrink-0 mt-0.5" />
-            <span>Zona Norte, Porto Alegre - RS (Endereço exato enviado via WhatsApp)</span>
+          <div className="pt-2 border-t border-[#e2e2df] text-[11px] text-[#595952] flex items-center gap-1.5">
+            <MapPin size={13} className="text-[var(--color-ember)] shrink-0" />
+            <span>Zona Norte, Porto Alegre - RS</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="space-y-2.5">
           <a
             href={waLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 hover:opacity-95 transition-opacity"
+            className="w-full py-3.5 px-5 rounded-full bg-[var(--color-ember)] hover:bg-[#ed4900] text-white font-medium text-sm flex items-center justify-center gap-2 shadow-sm transition-transform active:scale-[0.99] cursor-pointer"
           >
             <MessageCircle size={18} />
             <span>Confirmar no WhatsApp da Lara</span>
@@ -137,10 +111,10 @@ export function BookingSuccessModal({
               href={gcalLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2.5 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+              className="py-2.5 px-3 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-center transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-[var(--color-obsidian)]"
             >
-              <Calendar size={14} className="text-[#D4AF37]" />
               <span>Google Agenda</span>
+              <ArrowUpRight size={13} />
             </a>
 
             <button
@@ -149,10 +123,9 @@ export function BookingSuccessModal({
                 onClose();
                 onOpenMyAppointments();
               }}
-              className="py-2.5 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-neutral-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+              className="py-2.5 px-3 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-xs font-semibold text-center transition-colors cursor-pointer text-[var(--color-obsidian)]"
             >
-              <Sparkles size={14} className="text-[#D4AF37]" />
-              <span>Ver Meus Agendamentos</span>
+              Ver Meus Horários
             </button>
           </div>
         </div>
