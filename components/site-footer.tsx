@@ -84,16 +84,23 @@ export function SiteFooter() {
           Lara Varisa
         </div>
         <div className="footer-legal">
-          <span>© {new Date().getFullYear()} Lara Varisa</span>
-          <Link href="/privacidade" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Privacidade & LGPD
-          </Link>
-          <Link href="/termos" style={{ textDecoration: 'none', color: 'inherit' }}>
-            Termos & Políticas
-          </Link>
-          <a href="#conteudo">
-            Voltar ao topo <ArrowUp size={15} />
-          </a>
+          <div className="footer-legal-policies">
+            <Link href="/privacidade" className="footer-policy-link">
+              Privacidade & LGPD
+            </Link>
+            <span className="footer-policy-sep" aria-hidden="true">·</span>
+            <Link href="/termos" className="footer-policy-link">
+              Termos de Agendamento
+            </Link>
+          </div>
+          <div className="footer-legal-bottom">
+            <span className="footer-copyright">
+              © {new Date().getFullYear()} Lara Varisa · Porto Alegre, RS
+            </span>
+            <a href="#conteudo" className="footer-back-top">
+              Voltar ao topo <ArrowUp size={14} />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
