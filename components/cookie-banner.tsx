@@ -46,28 +46,44 @@ export function CookieBanner() {
         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#111' }}>Privacidade e Cookies</h3>
         <button 
           onClick={accept}
-          style={{ background: 'transparent', border: 0, color: '#888', cursor: 'pointer', padding: '4px', margin: '-4px' }}
-          aria-label="Fechar"
+          style={{
+            background: 'transparent',
+            border: 0,
+            color: '#333',
+            cursor: 'pointer',
+            padding: '12px',
+            margin: '-12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '44px',
+            minHeight: '44px',
+          }}
+          aria-label="Fechar aviso de cookies"
         >
-          <X size={16} />
+          <X size={18} />
         </button>
       </div>
-      <p style={{ margin: 0, fontSize: '13px', color: '#666', lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: '13px', color: '#444', lineHeight: 1.5 }}>
         Utilizamos cookies para oferecer a melhor experiência. Ao continuar navegando, você concorda com o uso de cookies.
       </p>
       <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
         <button 
           onClick={accept}
           style={{
-            background: '#c73800',
+            background: '#b03200',
             color: '#fff',
             border: 0,
             borderRadius: '99px',
-            padding: '8px 16px',
-            fontSize: '13px',
+            padding: '12px 24px',
+            fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',
-            flex: 1
+            flex: 1,
+            minHeight: '44px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           Aceitar

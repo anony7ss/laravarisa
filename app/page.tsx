@@ -62,98 +62,97 @@ export default function Home() {
           duration: 1.2,
           ease: 'power2.out',
         });
-        gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
-          gsap.from(el, {
-            y: 55,
-            opacity: 0,
-            duration: 1,
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 86%',
-              toggleActions: 'play none none reverse',
-            },
-          }),
-        );
-        gsap.fromTo(
-          '.scroll-progress',
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: root.current,
-              start: 'top top',
-              end: 'bottom bottom',
-              scrub: 0.25,
-            },
-          },
-        );
-        gsap.fromTo(
-          '.hero-art img',
-          { scale: 1.12, yPercent: -3 },
-          {
-            scale: 1.02,
-            yPercent: 3,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: '.hero',
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 1,
-            },
-          },
-        );
-        gsap.fromTo(
-          '.footer-signature',
-          { xPercent: -5, opacity: 0.35 },
-          {
-            xPercent: 0,
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: '.site-footer',
-              start: 'top 95%',
-              end: 'bottom bottom',
-              scrub: 1,
-            },
-          },
-        );
-        gsap.fromTo(
-          '.gallery-heading h2',
-          { x: -35 },
-          {
-            x: 0,
-            duration: 1.1,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: '.gallery-heading',
-              start: 'top 85%',
-              toggleActions: 'play none none reverse',
-            },
-          },
-        );
-      }, root);
 
-      void document.fonts.ready.then(() => {
-        if (alive) ScrollTrigger.refresh();
-      });
+        const setupScrollTriggers = () => {
+          if (!alive || !root.current) return;
+          gsap.utils.toArray<HTMLElement>('.reveal').forEach((el) =>
+            gsap.from(el, {
+              y: 55,
+              opacity: 0,
+              duration: 1,
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 86%',
+                toggleActions: 'play none none reverse',
+              },
+            }),
+          );
+          gsap.fromTo(
+            '.scroll-progress',
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: root.current,
+                start: 'top top',
+                end: 'bottom bottom',
+                scrub: 0.25,
+              },
+            },
+          );
+          gsap.fromTo(
+            '.hero-art img',
+            { scale: 1.12, yPercent: -3 },
+            {
+              scale: 1.02,
+              yPercent: 3,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: '.hero',
+                start: 'top top',
+                end: 'bottom top',
+                scrub: 1,
+              },
+            },
+          );
+          gsap.fromTo(
+            '.footer-signature',
+            { xPercent: -5, opacity: 0.35 },
+            {
+              xPercent: 0,
+              opacity: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: '.site-footer',
+                start: 'top 95%',
+                end: 'bottom bottom',
+                scrub: 1,
+              },
+            },
+          );
+          gsap.fromTo(
+            '.gallery-heading h2',
+            { x: -35 },
+            {
+              x: 0,
+              duration: 1.1,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: '.gallery-heading',
+                start: 'top 85%',
+                toggleActions: 'play none none reverse',
+              },
+            },
+          );
+          void document.fonts.ready.then(() => {
+            if (alive) ScrollTrigger.refresh();
+          });
+        };
+
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
+        } else {
+          setTimeout(setupScrollTriggers, 400);
+        }
+      }, root);
     };
 
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      const handle = (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(setupAnimations, { timeout: 200 });
-      return () => {
-        alive = false;
-        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(handle);
-        ctx?.revert();
-      };
-    } else {
-      const timer = setTimeout(setupAnimations, 60);
-      return () => {
-        alive = false;
-        clearTimeout(timer);
-        ctx?.revert();
-      };
-    }
+    setupAnimations();
+    return () => {
+      alive = false;
+      ctx?.revert();
+    };
   }, []);
   return (
     <div ref={root}>
@@ -238,10 +237,10 @@ export default function Home() {
           <div className="hero-art">
             <img
               src="/lara-lashes-optimized.webp"
-              srcSet="/lara-lashes-540.webp 540w, /lara-lashes-optimized.webp 1080w"
-              sizes="(max-width: 768px) 100vw, 540px"
-              width="1080"
-              height="1440"
+              srcSet="/lara-lashes-400.webp 400w, /lara-lashes-720.webp 720w, /lara-lashes-optimized.webp 960w"
+              sizes="(max-width: 640px) 380px, (max-width: 1024px) 520px, 600px"
+              width="960"
+              height="1280"
               alt="Detalhe dos cílios alongados em uma foto de atendimento"
               fetchPriority="high"
               decoding="async"

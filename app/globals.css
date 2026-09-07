@@ -8,6 +8,10 @@
   --popover: #f7f6f2;
   --popover-foreground: #070607;
   --muted-foreground: #555550;
+  --accent: #b03200;
+  --fg: #070607;
+  --fg-muted: #555550;
+  --border: #b5b5ac;
 }
 * {
   box-sizing: border-box;
@@ -177,7 +181,7 @@ h2,
 }
 em {
   font-style: normal;
-  color: #c73800;
+  color: #b03200;
 }
 .hero-description {
   font-size: 17px;
@@ -706,8 +710,8 @@ h2 {
     place-items: center;
     border: 1px solid #bdbdb7;
     border-radius: 50%;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
     background: transparent;
   }
@@ -1811,8 +1815,8 @@ h2 {
   position: absolute;
   right: 17px;
   bottom: 17px;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #f7f6f2;
   display: grid;
@@ -2152,7 +2156,9 @@ h2 {
 .footer-column > button {
   font-size: 14px;
   line-height: 1.5;
-  min-height: 32px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   color: #c4c4b9;
   text-align: left;
 }
@@ -2254,7 +2260,7 @@ h2 {
   display: flex;
   gap: 9px;
   align-items: center;
-  min-height: 38px;
+  min-height: 44px;
   color: #d1d0c6;
 }
 .site-footer .booking-dialog {
@@ -2316,8 +2322,8 @@ h2 {
     line-height: 1.5;
   }
   .gallery-expand {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     right: 13px;
     bottom: 13px;
   }
