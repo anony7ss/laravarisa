@@ -9,7 +9,7 @@ export function StudioCard() {
         </div>
         <div>
           <strong className="text-sm font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] block">
-            Atelier Lara Varisa · Zona Norte
+            Lara Varisa · Lash Designer · Zona Norte
           </strong>
           <p className="text-[12px] mt-0.5">
             Porto Alegre, RS · O endereço detalhado e orientações de chegada são enviados no seu WhatsApp após a confirmação.

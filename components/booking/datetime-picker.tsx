@@ -82,7 +82,7 @@ export function DateTimePicker({
     const dayInfo = availableDays.find((d) => d.dateStr === selectedDateStr);
     if (dayInfo?.isSunday) {
       setSlots([]);
-      setSlotError('O atelier não realiza atendimentos aos domingos.');
+      setSlotError('Atendimento de segunda a sábado. Escolha outra data.');
       return;
     }
 
@@ -152,21 +152,31 @@ export function DateTimePicker({
                 type="button"
                 disabled={disabled}
                 onClick={() => onSelectDate(item.dateStr)}
+                style={{
+                  backgroundColor: isSelected ? '#070607' : disabled ? 'transparent' : '#ffffff',
+                  color: isSelected ? '#ffffff' : '#070607',
+                  borderColor: isSelected ? '#070607' : '#d6d6cf',
+                }}
                 className={`flex-shrink-0 w-16 py-3 rounded-[18px] text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
-                  isSelected
-                    ? 'bg-[var(--color-obsidian)] text-[var(--color-limestone)] border-[var(--color-obsidian)] shadow-sm'
-                    : disabled
-                      ? 'opacity-30 cursor-not-allowed border-transparent text-[#595952]'
-                      : 'bg-white border-[#d6d6cf] text-[var(--color-obsidian)] hover:border-[var(--color-obsidian)]'
+                  disabled ? 'opacity-30 cursor-not-allowed border-transparent' : 'shadow-sm'
                 }`}
               >
-                <span className={`text-[11px] font-semibold uppercase tracking-wider ${isSelected ? 'text-[var(--color-sulfur)]' : 'text-[#595952]'}`}>
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-wider"
+                  style={{ color: isSelected ? '#f5f28e' : '#595952' }}
+                >
                   {item.weekDayShort}
                 </span>
-                <span className="text-xl font-bold font-[family-name:var(--font-display)] my-0.5">
+                <span
+                  className="text-xl font-bold font-[family-name:var(--font-display)] my-0.5"
+                  style={{ color: isSelected ? '#ffffff' : '#070607' }}
+                >
                   {item.dayNum}
                 </span>
-                <span className="text-[10px] text-[#8c8c84]">
+                <span
+                  className="text-[10px]"
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : '#8c8c84' }}
+                >
                   {item.isToday ? 'Hoje' : item.isSunday ? 'Fech.' : 'Livre'}
                 </span>
               </button>
@@ -178,7 +188,7 @@ export function DateTimePicker({
         <div className="pt-4 border-t border-[#e2e2df] space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#595952]">
-              Horários Livres no Atelier
+              Horários Livres
             </span>
             {slots.length > 0 && (
               <span className="text-xs text-[#595952]">
@@ -210,11 +220,12 @@ export function DateTimePicker({
                     key={slot.dateTime}
                     type="button"
                     onClick={() => onSelectSlot(slot)}
-                    className={`py-2.5 px-3 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
-                      isSlotSelected
-                        ? 'bg-[var(--color-ember)] text-white border-[var(--color-ember)] shadow-sm'
-                        : 'bg-white hover:bg-[#e2e2df] text-[var(--color-obsidian)] border-[#d6d6cf] hover:border-[var(--color-obsidian)]'
-                    }`}
+                    style={{
+                      backgroundColor: isSlotSelected ? '#fc5000' : '#ffffff',
+                      color: isSlotSelected ? '#ffffff' : '#070607',
+                      borderColor: isSlotSelected ? '#fc5000' : '#d6d6cf',
+                    }}
+                    className="py-2.5 px-3 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer border shadow-xs"
                   >
                     {slot.time}
                   </button>

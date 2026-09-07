@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Agendar Horário · Lara Varisa',
   description:
-    'Agendamento online de extensão de cílios e lash lifting no atelier Lara Varisa em Porto Alegre.',
+    'Agendamento online de extensão de cílios e lash lifting com a Lash Designer Lara Varisa em Porto Alegre.',
   robots: {
     index: false,
     follow: false,

@@ -124,10 +124,11 @@ export function MyAppointmentsSheet({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2.5 rounded-full bg-[var(--color-obsidian)] text-white font-medium text-xs hover:opacity-90 transition-opacity flex items-center gap-1.5 shrink-0 cursor-pointer"
+                style={{ backgroundColor: '#fc5000', color: '#ffffff' }}
+                className="px-5 py-2.5 rounded-full text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm hover:opacity-95 transition-opacity"
               >
-                {loading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                <span>Buscar</span>
+                {loading ? <Loader2 size={13} className="animate-spin text-white" /> : <Search size={13} className="text-white" />}
+                <span className="text-white">Buscar</span>
               </button>
             </div>
             {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}

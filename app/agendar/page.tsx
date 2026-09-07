@@ -469,7 +469,7 @@ export default function AgendarPage() {
                 {submitting ? (
                   <>
                     <Loader2 size={20} className="animate-spin" />
-                    <span>Gravando seu agendamento no atelier...</span>
+                    <span>Gravando seu agendamento com a Lash Designer...</span>
                   </>
                 ) : (
                   <>
@@ -501,7 +501,7 @@ export default function AgendarPage() {
                 Aguardamos você, {successBooking.client_name.split(' ')[0]}!
               </h2>
               <p className="text-xs text-[#595952] max-w-sm mx-auto mt-1">
-                Seu horário foi agendado no sistema do atelier. Confirme pelo WhatsApp para receber o endereço exato.
+                Seu horário foi agendado com a Lash Designer. Confirme pelo WhatsApp para receber o endereço exato.
               </p>
             </div>
 
@@ -537,7 +537,7 @@ export default function AgendarPage() {
 
               <div className="pt-2 border-t border-[#e2e2df] text-[11px] text-[#595952] flex items-center gap-1.5">
                 <MapPin size={13} className="text-[var(--color-ember)] shrink-0" />
-                <span>Atelier Zona Norte, Porto Alegre - RS (Instruções no WhatsApp)</span>
+                <span>Lash Designer · Zona Norte, Porto Alegre - RS (Instruções no WhatsApp)</span>
               </div>
             </div>
 
@@ -586,7 +586,7 @@ export default function AgendarPage() {
       <footer className="border-t border-[#cfcfc9] py-8 px-6 text-center text-xs text-[#595952] bg-[var(--color-pumice)]">
         <div className="max-w-4xl mx-auto space-y-1">
           <p className="font-[family-name:var(--font-display)] text-sm uppercase tracking-wide text-[var(--color-obsidian)]">
-            Lara Varisa Lash Atelier · Porto Alegre, RS
+            Lara Varisa · Lash Designer · Porto Alegre, RS
           </p>
           <p className="text-[11px] text-[#7a7a72]">
             Atendimento com hora marcada na Zona Norte de Porto Alegre.

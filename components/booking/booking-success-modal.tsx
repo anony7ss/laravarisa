@@ -69,7 +69,7 @@ export function BookingSuccessModal({
             Tudo Pronto, {booking.client_name.split(' ')[0]}!
           </h3>
           <p className="text-xs text-[#595952]">
-            Seu horário foi reservado no atelier. Confirmando pelo WhatsApp você já recebe o endereço exato e orientações de chegada.
+            Seu horário foi reservado com a Lash Designer. Confirmando pelo WhatsApp você já recebe o endereço exato e orientações de chegada.
           </p>
         </div>
 

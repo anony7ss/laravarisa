@@ -8,7 +8,7 @@ import {
 } from '@/lib/security';
 
 const bookingRequestSchema = z.object({
-  serviceId: z.string().uuid(),
+  serviceId: z.string().trim().min(1, 'Selecione um serviço válido'),
   startsAt: z.string().datetime({ offset: true }),
   clientName: z.string().trim().min(2, 'Informe seu nome completo').max(80),
   clientPhone: z
