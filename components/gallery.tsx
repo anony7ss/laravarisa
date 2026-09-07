@@ -123,8 +123,8 @@ export function Gallery({ full = false }: { full?: boolean }) {
     () =>
       createAutoScroll({
         speed: 0.7,
-        startDelay: 600,
-        playOnInit: true,
+        startDelay: 300,
+        playOnInit: false,
         stopOnInteraction: false,
         stopOnFocusIn: false,
       }),
@@ -134,17 +134,34 @@ export function Gallery({ full = false }: { full?: boolean }) {
     if (!api || full) return;
     const autoScrollPlugin = api.plugins().autoScroll;
     if (!autoScrollPlugin) return;
-    
+
+    let isVisible = false;
     const sync = () => {
-      if (!document.hidden && !userPaused.current) autoScrollPlugin.play(0);
-      else autoScrollPlugin.stop();
+      if (isVisible && !document.hidden && !userPaused.current) {
+        autoScrollPlugin.play(0);
+      } else {
+        autoScrollPlugin.stop();
+      }
     };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        isVisible = Boolean(entry?.isIntersecting);
+        sync();
+      },
+      { rootMargin: '100px' },
+    );
+
+    if (host.current) observer.observe(host.current);
+
     const onPlay = () => setPlaying(true);
     const onStop = () => setPlaying(false);
     api.on('autoScroll:play', onPlay).on('autoScroll:stop', onStop);
     document.addEventListener('visibilitychange', sync);
-    sync();
+
     return () => {
+      observer.disconnect();
       autoScrollPlugin.stop();
       api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);
@@ -175,6 +192,12 @@ export function Gallery({ full = false }: { full?: boolean }) {
         <span className="gallery-image">
           <img
             src={item.src}
+            srcSet={
+              item.src.endsWith('.webp') && !item.src.includes('-360.webp')
+                ? `${item.src.replace('.webp', '-360.webp')} 360w, ${item.src} 640w`
+                : undefined
+            }
+            sizes="(max-width: 640px) 288px, 450px"
             alt={item.title + ' — ' + item.subtitle.toLowerCase()}
             width="1080"
             height="1440"

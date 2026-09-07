@@ -18,6 +18,7 @@ const dmSans = DM_Sans({
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
+import { AntiDebugger } from '@/components/anti-debugger';
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
@@ -52,6 +53,7 @@ export default function RootLayout({
             __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");}catch(e){}`,
           }}
         />
+        <AntiDebugger />
         <PromoBanner />
         {children}
         <CookieBanner />

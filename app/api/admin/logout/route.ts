@@ -12,5 +12,6 @@ export async function POST(request: Request) {
       cookieStore.delete(c.name);
     }
   }
+  cookieStore.delete('lv_staff');
   return Response.json({ ok: true });
 }

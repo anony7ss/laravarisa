@@ -30,8 +30,8 @@ export function ServiceCarousel() {
     () =>
       createAutoScroll({
         speed: 0.65,
-        startDelay: 500,
-        playOnInit: true,
+        startDelay: 300,
+        playOnInit: false,
         stopOnInteraction: false,
         stopOnFocusIn: false,
       }),
@@ -40,16 +40,34 @@ export function ServiceCarousel() {
 
   useEffect(() => {
     if (!api) return;
+    let isVisible = false;
+
     const sync = () => {
-      if (!document.hidden && !userPaused.current) autoScroll.play(0);
-      else autoScroll.stop();
+      if (isVisible && !document.hidden && !userPaused.current) {
+        autoScroll.play(0);
+      } else {
+        autoScroll.stop();
+      }
     };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        isVisible = Boolean(entry?.isIntersecting);
+        sync();
+      },
+      { rootMargin: '100px' },
+    );
+
+    if (host.current) observer.observe(host.current);
+
     const onPlay = () => setPlaying(true);
     const onStop = () => setPlaying(false);
     api.on('autoScroll:play', onPlay).on('autoScroll:stop', onStop);
     document.addEventListener('visibilitychange', sync);
-    sync();
+
     return () => {
+      observer.disconnect();
       autoScroll.stop();
       api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);

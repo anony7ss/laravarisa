@@ -82,5 +82,11 @@ export async function POST(request: Request) {
     });
   }
 
+  cookieStore.set('lv_staff', '1', {
+    path: '/',
+    sameSite: 'lax',
+    maxAge: 604800,
+  });
+
   return Response.json({ ok: true });
 }

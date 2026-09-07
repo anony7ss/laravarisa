@@ -82,7 +82,13 @@ export function AdminShell({
         ? 'Editor'
         : 'Leitura';
 
+  useEffect(() => {
+    document.cookie = 'lv_staff=1; path=/; max-age=604800; SameSite=Lax';
+  }, []);
+
   async function logout() {
+    document.cookie =
+      'lv_staff=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     await fetch('/api/admin/logout', { method: 'POST' });
     window.location.assign('/admin/login');
   }
