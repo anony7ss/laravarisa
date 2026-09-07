@@ -17,18 +17,83 @@ export async function GET(request: NextRequest) {
     return jsonError('Data inválida.', 400);
   }
 
-  // Check if Sunday (0)
-  if (selectedDate.getUTCDay() === 0) {
+  const supabase = createPublicSupabase();
+  let settings: {
+    booking_enabled?: boolean;
+    booking_closed_message?: string;
+    open_days?: number[];
+    max_future_days?: number;
+    open_time?: string;
+    close_time?: string;
+    break_start?: string;
+    break_end?: string;
+  } | null = null;
+
+  if (supabase) {
+    try {
+      const { data: s } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('id', 'global')
+        .maybeSingle();
+      settings = s;
+    } catch {
+      // ignore
+    }
+  }
+
+  // 1. Check if booking is globally enabled
+  if (settings && settings.booking_enabled === false) {
     return Response.json({
       ok: true,
       date: dateStr,
       closed: true,
-      message: 'O studio não realiza atendimentos aos domingos.',
+      message:
+        settings.booking_closed_message ||
+        'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.',
       slots: [],
     });
   }
 
-  const supabase = createPublicSupabase();
+  // 2. Check open days of week
+  const openDays = settings?.open_days ?? [1, 2, 3, 4, 5, 6];
+  const dow = new Date(`${dateStr}T12:00:00-03:00`).getDay();
+  if (!openDays.includes(dow)) {
+    const dayNames = [
+      'domingos',
+      'segundas-feiras',
+      'terças-feiras',
+      'quartas-feiras',
+      'quintas-feiras',
+      'sextas-feiras',
+      'sábados',
+    ];
+    return Response.json({
+      ok: true,
+      date: dateStr,
+      closed: true,
+      message: `O estúdio não realiza atendimentos aos ${dayNames[dow]}.`,
+      slots: [],
+    });
+  }
+
+  // 3. Check future days limit
+  const maxDays = settings?.max_future_days ?? 30;
+  const now = new Date();
+  const targetDate = new Date(`${dateStr}T23:59:59-03:00`);
+  const diffDays = Math.ceil(
+    (targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (diffDays > maxDays) {
+    return Response.json({
+      ok: true,
+      date: dateStr,
+      closed: true,
+      message: `Agenda aberta apenas para os próximos ${maxDays} dias.`,
+      slots: [],
+    });
+  }
+
   if (supabase) {
     try {
       const { data, error } = await supabase.rpc('get_public_available_slots', {
@@ -41,10 +106,12 @@ export async function GET(request: NextRequest) {
           ok: true,
           date: dateStr,
           closed: false,
-          slots: data.map((item: { slot_time: string; time_label: string }) => ({
-            time: item.time_label,
-            dateTime: item.slot_time,
-          })),
+          slots: data.map(
+            (item: { slot_time: string; time_label: string }) => ({
+              time: item.time_label,
+              dateTime: item.slot_time,
+            }),
+          ),
         });
       }
     } catch {
@@ -54,7 +121,6 @@ export async function GET(request: NextRequest) {
 
   // Fallback slot generator if Supabase is offline or not configured
   const standardTimes = ['09:00', '10:00', '11:30', '14:00', '15:30', '17:00'];
-  const now = new Date();
   const simulatedSlots = standardTimes
     .map((t) => {
       const [h, m] = t.split(':').map(Number);

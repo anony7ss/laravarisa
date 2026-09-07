@@ -178,9 +178,30 @@ export function AdminShell({
               <small>Lash designer</small>
             </span>
           </Link>
-          <button aria-label="Fechar menu" onClick={() => setOpen(false)}>
-            <X size={20} />
-          </button>
+          <div className="admin-sidebar-head-actions">
+            <Link
+              href="/admin/dashboard/agenda"
+              className="admin-bell-btn"
+              title={
+                pendingCount > 0
+                  ? `${pendingCount} agendamento(s) aguardando`
+                  : 'Nenhum agendamento pendente'
+              }
+              aria-label="Agendamentos pendentes"
+            >
+              <Bell size={17} />
+              {pendingCount > 0 && (
+                <span className="admin-bell-badge">{pendingCount}</span>
+              )}
+            </Link>
+            <button
+              className="admin-sidebar-close"
+              aria-label="Fechar menu"
+              onClick={() => setOpen(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
         <p className="admin-nav-label">GESTÃO</p>
         <nav aria-label="Navegação administrativa">
@@ -225,31 +246,18 @@ export function AdminShell({
             <strong>{name || 'Conta administrativa'}</strong>
             <small>{roleLabel}</small>
           </span>
-          <Link
-            href="/admin/dashboard/agenda"
-            className="admin-bell-btn"
-            title={
-              pendingCount > 0
-                ? `${pendingCount} agendamento(s) aguardando`
-                : 'Notificações (nenhum pendente)'
-            }
-            aria-label="Agendamentos pendentes"
-          >
-            <Bell size={16} />
-            {pendingCount > 0 && (
-              <span className="admin-bell-badge">{pendingCount}</span>
-            )}
-          </Link>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            aria-label="Alternar tema"
-            title="Alternar tema"
-          >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button onClick={logout} aria-label="Sair do painel" title="Sair">
-            <LogOut size={17} />
-          </button>
+          <div className="admin-user-actions">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label="Alternar tema"
+              title="Alternar tema"
+            >
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button onClick={logout} aria-label="Sair do painel" title="Sair">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </aside>
       {open && (

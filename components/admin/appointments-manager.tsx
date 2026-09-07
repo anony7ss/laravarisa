@@ -345,21 +345,21 @@ export function AppointmentsManager({
           className={`admin-filter-pill ${quickFilter === 'selected' ? 'active' : ''}`}
           onClick={() => setQuickFilter('selected')}
         >
-          <span>Dia ({selectedItems.length})</span>
+          Dia ({selectedItems.length})
         </button>
         <button
           type="button"
           className={`admin-filter-pill ${quickFilter === 'today' ? 'active' : ''}`}
           onClick={() => goToday()}
         >
-          <span>Hoje</span>
+          Hoje
         </button>
         <button
           type="button"
           className={`admin-filter-pill ${quickFilter === 'next7' ? 'active' : ''}`}
           onClick={() => setQuickFilter('next7')}
         >
-          <span>Próximos 7 dias ({next7Count})</span>
+          Próximos 7 dias ({next7Count})
         </button>
         <button
           type="button"
@@ -367,7 +367,7 @@ export function AppointmentsManager({
           onClick={() => setQuickFilter('scheduled')}
         >
           <i className="scheduled" />
-          <span><strong>{pending}</strong> aguardando</span>
+          <strong>{pending}</strong> aguardando
         </button>
         <button
           type="button"
@@ -375,7 +375,7 @@ export function AppointmentsManager({
           onClick={() => setQuickFilter('confirmed')}
         >
           <i className="confirmed" />
-          <span><strong>{confirmed}</strong> confirmados</span>
+          <strong>{confirmed}</strong> confirmados
         </button>
       </div>
 

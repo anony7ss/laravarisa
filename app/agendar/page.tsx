@@ -70,6 +70,21 @@ export default function AgendarPage() {
   const [submitError, setSubmitError] = useState('');
   const [successBooking, setSuccessBooking] = useState<BookingResult | null>(null);
   const [showMyAppointments, setShowMyAppointments] = useState(false);
+  const [siteSettings, setSiteSettings] = useState<{
+    booking_enabled?: boolean;
+    booking_closed_message?: string;
+    booking_alert?: string;
+    whatsapp_phone?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/public/content')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.settings) setSiteSettings(data.settings);
+      })
+      .catch(() => {});
+  }, []);
 
   // Restore saved name and phone
   useEffect(() => {
@@ -290,8 +305,27 @@ export default function AgendarPage() {
         </div>
       </header>
 
+      {siteSettings?.booking_alert && (
+        <div className="bg-[var(--color-limestone)] border-b border-[#cfcfc9] px-4 py-2.5 text-center text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-2">
+          <Sparkles size={14} className="text-[var(--color-ember)] shrink-0" />
+          <span>{siteSettings.booking_alert}</span>
+        </div>
+      )}
+
       {/* Main Multi-Step Wizard */}
-      <main className={`flex-1 max-w-4xl mx-auto w-full px-3.5 sm:px-6 py-4 sm:py-8 md:py-10 space-y-6 sm:space-y-8 ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}>
+      <main
+        className={`flex-1 max-w-4xl mx-auto w-full px-3.5 sm:px-6 py-4 sm:py-8 md:py-10 space-y-6 sm:space-y-8 ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}
+      >
+        {siteSettings?.booking_enabled === false && (
+          <div className="bg-[#fff4e5] border border-[#ffcc99] text-[#8a4b08] p-4 rounded-2xl text-xs flex items-center gap-3">
+            <AlertCircle size={18} className="shrink-0" />
+            <p>
+              {siteSettings.booking_closed_message ||
+                'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'}
+            </p>
+          </div>
+        )}
+
         {/* Progress Bar (Visible on Steps 1, 2, 3) */}
         {step < 4 && (
           <div className="space-y-2.5 sm:space-y-3">

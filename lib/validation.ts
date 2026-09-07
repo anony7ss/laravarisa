@@ -109,6 +109,21 @@ export const settingsSchema = z.object({
   promo_text: z.string().trim().max(500).default(''),
   promo_link_url: z.string().trim().max(500).default(''),
   promo_link_text: z.string().trim().max(100).default(''),
+  // Operating rules & hours
+  booking_enabled: z.boolean().default(true),
+  booking_closed_message: z.string().trim().max(500).default(''),
+  open_days: z.array(z.coerce.number().int().min(0).max(6)).default([1, 2, 3, 4, 5, 6]),
+  open_time: z.string().regex(/^(\d{2}:\d{2})?$/, 'Formato HH:MM inválido').default('09:00'),
+  close_time: z.string().regex(/^(\d{2}:\d{2})?$/, 'Formato HH:MM inválido').default('19:00'),
+  break_start: z.string().trim().max(5).default(''),
+  break_end: z.string().trim().max(5).default(''),
+  slot_interval_minutes: z.coerce.number().int().min(10).max(180).default(30),
+  min_lead_hours: z.coerce.number().int().min(0).max(72).default(2),
+  max_future_days: z.coerce.number().int().min(1).max(120).default(30),
+  // Communication & studio
+  whatsapp_phone: z.string().trim().max(25).default('5551989601662'),
+  whatsapp_confirmation_message: z.string().trim().max(1000).default(''),
+  booking_alert: z.string().trim().max(300).default(''),
 });
 
 export const testimonialSchema = z.object({
