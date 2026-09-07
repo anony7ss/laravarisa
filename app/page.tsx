@@ -44,6 +44,7 @@ export default function Home() {
   useEffect(() => {
     let ctx: gsap.Context | null = null;
     let alive = true;
+    let removeTriggerListeners: (() => void) | null = null;
 
     const setupAnimations = () => {
       if (!alive || !root.current) return;
@@ -140,10 +141,35 @@ export default function Home() {
           });
         };
 
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(setupScrollTriggers, { timeout: 2000 });
-        } else {
-          setTimeout(setupScrollTriggers, 400);
+        let triggersReady = false;
+        const initScrollTriggers = () => {
+          if (triggersReady || !alive) return;
+          triggersReady = true;
+          if (removeTriggerListeners) removeTriggerListeners();
+          setupScrollTriggers();
+        };
+
+        const onScroll = () => initScrollTriggers();
+        const onPointer = () => initScrollTriggers();
+        const onTouch = () => initScrollTriggers();
+        const onKey = () => initScrollTriggers();
+
+        removeTriggerListeners = () => {
+          window.removeEventListener('scroll', onScroll);
+          window.removeEventListener('pointerdown', onPointer);
+          window.removeEventListener('touchstart', onTouch);
+          window.removeEventListener('keydown', onKey);
+        };
+
+        if (typeof window !== 'undefined') {
+          if (window.scrollY > 20 || window.location.hash) {
+            initScrollTriggers();
+          } else {
+            window.addEventListener('scroll', onScroll, { passive: true, once: true });
+            window.addEventListener('pointerdown', onPointer, { passive: true, once: true });
+            window.addEventListener('touchstart', onTouch, { passive: true, once: true });
+            window.addEventListener('keydown', onKey, { passive: true, once: true });
+          }
         }
       }, root);
     };
@@ -151,6 +177,7 @@ export default function Home() {
     setupAnimations();
     return () => {
       alive = false;
+      if (removeTriggerListeners) removeTriggerListeners();
       ctx?.revert();
     };
   }, []);

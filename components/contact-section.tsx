@@ -165,14 +165,14 @@ export function ContactSection() {
           </>
         ) : (
           <div className="form-success-state" role="status" style={{ animation: 'fade-in 0.5s ease-out' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f6f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#ff5100' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f6f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#a02c00' }}>
               <Check size={24} />
             </div>
             <h3 style={{ fontSize: '24px', fontWeight: '500', marginBottom: '8px' }}>Mensagem enviada!</h3>
-            <p style={{ color: '#71716a', lineHeight: '1.5' }}>
+            <p style={{ color: '#4b4b46', lineHeight: '1.5' }}>
               Obrigado por entrar em contato. A Lara responderá o mais breve possível pelo contato informado.
             </p>
-            <button className="button" style={{ marginTop: '24px', background: 'transparent', color: '#ff5100', border: '1px solid #ff5100' }} type="button" onClick={() => setSent(false)}>
+            <button className="button" style={{ marginTop: '24px', background: 'transparent', color: '#a02c00', border: '1px solid #a02c00' }} type="button" onClick={() => setSent(false)}>
               Enviar outra mensagem
             </button>
           </div>

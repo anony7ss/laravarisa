@@ -1818,8 +1818,8 @@ h2 {
   position: absolute;
   right: 17px;
   bottom: 17px;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #f7f6f2;
   display: grid;
@@ -1864,8 +1864,8 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 48px;
+  min-width: 48px;
   gap: 8px;
 }
 .play-button {
@@ -3524,8 +3524,8 @@ h2 {
   margin-top: 40px;
 }
 .testimonial-dot {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: none;
   background: transparent;

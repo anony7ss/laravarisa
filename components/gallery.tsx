@@ -59,6 +59,7 @@ function BeforeAfterSlider({ beforeSrc, afterSrc, alt }: { beforeSrc: string; af
         value={position}
         onChange={(e) => setPosition(Number(e.target.value))}
         className="before-after-input"
+        aria-label={`Comparar antes e depois de ${alt}`}
         style={{
           position: 'absolute',
           top: 0,
@@ -105,8 +106,8 @@ function BeforeAfterSlider({ beforeSrc, afterSrc, alt }: { beforeSrc: string; af
         </div>
       </div>
       {/* Labels */}
-      <span style={{ position: 'absolute', bottom: '16px', left: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>ANTES</span>
-      <span style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>DEPOIS</span>
+      <span style={{ position: 'absolute', bottom: '16px', left: '16px', background: 'rgba(0,0,0,0.85)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>ANTES</span>
+      <span style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,0.85)', color: '#fff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', zIndex: 4, pointerEvents: 'none' }}>DEPOIS</span>
     </div>
   );
 }
@@ -185,7 +186,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
             }}
           />
           {item.beforeSrc && (
-            <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', zIndex: 2 }}>
+            <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: '10px', padding: '4px 8px', borderRadius: '12px', fontWeight: 'bold', zIndex: 2 }}>
               ANTES / DEPOIS
             </span>
           )}

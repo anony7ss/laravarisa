@@ -56,8 +56,8 @@ export function CookieBanner() {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '44px',
-            minHeight: '44px',
+            minWidth: '48px',
+            minHeight: '48px',
           }}
           aria-label="Fechar aviso de cookies"
         >
@@ -80,7 +80,7 @@ export function CookieBanner() {
             fontWeight: 500,
             cursor: 'pointer',
             flex: 1,
-            minHeight: '44px',
+            minHeight: '48px',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
