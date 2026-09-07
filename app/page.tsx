@@ -266,7 +266,27 @@ export default function Home() {
             <h1 className="hero-title">
               <span>SEU OLHAR.</span>
               <span>
-                SUA <em>ESSÊNCIA.</em>
+                SUA{' '}
+                <em>
+                  ESS
+                  <span className="hero-circumflex-e" title="Ê">
+                    <span className="sr-only">Ê</span>
+                    <span aria-hidden="true" className="hero-circumflex-char">
+                      E
+                      <svg
+                        className="hero-circumflex-mark"
+                        viewBox="0 0 24 14"
+                        aria-hidden="true"
+                      >
+                        <polygon
+                          points="12,0 24,10 19.5,14 12,6.5 4.5,14 0,10"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </span>
+                  </span>
+                  NCIA.
+                </em>
               </span>
             </h1>
             <p className="hero-description">

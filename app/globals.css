@@ -188,6 +188,26 @@ em {
   font-style: normal;
   color: #c43805;
 }
+.hero-circumflex-e {
+  position: relative;
+  display: inline-block;
+  vertical-align: baseline;
+}
+.hero-circumflex-char {
+  position: relative;
+  display: inline-block;
+}
+.hero-circumflex-mark {
+  position: absolute;
+  top: -0.19em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.44em;
+  height: 0.22em;
+  pointer-events: none;
+  overflow: visible;
+  color: inherit;
+}
 .hero-description {
   font-size: 17px;
   line-height: 1.7;
@@ -647,8 +667,8 @@ h2 {
     padding-bottom: 65px;
   }
   .hero-art {
-    max-width: 480px;
-    height: 500px;
+    max-width: 540px;
+    height: 580px;
     margin-left: auto;
   }
   .hero-title {
@@ -3011,19 +3031,27 @@ h2 {
     min-width: 0;
   }
   .hero {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    max-width: 1380px;
+    margin-inline: auto;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     align-items: center;
-    gap: clamp(28px, 4vw, 64px);
+    gap: clamp(32px, 4.5vw, 64px);
   }
   .hero-art {
-    max-width: 460px;
-    height: clamp(380px, 32vw, 470px);
+    width: 100%;
+    max-width: 530px;
+    height: clamp(480px, 39vw, 580px);
     margin-left: auto;
-    border-radius: 36px;
+    border-radius: 40px;
     overflow: hidden;
+    position: relative;
+    box-shadow: 0 28px 70px -15px rgba(0, 0, 0, 0.16);
+    /* Efeito editorial: a base da foto se dissolve suavemente no fundo da página */
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 76%, rgba(0, 0, 0, 0.35) 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 76%, rgba(0, 0, 0, 0.35) 90%, transparent 100%);
   }
   .hero-art img {
-    object-position: 50% 48%;
+    object-position: 50% 40%;
   }
   .section {
     padding-top: clamp(68px, 6vw, 112px);
