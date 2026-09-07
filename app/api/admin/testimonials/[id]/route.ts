@@ -1,40 +1,61 @@
+import { z } from 'zod';
 import { requireStaff } from '@/lib/admin-auth';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { testimonialSchema } from '@/lib/validation';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const { id } = await params;
+  if (!z.string().uuid().safeParse(id).success) {
+    return jsonError('ID inválido.', 400);
+  }
+
   const { supabase, profile } = await requireStaff();
   if (profile.role === 'viewer')
-    return Response.json({ error: 'Não autorizado' }, { status: 403 });
-  const body = await request.json();
+    return jsonError('Não autorizado.', 403);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('JSON inválido.', 400);
+  }
+
+  const parsed = testimonialSchema.partial().safeParse(body);
+  if (!parsed.success) {
+    return jsonError('Revise os campos informados.', 422);
+  }
+
   const { data, error } = await supabase
     .from('testimonials')
-    .update({
-      client_name: body.client_name,
-      client_role: body.client_role,
-      content: body.content,
-      rating: body.rating,
-      sort_order: body.sort_order,
-      active: body.active,
-    })
+    .update(parsed.data)
     .eq('id', id)
     .select()
     .single();
-  if (error) return Response.json({ error: error.message }, { status: 400 });
-  return Response.json(data);
+
+  if (error) return jsonError(error.message, 400);
+  return Response.json(data, { headers: NO_STORE_HEADERS });
 }
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const { id } = await params;
+  if (!z.string().uuid().safeParse(id).success) {
+    return jsonError('ID inválido.', 400);
+  }
+
   const { supabase, profile } = await requireStaff();
   if (profile.role !== 'admin')
-    return Response.json({ error: 'Apenas admins' }, { status: 403 });
+    return jsonError('Apenas administradores podem excluir.', 403);
+
   const { error } = await supabase.from('testimonials').delete().eq('id', id);
-  if (error) return Response.json({ error: error.message }, { status: 400 });
-  return Response.json({ ok: true });
+  if (error) return jsonError(error.message, 400);
+  return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
+

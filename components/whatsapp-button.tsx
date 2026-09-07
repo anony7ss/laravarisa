@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 
 export function WhatsAppButton() {
   const pathname = usePathname();
-  // Don't show in admin area
-  if (pathname?.startsWith('/admin')) return null;
+  // Don't show in admin area or booking portal (which has its own action bar)
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agendar')) return null;
 
   return (
     <a

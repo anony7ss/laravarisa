@@ -104,3 +104,78 @@ export async function verifyTurnstile(token: string, request: Request) {
   const result = (await response.json()) as { success?: boolean };
   return result.success === true;
 }
+
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  return (
+    forwarded ||
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-real-ip') ||
+    '127.0.0.1'
+  );
+}
+
+// In-memory sliding window rate limiter
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+const rateLimitCache = new Map<string, RateLimitEntry>();
+let lastCleanup = Date.now();
+
+function cleanupExpiredRateLimits() {
+  const now = Date.now();
+  if (now - lastCleanup < 60_000) return;
+  lastCleanup = now;
+  for (const [key, entry] of rateLimitCache.entries()) {
+    if (now > entry.resetAt) {
+      rateLimitCache.delete(key);
+    }
+  }
+}
+
+export function checkRateLimit(
+  key: string,
+  maxRequests: number,
+  windowMs: number,
+): { allowed: boolean; remaining: number; resetInMs: number } {
+  cleanupExpiredRateLimits();
+  const now = Date.now();
+  const entry = rateLimitCache.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitCache.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, remaining: maxRequests - 1, resetInMs: windowMs };
+  }
+
+  if (entry.count >= maxRequests) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetInMs: Math.max(0, entry.resetAt - now),
+    };
+  }
+
+  entry.count++;
+  return {
+    allowed: true,
+    remaining: maxRequests - entry.count,
+    resetInMs: Math.max(0, entry.resetAt - now),
+  };
+}
+
+export function sanitizeText(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .trim();
+}
+
+export const NO_STORE_HEADERS = {
+  'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
+  Pragma: 'no-cache',
+} as const;
+

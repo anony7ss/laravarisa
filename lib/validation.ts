@@ -92,3 +92,31 @@ export const appointmentSchema = z
     message: 'O horário final deve ser posterior ao inicial.',
     path: ['ends_at'],
   });
+
+export const anamnesisSchema = z.object({
+  client_name: cleanText(100).min(2),
+  client_phone: z.string().trim().min(10).max(24),
+  has_allergies: z.boolean().default(false),
+  allergies_detail: z.string().trim().max(1000).nullable().optional(),
+  pregnant: z.boolean().default(false),
+  eye_surgery: z.boolean().default(false),
+  thyroid_issues: z.boolean().default(false),
+  signature: cleanText(150).min(2),
+});
+
+export const settingsSchema = z.object({
+  promo_active: z.boolean().default(false),
+  promo_text: z.string().trim().max(500).default(''),
+  promo_link_url: z.string().trim().max(500).default(''),
+  promo_link_text: z.string().trim().max(100).default(''),
+});
+
+export const testimonialSchema = z.object({
+  client_name: cleanText(100).min(2),
+  client_role: z.string().trim().max(100).default('Cliente'),
+  content: cleanText(1000).min(5),
+  rating: z.coerce.number().int().min(1).max(5).default(5),
+  sort_order: z.coerce.number().int().min(-10000).max(10000).default(0),
+  active: z.boolean().default(true),
+});
+

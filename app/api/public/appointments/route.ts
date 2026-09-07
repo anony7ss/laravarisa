@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import { createPublicSupabase } from '@/lib/supabase/server';
 import {
+  checkRateLimit,
+  getClientIp,
   hasValidOrigin,
   jsonError,
   leadFingerprint,
+  NO_STORE_HEADERS,
+  sanitizeText,
   verifyTurnstile,
 } from '@/lib/security';
 
@@ -30,6 +34,13 @@ export async function POST(request: Request) {
   if (contentLength > 15_000) return jsonError('Conteúdo muito grande.', 413);
   if (!request.headers.get('content-type')?.includes('application/json')) {
     return jsonError('Formato inválido.', 415);
+  }
+
+  // Rate Limiting (max 6 booking attempts per 10 minutes per IP)
+  const ip = getClientIp(request);
+  const rateCheck = checkRateLimit(`booking:${ip}`, 6, 10 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return jsonError('Muitas tentativas de agendamento. Aguarde alguns minutos.', 429);
   }
 
   let body: unknown;
@@ -65,19 +76,24 @@ export async function POST(request: Request) {
     return jsonError('Sistema de agendamento em manutenção temporária.', 503);
   }
 
-  // Calculate fingerprint for rate limiting
+  // Calculate fingerprint for database-level rate limiting
   const fingerprint =
     leadFingerprint(request, clientPhone || clientEmail || 'guest') ||
     '0000000000000000000000000000000000000000000000000000000000000000';
+
+  // Sanitize text inputs
+  const cleanName = sanitizeText(clientName);
+  const cleanEmail = sanitizeText(clientEmail);
+  const cleanNotes = sanitizeText(notes);
 
   try {
     const { data, error } = await supabase.rpc('submit_public_booking', {
       p_service_id: serviceId,
       p_starts_at: startsAt,
-      p_client_name: clientName,
+      p_client_name: cleanName,
       p_client_phone: clientPhone,
-      p_client_email: clientEmail,
-      p_notes: notes,
+      p_client_email: cleanEmail,
+      p_notes: cleanNotes,
       p_fingerprint_hash: fingerprint,
     });
 
@@ -97,9 +113,10 @@ export async function POST(request: Request) {
         data,
         message: 'Agendamento reservado com sucesso!',
       },
-      { status: 201 },
+      { status: 201, headers: NO_STORE_HEADERS },
     );
   } catch {
     return jsonError('Erro interno ao processar agendamento.', 500);
   }
 }
+

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 import {
   appointmentSchema,
   clientSchema,
@@ -42,7 +42,7 @@ export async function GET(
     .select('*')
     .order(config.order, { ascending: resource === 'appointments' });
   if (error) return jsonError('Não foi possível carregar os dados.', 500);
-  return Response.json({ ok: true, data });
+  return Response.json({ ok: true, data }, { headers: NO_STORE_HEADERS });
 }
 
 export async function POST(
@@ -76,5 +76,5 @@ export async function POST(
     .select('*')
     .single();
   if (error) return jsonError('Não foi possível salvar.', 500);
-  return Response.json({ ok: true, data }, { status: 201 });
+  return Response.json({ ok: true, data }, { status: 201, headers: NO_STORE_HEADERS });
 }

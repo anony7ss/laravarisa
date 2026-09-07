@@ -1,4 +1,6 @@
 import { requireStaff } from '@/lib/admin-auth';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { settingsSchema } from '@/lib/validation';
 
 export async function GET() {
   const context = await requireStaff();
@@ -9,33 +11,39 @@ export async function GET() {
     .eq('id', 'global')
     .single();
 
-  return Response.json(data || {});
+  return Response.json(data || {}, { headers: NO_STORE_HEADERS });
 }
 
 export async function PATCH(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const context = await requireStaff();
   if (context.profile.role !== 'admin') {
-    return Response.json({ error: 'Unauthorized' }, { status: 403 });
+    return jsonError('Apenas administradores podem alterar configurações.', 403);
   }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonError('JSON inválido.', 400);
+  }
+
+  const parsed = settingsSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonError('Revise os campos informados.', 422);
+  }
+
   const supabase = context.supabase;
-  const body = await request.json();
-
-  const payload = {
-    promo_active: Boolean(body.promo_active),
-    promo_text: String(body.promo_text || ''),
-    promo_link_url: String(body.promo_link_url || ''),
-    promo_link_text: String(body.promo_link_text || ''),
-  };
-
   const { data, error } = await supabase
     .from('site_settings')
-    .update(payload)
+    .update(parsed.data)
     .eq('id', 'global')
     .select()
     .single();
 
   if (error) {
-    return Response.json({ error: error.message }, { status: 400 });
+    return jsonError(error.message, 400);
   }
-  return Response.json(data);
+  return Response.json(data, { headers: NO_STORE_HEADERS });
 }
+

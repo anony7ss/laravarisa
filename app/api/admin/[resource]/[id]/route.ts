@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 import {
   appointmentSchema,
   clientSchema,
@@ -45,7 +45,7 @@ export async function PATCH(
     .select('*')
     .single();
   if (error) return jsonError('Não foi possível atualizar.', 500);
-  return Response.json({ ok: true, data });
+  return Response.json({ ok: true, data }, { headers: NO_STORE_HEADERS });
 }
 
 export async function DELETE(
@@ -80,9 +80,9 @@ export async function DELETE(
       toRemove.push(item.before_image_path);
     if (toRemove.length > 0)
       await staff.supabase.storage.from('gallery').remove(toRemove);
-    return Response.json({ ok: true });
+    return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
   }
   const { error } = await staff.supabase.from(config.table).delete().eq('id', id);
   if (error) return jsonError('Não foi possível excluir.', 500);
-  return Response.json({ ok: true });
+  return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }

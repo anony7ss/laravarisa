@@ -587,7 +587,11 @@ export default function AgendarPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#cfcfc9] py-8 px-6 text-center text-xs text-[#595952] bg-[var(--color-pumice)]">
+      <footer
+        className={`border-t border-[#cfcfc9] pt-8 px-6 text-center text-xs text-[#595952] bg-[var(--color-pumice)] ${
+          step <= 2 ? 'pb-28 sm:pb-8' : 'pb-8'
+        }`}
+      >
         <div className="max-w-4xl mx-auto space-y-1">
           <p className="font-[family-name:var(--font-display)] text-sm uppercase tracking-wide text-[var(--color-obsidian)]">
             Lara Varisa · Lash Designer · Porto Alegre, RS
