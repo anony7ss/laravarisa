@@ -14,7 +14,7 @@ const nextConfig = {
       img-src 'self' blob: data: https:;
       font-src 'self' https://fonts.gstatic.com data:;
       connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://*.netlify.app;
-      frame-src 'self' https://challenges.cloudflare.com https://www.google.com;
+      frame-src 'self' https://challenges.cloudflare.com https://www.google.com https://*.google.com https://maps.google.com;
       object-src 'none';
       base-uri 'self';
       form-action 'self';

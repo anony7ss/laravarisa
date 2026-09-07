@@ -137,6 +137,29 @@ export function ClientForm({
             className="w-full px-4 py-3 rounded-full bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-xs focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
           />
         </div>
+
+        {/* LGPD Consent */}
+        <div className="pt-2 border-t border-[#d6d6cf]/70">
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              required
+              defaultChecked
+              className="mt-0.5 w-4 h-4 rounded text-[var(--color-ember)] accent-[var(--color-ember)] cursor-pointer shrink-0"
+            />
+            <span className="text-[11px] text-[#595952] leading-relaxed">
+              Concordo com o tratamento dos meus dados (nome, WhatsApp e e-mail) para confirmação da reserva e orientações do estúdio, nos termos da <strong>LGPD (Lei nº 13.709/18)</strong> e da{' '}
+              <a
+                href="/privacidade"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-[var(--color-obsidian)] font-semibold hover:text-[var(--color-ember)]"
+              >
+                Política de Privacidade
+              </a>.
+            </span>
+          </label>
+        </div>
       </div>
     </div>
   );

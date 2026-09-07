@@ -114,6 +114,7 @@ export const settingsSchema = z.object({
   promo_text: z.string().trim().max(500).default(''),
   promo_link_url: z.string().trim().max(500).default(''),
   promo_link_text: z.string().trim().max(100).default(''),
+  promo_conditions: z.string().trim().max(1500).default(''),
   // Operating rules & hours
   booking_enabled: z.boolean().default(true),
   booking_closed_message: z.string().trim().max(500).default(''),

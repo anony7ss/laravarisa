@@ -71,6 +71,7 @@ export function SettingsManager({
       promo_text: String(form.get('promo_text') || ''),
       promo_link_url: String(form.get('promo_link_url') || ''),
       promo_link_text: String(form.get('promo_link_text') || ''),
+      promo_conditions: String(form.get('promo_conditions') || ''),
 
       // Horários & Dias
       open_days: openDays,
@@ -450,6 +451,20 @@ export function SettingsManager({
               disabled={role !== 'admin'}
               placeholder="Ex: /agendar ou https://wa.me/..."
             />
+          </label>
+
+          <label style={{ gridColumn: '1 / -1' }}>
+            Regras e Condições da Promoção (Validade, se vale apenas para novos clientes, etc.)
+            <textarea
+              name="promo_conditions"
+              defaultValue={settings?.promo_conditions || ''}
+              disabled={role !== 'admin'}
+              rows={3}
+              placeholder="Ex: Válido exclusivamente para novas clientes no primeiro procedimento. Não cumulativo com outras promoções. Validade até o fim do mês corrente."
+            />
+            <small style={{ color: 'var(--admin-muted)', marginTop: '4px', display: 'block', fontSize: '11px' }}>
+              Essas informações serão exibidas para as clientes ao clicar em &quot;Ver condições&quot; no banner superior.
+            </small>
           </label>
         </div>
       </section>

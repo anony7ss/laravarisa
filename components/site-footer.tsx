@@ -85,7 +85,12 @@ export function SiteFooter() {
         </div>
         <div className="footer-legal">
           <span>© {new Date().getFullYear()} Lara Varisa</span>
-          <span>Beleza em cada detalhe.</span>
+          <Link href="/privacidade" style={{ textDecoration: 'none', color: 'inherit' }}>
+            Privacidade & LGPD
+          </Link>
+          <Link href="/termos" style={{ textDecoration: 'none', color: 'inherit' }}>
+            Termos & Políticas
+          </Link>
           <a href="#conteudo">
             Voltar ao topo <ArrowUp size={15} />
           </a>

@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useState, type SyntheticEvent } from 'react';
+import Link from 'next/link';
 import { ArrowUpRight, Check, Mail, MessageCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,7 +62,7 @@ export function ContactSection() {
   return (
     <section id="contato" className="contact-section wrap section">
       <div className="contact-copy reveal">
-        <p className="eyebrow">05 / VAMOS CONVERSAR</p>
+        <p className="eyebrow">06 / VAMOS CONVERSAR</p>
         <h2>
           UM OLÁ.
           <br />
@@ -122,7 +123,7 @@ export function ContactSection() {
                 name="phone"
                 type="tel"
                 autoComplete="tel"
-                placeholder="(11) 99999-9999"
+                placeholder="(51) 98960-0000"
                 maxLength={15}
                 onChange={(e) => {
                   let value = e.target.value.replace(/\D/g, '');
@@ -156,7 +157,10 @@ export function ContactSection() {
               </p>
             )}
             <p className="form-privacy">
-              Seus dados serão usados apenas para responder sua solicitação.
+              Seus dados estão protegidos nos termos da <strong>LGPD (Lei 13.709/18)</strong> e são utilizados exclusivamente para responder à sua mensagem. Veja nossa{' '}
+              <Link href="/privacidade" target="_blank" style={{ textDecoration: 'underline' }}>
+                Política de Privacidade
+              </Link>.
             </p>
             <button className="button" type="submit" disabled={submitting}>
               {submitting ? 'Enviando sua mensagem…' : 'Enviar dúvida'}

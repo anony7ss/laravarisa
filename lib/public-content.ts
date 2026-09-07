@@ -10,6 +10,7 @@ export type SiteSettings = {
   promo_text: string;
   promo_link_url: string;
   promo_link_text: string;
+  promo_conditions?: string;
 };
 
 export type Testimonial = {

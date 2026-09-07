@@ -2,6 +2,7 @@
 
 import { MessageCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { whatsappUrl } from '@/lib/studio';
 
 export function WhatsAppButton() {
   const pathname = usePathname();
@@ -10,7 +11,7 @@ export function WhatsAppButton() {
 
   return (
     <a
-      href="https://wa.me/5511999999999?text=Ol%C3%A1%2C%20gostaria%20de%20agendar%20um%20hor%C3%A1rio%21"
+      href={whatsappUrl('Olá, Lara! Gostaria de tirar uma dúvida sobre os procedimentos de cílios ✨')}
       target="_blank"
       rel="noopener noreferrer"
       className="whatsapp-float"

@@ -85,6 +85,16 @@ export default function AnamnesePage() {
           <input type="text" name="signature" required placeholder="Declaro que as informações são verdadeiras" style={{ padding: '12px', borderRadius: '8px', border: '1px solid #333', background: 'transparent', color: '#fff' }} />
         </label>
 
+        <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+            <input type="checkbox" required defaultChecked style={{ marginTop: '3px' }} />
+            <span style={{ fontSize: '12px', color: '#c2c2bc', lineHeight: '1.5' }}>
+              Consinto expressamente com o tratamento dos meus dados pessoais e dados sensíveis de saúde ocular nos termos do Art. 11 da <strong>LGPD (Lei nº 13.709/2018)</strong>, com a finalidade exclusiva de avaliação pré-procedimento e segurança estética. Conheça nossa{' '}
+              <Link href="/privacidade" target="_blank" style={{ textDecoration: 'underline', color: '#fff' }}>Política de Privacidade</Link>.
+            </span>
+          </label>
+        </div>
+
         <button type="submit" className="button" disabled={loading} style={{ marginTop: '16px', justifyContent: 'center', width: '100%' }}>
           {loading ? 'Enviando...' : 'Enviar Ficha'}
         </button>
