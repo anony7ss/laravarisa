@@ -4,23 +4,22 @@ import {
   createServerSupabase,
   createPublicSupabase,
 } from '@/lib/supabase/server';
-import { hasValidOrigin, jsonError } from '@/lib/security';
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+import {
+  checkRateLimit,
+  getClientIp,
+  hasValidOrigin,
+  jsonError,
+  NO_STORE_HEADERS,
+} from '@/lib/security';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
 
   // In-memory rate limiting (max 5 attempts per 15 minutes per IP)
-  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '127.0.0.1';
-  const now = Date.now();
-  const limit = rateLimitMap.get(ip);
-  if (!limit || now > limit.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
-  } else if (limit.count >= 5) {
+  const ip = getClientIp(request);
+  const ipCheck = checkRateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
+  if (!ipCheck.allowed) {
     return jsonError('Muitas tentativas. Tente novamente mais tarde.', 429);
-  } else {
-    limit.count++;
   }
 
   let input: unknown;
@@ -31,6 +30,16 @@ export async function POST(request: Request) {
   }
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return jsonError('Credenciais inválidas.', 422);
+
+  // Additional rate limiting per email+IP combination to mitigate credential stuffing
+  const accountCheck = checkRateLimit(
+    `login-acct:${ip}:${parsed.data.email}`,
+    5,
+    15 * 60 * 1000,
+  );
+  if (!accountCheck.allowed) {
+    return jsonError('Muitas tentativas para esta conta. Aguarde alguns minutos.', 429);
+  }
 
   // 1. Autentica com cliente público limpo (sem herdar cookies antigos ou tokens de outros projetos no localhost)
   const authClient = createPublicSupabase();
@@ -84,9 +93,12 @@ export async function POST(request: Request) {
 
   cookieStore.set('lv_staff', '1', {
     path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 604800,
   });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
+

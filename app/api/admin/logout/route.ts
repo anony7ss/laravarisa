@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createServerSupabase } from '@/lib/supabase/server';
-import { hasValidOrigin, jsonError } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -13,5 +13,6 @@ export async function POST(request: Request) {
     }
   }
   cookieStore.delete('lv_staff');
-  return Response.json({ ok: true });
+  return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
+

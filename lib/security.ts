@@ -4,35 +4,49 @@ export function jsonError(message: string, status: number) {
   return Response.json({ ok: false, error: message }, { status });
 }
 
-export function hasValidOrigin(request: Request) {
+const TRUSTED_PRODUCTION_HOSTNAMES = new Set([
+  'laravarisa.com.br',
+  'www.laravarisa.com.br',
+  'laravarisa.netlify.app',
+]);
+
+export function hasValidOrigin(request: Request): boolean {
   const origin = request.headers.get('origin') || request.headers.get('referer');
-  if (!origin) return true;
+
+  // If origin is explicit string 'null' (sandboxed iframe exploit), reject immediately
+  if (origin === 'null') return false;
+
+  if (!origin) {
+    // For mutative requests (POST, PATCH, PUT, DELETE), require origin or referer in production
+    const method = request.method.toUpperCase();
+    if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+      if (process.env.NODE_ENV === 'development') return true;
+      return false;
+    }
+    return true;
+  }
 
   try {
-    const originHost = new URL(origin).host.toLowerCase();
-    const forwardedHost = request.headers
-      .get('x-forwarded-host')
-      ?.split(',')[0]
-      ?.trim()
-      .toLowerCase();
-    const hostHeader = request.headers.get('host')?.toLowerCase();
-    const urlHost = new URL(request.url).host.toLowerCase();
+    const parsedUrl = new URL(origin);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const host = parsedUrl.host.toLowerCase();
 
-    if (
-      (forwardedHost && originHost === forwardedHost) ||
-      (hostHeader && originHost === hostHeader) ||
-      (urlHost && originHost === urlHost)
-    ) {
+    // 1. Exact trusted production domains
+    if (TRUSTED_PRODUCTION_HOSTNAMES.has(hostname)) {
       return true;
     }
 
+    // 2. Netlify deploy previews for THIS app only (e.g. deploy-preview-12--laravarisa.netlify.app)
+    if (/^[a-z0-9-]+--laravarisa\.netlify\.app$/.test(hostname)) {
+      return true;
+    }
+
+    // 3. Localhost development only
     if (
-      originHost === 'laravarisa.netlify.app' ||
-      originHost.endsWith('.netlify.app') ||
-      originHost === 'laravarisa.com.br' ||
-      originHost === 'www.laravarisa.com.br' ||
-      originHost.startsWith('localhost') ||
-      originHost.startsWith('127.0.0.1')
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      host.startsWith('localhost:') ||
+      host.startsWith('127.0.0.1:')
     ) {
       return true;
     }

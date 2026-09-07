@@ -141,3 +141,13 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.submit_public_anamnesis(text, text, boolean, text, boolean, boolean, boolean, text) TO anon, authenticated;
+
+-- 6. Lock down DML privileges on sensitive tables
+REVOKE INSERT, DELETE ON public.profiles FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.audit_logs FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.services FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.gallery_items FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.testimonials FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.site_settings FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.clients FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.appointments FROM anon;

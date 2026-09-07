@@ -3,6 +3,7 @@ import {
   hasValidOrigin,
   imageMimeFromMagic,
   jsonError,
+  NO_STORE_HEADERS,
   safeStorageName,
 } from '@/lib/security';
 
@@ -45,5 +46,5 @@ export async function POST(request: Request) {
     .from('gallery')
     .upload(path, bytes, { contentType: 'image/webp', upsert: false });
   if (error) return jsonError('Não foi possível enviar a imagem.', 500);
-  return Response.json({ ok: true, path }, { status: 201 });
+  return Response.json({ ok: true, path }, { status: 201, headers: NO_STORE_HEADERS });
 }
