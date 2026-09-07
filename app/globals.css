@@ -188,26 +188,23 @@ em {
   font-style: normal;
   color: #c43805;
 }
-.hero-circumflex-e {
-  position: relative;
-  display: inline-block;
-  vertical-align: baseline;
-}
-.hero-circumflex-char {
+.hero-e-accent {
   position: relative;
   display: inline-block;
 }
-.hero-circumflex-mark {
+.hero-e-accent::after {
+  content: '';
   position: absolute;
-  top: -0.19em;
+  top: 0.04em;
   left: 50%;
   transform: translateX(-50%);
-  width: 0.44em;
-  height: 0.22em;
+  width: 0.14em;
+  height: 0.08em;
+  background-color: currentColor;
+  border-radius: 1px;
   pointer-events: none;
-  overflow: visible;
-  color: inherit;
 }
+
 .hero-description {
   font-size: 17px;
   line-height: 1.7;
