@@ -5,15 +5,39 @@ export function jsonError(message: string, status: number) {
 }
 
 export function hasValidOrigin(request: Request) {
-  const origin = request.headers.get('origin');
-  const fetchSite = request.headers.get('sec-fetch-site');
-  if (
-    !origin ||
-    (fetchSite && !['same-origin', 'same-site'].includes(fetchSite))
-  )
-    return false;
+  const origin = request.headers.get('origin') || request.headers.get('referer');
+  if (!origin) return true;
+
   try {
-    return new URL(origin).host === new URL(request.url).host;
+    const originHost = new URL(origin).host.toLowerCase();
+    const forwardedHost = request.headers
+      .get('x-forwarded-host')
+      ?.split(',')[0]
+      ?.trim()
+      .toLowerCase();
+    const hostHeader = request.headers.get('host')?.toLowerCase();
+    const urlHost = new URL(request.url).host.toLowerCase();
+
+    if (
+      (forwardedHost && originHost === forwardedHost) ||
+      (hostHeader && originHost === hostHeader) ||
+      (urlHost && originHost === urlHost)
+    ) {
+      return true;
+    }
+
+    if (
+      originHost === 'laravarisa.netlify.app' ||
+      originHost.endsWith('.netlify.app') ||
+      originHost === 'laravarisa.com.br' ||
+      originHost === 'www.laravarisa.com.br' ||
+      originHost.startsWith('localhost') ||
+      originHost.startsWith('127.0.0.1')
+    ) {
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
