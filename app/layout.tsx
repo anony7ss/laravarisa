@@ -4,16 +4,16 @@ import './globals.css';
 
 const anton = Anton({
   weight: '400',
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   display: 'swap',
-  variable: '--font-display',
+  variable: '--font-anton',
 });
 
 const dmSans = DM_Sans({
   weight: ['400', '500'],
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   display: 'swap',
-  variable: '--font-body',
+  variable: '--font-dm-sans',
 });
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';

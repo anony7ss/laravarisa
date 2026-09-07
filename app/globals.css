@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 @import './design-tokens.css';
 :root {
-  --font-display: var(--font-display), 'Anton', sans-serif;
-  --font-body: var(--font-body), 'DM Sans', sans-serif;
+  --font-display: var(--font-anton), 'Anton', sans-serif;
+  --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
   --background: #e2e2df;
   --foreground: #070607;
   --popover: #f7f6f2;
@@ -179,15 +179,14 @@ h2,
   display: block;
   white-space: nowrap;
   overflow: hidden;
-  padding-bottom: 4px;
+  padding-top: 8px;
+  margin-top: -8px;
+  padding-bottom: 6px;
+  margin-bottom: -6px;
 }
 em {
   font-style: normal;
-  color: #a02c00;
-  display: inline-block;
-  background: linear-gradient(135deg, #a02c00 0%, #c43805 50%, #d84508 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #c43805;
 }
 .hero-description {
   font-size: 17px;
@@ -648,10 +647,12 @@ h2 {
     padding-bottom: 65px;
   }
   .hero-art {
-    height: 610px;
+    max-width: 480px;
+    height: 500px;
+    margin-left: auto;
   }
   .hero-title {
-    font-size: 112px;
+    font-size: 104px;
   }
 }
 @media (max-width: 1100px) {
@@ -3010,11 +3011,19 @@ h2 {
     min-width: 0;
   }
   .hero {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: clamp(28px, 4vw, 96px);
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: center;
+    gap: clamp(28px, 4vw, 64px);
   }
   .hero-art {
-    height: clamp(440px, 39vw, 740px);
+    max-width: 460px;
+    height: clamp(380px, 32vw, 470px);
+    margin-left: auto;
+    border-radius: 36px;
+    overflow: hidden;
+  }
+  .hero-art img {
+    object-position: 50% 48%;
   }
   .section {
     padding-top: clamp(68px, 6vw, 112px);
