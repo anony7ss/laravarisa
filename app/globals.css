@@ -4064,24 +4064,23 @@ h2 {
 
 /* Promo Banner Conditions & Modal */
 .promo-conditions-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
+  display: inline-block;
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11.5px;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  padding: 0 4px;
   font-family: inherit;
+  transition: color 0.15s ease;
+  line-height: inherit;
 }
 
 .promo-conditions-trigger:hover {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .promo-modal-backdrop {

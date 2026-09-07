@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { usePublicSettings } from '@/lib/public-content';
-import { Info, X, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export function PromoBanner() {
@@ -29,8 +29,7 @@ export function PromoBanner() {
             onClick={() => setShowModal(true)}
             aria-label="Ver condições da promoção"
           >
-            <Info size={13} />
-            <span>Condições</span>
+            (ver condições)
           </button>
           {settings.promo_link_url && settings.promo_link_text && (
             <a href={settings.promo_link_url} className="promo-link">
