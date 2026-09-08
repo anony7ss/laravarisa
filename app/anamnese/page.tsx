@@ -1,31 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, CheckCircle, AlertCircle, FileText, Lock } from 'lucide-react';
 
-export default function AnamnesePage() {
+function AnamneseForm() {
+  const searchParams = useSearchParams();
+  const queryName = searchParams.get('nome') || searchParams.get('name') || '';
+  const queryPhone = searchParams.get('telefone') || searchParams.get('phone') || searchParams.get('whatsapp') || '';
+
+  const formatPhone = (val: string) => {
+    let digits = val.replace(/\D/g, '');
+    if (digits.startsWith('55') && digits.length >= 12) {
+      digits = digits.slice(2);
+    }
+    digits = digits.slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Controlled form fields
-  const [clientName, setClientName] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
+  // Controlled form fields (inicia com query params se presentes)
+  const [clientName, setClientName] = useState(queryName);
+  const [clientPhone, setClientPhone] = useState(queryPhone ? formatPhone(queryPhone) : '');
   const [hasAllergies, setHasAllergies] = useState(false);
   const [allergiesDetail, setAllergiesDetail] = useState('');
   const [pregnant, setPregnant] = useState(false);
   const [eyeSurgery, setEyeSurgery] = useState(false);
   const [thyroidIssues, setThyroidIssues] = useState(false);
-  const [signature, setSignature] = useState('');
+  const [signature, setSignature] = useState(queryName);
   const [consentLgpd, setConsentLgpd] = useState(true);
 
-  const formatPhone = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  };
+  // Sincroniza caso searchParams mudem
+  useEffect(() => {
+    if (queryName && !clientName) {
+      setClientName(queryName);
+    }
+    if (queryName && !signature) {
+      setSignature(queryName);
+    }
+    if (queryPhone && !clientPhone) {
+      setClientPhone(formatPhone(queryPhone));
+    }
+  }, [queryName, queryPhone]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -363,4 +385,19 @@ export default function AnamnesePage() {
     </main>
   );
 }
+
+export default function AnamnesePage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', color: '#8b8b83' }}>
+          Carregando formulário de anamnese...
+        </div>
+      }
+    >
+      <AnamneseForm />
+    </Suspense>
+  );
+}
+
 

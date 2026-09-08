@@ -926,14 +926,21 @@ export function ClientsManager({
                         ) : item.phone ? (
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
+                              const pClean = cleanDigits(item.phone);
+                              const qParams = new URLSearchParams();
+                              if (item.name) qParams.set('nome', item.name);
+                              if (pClean) qParams.set('telefone', pClean);
+                              const qStr = qParams.toString() ? `?${qParams.toString()}` : '';
+                              const anamneseUrl = `https://laravarisa.com.br/anamnese${qStr}`;
+
                               sendBotMessage(
                                 item,
                                 `anamnese-${item.id}`,
-                                'Olá, {primeiro_nome}! 💕 Antes do seu atendimento no estúdio da Lara Varisa, por favor preencha nossa rápida Ficha de Anamnese: https://laravarisa.com.br/anamnese',
+                                `Olá, {primeiro_nome}! 💕 Antes do seu atendimento no estúdio da Lara Varisa, por favor preencha nossa rápida Ficha de Anamnese: ${anamneseUrl}`,
                                 'Envio de Anamnese',
-                              )
-                            }
+                              );
+                            }}
                             disabled={botSendingMap[`anamnese-${item.id}`] === 'sending' || botSendingMap[`anamnese-${item.id}`] === 'sent'}
                             style={{
                               display: 'inline-flex',
