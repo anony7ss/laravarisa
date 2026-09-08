@@ -30,20 +30,26 @@ console.warn = function (...args) {
   _origWarn.apply(console, args);
 };
 
+import { initWhatsApp, limparSessaoDesincronizada } from './src/whatsapp.js';
+
 console.error = function (...args) {
-  if (typeof args[0] === 'string' && (
-    args[0].includes('Failed to decrypt message with any known session') ||
-    args[0].includes('Session error:Error: Bad MAC') ||
-    args[0].includes('Session error:MessageCounterError') ||
-    args[0].includes('Session error:')
-  )) {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (
+    msg.includes('Failed to decrypt message with any known session') ||
+    msg.includes('Session error:Error: Bad MAC') ||
+    msg.includes('Session error:MessageCounterError') ||
+    msg.includes('Session error:')
+  ) {
+    const match = msg.match(/(\d{8,16})/);
+    if (match && match[1]) {
+      limparSessaoDesincronizada(match[1]);
+    }
     return;
   }
   _origError.apply(console, args);
 };
 
 import config from './src/config.js';
-import { initWhatsApp } from './src/whatsapp.js';
 import { iniciarSincronizacaoSite } from './src/supabase.js';
 import { iniciarLembretesAutomaticos } from './src/reminders.js';
 import { iniciarProcessadorOutbox } from './src/outbox.js';

@@ -27,10 +27,10 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
       const sem9 = `55${rest.slice(0, 2)}${rest.slice(3)}@s.whatsapp.net`;
       candidates.push(com9, sem9);
     } else if (rest.length === 10) {
-      // Ex: 51 8974-1970 -> Testa sem 9 e com 9
-      const sem9 = `55${rest}@s.whatsapp.net`;
+      // Ex: 51 8974-1970 -> Testa com 9 primeiro e depois sem 9
       const com9 = `55${rest.slice(0, 2)}9${rest.slice(2)}@s.whatsapp.net`;
-      candidates.push(sem9, com9);
+      const sem9 = `55${rest}@s.whatsapp.net`;
+      candidates.push(com9, sem9);
     } else {
       candidates.push(`${withCountry}@s.whatsapp.net`);
     }

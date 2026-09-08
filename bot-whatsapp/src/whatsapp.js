@@ -62,6 +62,25 @@ function ehMensagemDuplicada(msgId) {
   return false;
 }
 
+export function limparSessaoDesincronizada(idOuJid) {
+  if (!idOuJid) return;
+  try {
+    const raw = String(idOuJid).split('@')[0].split(':')[0].replace(/\D/g, '');
+    if (!raw || raw.length < 5) return;
+    if (!fs.existsSync(authPath)) return;
+
+    const files = fs.readdirSync(authPath);
+    for (const f of files) {
+      if (f.startsWith(`session-${raw}`) && f.endsWith('.json')) {
+        try {
+          fs.unlinkSync(path.join(authPath, f));
+          logWarn('WhatsApp', `Auto-recuperação: Sessão Signal redefinida para ${raw} (${f})`);
+        } catch {}
+      }
+    }
+  } catch {}
+}
+
 /**
  * Inicializa a conexão com o WhatsApp usando Baileys
  * @param {Function} onMessageReceived Callback executado quando uma mensagem válida é recebida: (sock, msg) => Promise<void>
@@ -106,6 +125,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     shouldSyncHistoryMessage: () => false,
     shouldIgnoreJid: (jid) => isJidBroadcast(jid) || isJidStatusBroadcast(jid) || isJidNewsletter(jid),
     msgRetryCounterCache,
+    markOnlineOnConnect: true,
     getMessage: async (key) => {
       if (key?.id && messageStore.has(key.id)) {
         return messageStore.get(key.id);
