@@ -5,6 +5,7 @@ import { serverCache } from '@/lib/memory-cache';
 import {
   appointmentUpdateSchema,
   clientSchema,
+  expenseSchema,
   gallerySchema,
   leadUpdateSchema,
   serviceSchema,
@@ -16,6 +17,7 @@ const resources = {
   appointments: { table: 'appointments', schema: appointmentUpdateSchema },
   services: { table: 'services', schema: serviceSchema.partial() },
   gallery: { table: 'gallery_items', schema: gallerySchema.partial() },
+  expenses: { table: 'expenses', schema: expenseSchema.partial() },
 } as const;
 
 export async function PATCH(

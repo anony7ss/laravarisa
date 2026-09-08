@@ -1,6 +1,6 @@
 /**
  * Terminal UI & Logger Minimalista e Elegante para o Bot de WhatsApp Lara Varisa
- * Elimina poluição visual e formata eventos importantes de forma limpa.
+ * 100% livre de glifos corrompidos ou interrogações no console do Windows.
  */
 
 // Códigos de cores ANSI nativos (sem dependências externas)
@@ -48,7 +48,42 @@ function getTimestamp() {
 }
 
 /**
- * Renderiza o painel principal de status limpo
+ * Remove qualquer emoji, pictógrafo ou caractere especial não suportado pelo terminal do Windows
+ * mantendo integralmente a acentuação e caracteres válidos da língua portuguesa.
+ * 
+ * @param {string} str
+ * @returns {string}
+ */
+export function sanitizeForTerminal(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    // Substitui setas e símbolos comuns por versões ASCII
+    .replace(/[\u2190-\u21FF\u2794-\u2797\u27A1➔→➜➤]/g, ' -> ')
+    .replace(/[←]/g, ' <- ')
+    .replace(/[•●·]/g, '-')
+    .replace(/[✔√]/g, '[OK]')
+    .replace(/[✖×]/g, '[X]')
+    .replace(/[«]/g, '<<')
+    .replace(/[»]/g, '>>')
+    // Remove qualquer emoji Unicode (faixas completas de emojis, pictógrafos e variações)
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{200D}\u{20E3}]/gu, '')
+    // Remove caracteres fora da faixa ASCII e Latin-1 estendido (preserva acentos pt-BR)
+    .replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+const stripAnsi = (str) => String(str).replace(/\x1b\[[0-9;]*m/g, '');
+const BOX_WIDTH = 57;
+
+function createRow(content) {
+  const visibleLen = stripAnsi(content).length;
+  const pad = Math.max(0, BOX_WIDTH - visibleLen);
+  return `${colors.brightMagenta}|${colors.reset}  ${content}${' '.repeat(pad)}${colors.brightMagenta}|${colors.reset}`;
+}
+
+/**
+ * Renderiza o painel principal de status limpo e perfeitamente alinhado
  */
 export function renderBanner(config = {}) {
   const studio = config.studioName || 'Lara Lash & Sobrancelhas';
@@ -66,17 +101,17 @@ export function renderBanner(config = {}) {
   const isRemOk = botStatus.reminders.includes('Ativ');
   const isAiOk = botStatus.ai.includes('Conectad') || botStatus.ai.includes('OpenCode');
 
-  console.log(`\n${c.magenta}╭─────────────────────────────────────────────────────────────╮${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  ${c.bold}${c.brightMagenta}✨  ${studio.toUpperCase()}${c.reset}  ${c.dim}•  WhatsApp Bot VIP${c.reset}       ${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}├─────────────────────────────────────────────────────────────┤${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  📍 ${c.dim}Local:${c.reset}        ${city.padEnd(41)} ${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  📱 ${c.dim}WhatsApp:${c.reset}     ${(isWaOk ? c.brightGreen + '🟢 ' : c.brightYellow + '🟡 ') + botStatus.whatsapp + c.reset}`.padEnd(72) + `${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  ⚡ ${c.dim}Supabase:${c.reset}     ${(isSupaOk ? c.brightGreen + '🟢 ' : c.brightYellow + '🟡 ') + botStatus.supabase + c.reset}`.padEnd(72) + `${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  ⏰ ${c.dim}Lembretes:${c.reset}    ${(isRemOk ? c.brightGreen + '🟢 ' : c.gray + '⚪ ') + botStatus.reminders + c.reset}`.padEnd(72) + `${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}│${c.reset}  🧠 ${c.dim}Motor IA:${c.reset}     ${(isAiOk ? c.brightCyan + '🟢 ' : c.brightYellow + '🟡 ') + botStatus.ai + c.reset}`.padEnd(72) + `${c.magenta}│${c.reset}`);
-  console.log(`${c.magenta}╰─────────────────────────────────────────────────────────────╯${c.reset}\n`);
-  console.log(`${c.dim}  Pressione Ctrl+C para encerrar com segurança.${c.reset}`);
-  console.log(`${c.gray}───────────────────────────────────────────────────────────────${c.reset}\n`);
+  console.log(`\n${c.brightMagenta}+-------------------------------------------------------------+${c.reset}`);
+  console.log(createRow(`${c.bold}${c.brightMagenta}${studio.toUpperCase()}${c.reset}  ${c.dim}|  WhatsApp Bot VIP${c.reset}`));
+  console.log(`${c.brightMagenta}+-------------------------------------------------------------+${c.reset}`);
+  console.log(createRow(`${c.dim}- Local:${c.reset}       ${city}`));
+  console.log(createRow(`${c.dim}- WhatsApp:${c.reset}    ${isWaOk ? c.brightGreen + '[OK] ' : c.brightYellow + '[..] '}${botStatus.whatsapp}${c.reset}`));
+  console.log(createRow(`${c.dim}- Supabase:${c.reset}    ${isSupaOk ? c.brightGreen + '[OK] ' : c.brightYellow + '[..] '}${botStatus.supabase}${c.reset}`));
+  console.log(createRow(`${c.dim}- Lembretes:${c.reset}   ${isRemOk ? c.brightGreen + '[OK] ' : c.gray + '[--] '}${botStatus.reminders}${c.reset}`));
+  console.log(createRow(`${c.dim}- Motor IA:${c.reset}    ${isAiOk ? c.brightCyan + '[OK] ' : c.brightYellow + '[..] '}${botStatus.ai}${c.reset}`));
+  console.log(`${c.brightMagenta}+-------------------------------------------------------------+${c.reset}\n`);
+  console.log(`${c.dim}  Pressione Ctrl+C para encerrar com seguranca.${c.reset}`);
+  console.log(`${c.gray}---------------------------------------------------------------${c.reset}\n`);
 }
 
 /**
@@ -93,7 +128,8 @@ export function updateStatus(key, value) {
  */
 export function logSuccess(tag, message) {
   const time = getTimestamp();
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}🟢 [${tag}]${colors.reset} ${message}`);
+  const cleanMsg = sanitizeForTerminal(message);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}[OK] [${tag}]${colors.reset} ${cleanMsg}`);
 }
 
 /**
@@ -101,8 +137,10 @@ export function logSuccess(tag, message) {
  */
 export function logIncoming(senderName, text) {
   const time = getTimestamp();
-  const cleanText = text.replace(/\n+/g, ' ').slice(0, 65) + (text.length > 65 ? '...' : '');
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightCyan}💬 [${senderName}]${colors.reset} "${cleanText}"`);
+  const cleanSender = sanitizeForTerminal(senderName) || 'Cliente';
+  const cleanTextRaw = sanitizeForTerminal(text);
+  const cleanText = cleanTextRaw.replace(/\n+/g, ' ').slice(0, 65) + (cleanTextRaw.length > 65 ? '...' : '');
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightCyan}>> [${cleanSender}]${colors.reset} "${cleanText}"`);
 }
 
 /**
@@ -110,8 +148,10 @@ export function logIncoming(senderName, text) {
  */
 export function logOutgoing(recipientName, textSummary) {
   const time = getTimestamp();
-  const cleanText = textSummary.replace(/\n+/g, ' ').slice(0, 65) + (textSummary.length > 65 ? '...' : '');
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightMagenta}🤖 [Lara ➔ ${recipientName}]${colors.reset} "${cleanText}"`);
+  const cleanRecipient = sanitizeForTerminal(recipientName) || 'Cliente';
+  const cleanTextRaw = sanitizeForTerminal(textSummary);
+  const cleanText = cleanTextRaw.replace(/\n+/g, ' ').slice(0, 65) + (cleanTextRaw.length > 65 ? '...' : '');
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightMagenta}<< [Lara -> ${cleanRecipient}]${colors.reset} "${cleanText}"`);
 }
 
 /**
@@ -119,7 +159,9 @@ export function logOutgoing(recipientName, textSummary) {
  */
 export function logSiteBooking(clientName, serviceName, dateStr) {
   const time = getTimestamp();
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}🌟 [Novo Agendamento Site]${colors.reset} ${clientName} • ${serviceName} (${dateStr})`);
+  const cleanClient = sanitizeForTerminal(clientName);
+  const cleanService = sanitizeForTerminal(serviceName);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}[+] [Novo Agendamento Site]${colors.reset} ${cleanClient} - ${cleanService} (${dateStr})`);
 }
 
 /**
@@ -127,7 +169,9 @@ export function logSiteBooking(clientName, serviceName, dateStr) {
  */
 export function logReminder(clientName, tipoLembrete, serviceName, timeStr) {
   const time = getTimestamp();
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}⏰ [Lembrete ${tipoLembrete}]${colors.reset} Enviado para ${clientName} • ${serviceName} às ${timeStr}`);
+  const cleanClient = sanitizeForTerminal(clientName);
+  const cleanService = sanitizeForTerminal(serviceName);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}[*] [Lembrete ${tipoLembrete}]${colors.reset} Enviado para ${cleanClient} - ${cleanService} as ${timeStr}`);
 }
 
 /**
@@ -135,16 +179,14 @@ export function logReminder(clientName, tipoLembrete, serviceName, timeStr) {
  */
 export function logAction(actionType, details) {
   const time = getTimestamp();
-  let icon = '⚡';
   let color = colors.brightBlue;
-  if (actionType.toLowerCase().includes('cancel')) {
-    icon = '🚫';
+  if (String(actionType).toLowerCase().includes('cancel')) {
     color = colors.red;
-  } else if (actionType.toLowerCase().includes('reagend')) {
-    icon = '🔄';
+  } else if (String(actionType).toLowerCase().includes('reagend')) {
     color = colors.brightCyan;
   }
-  console.log(`${colors.gray}[${time}]${colors.reset} ${color}${icon} [${actionType}]${colors.reset} ${details}`);
+  const cleanDetails = sanitizeForTerminal(details);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${color}[>] [${actionType}]${colors.reset} ${cleanDetails}`);
 }
 
 /**
@@ -152,7 +194,8 @@ export function logAction(actionType, details) {
  */
 export function logWarn(tag, message) {
   const time = getTimestamp();
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}⚠️  [${tag}]${colors.reset} ${message}`);
+  const cleanMsg = sanitizeForTerminal(message);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}[!] [${tag}]${colors.reset} ${cleanMsg}`);
 }
 
 /**
@@ -160,7 +203,8 @@ export function logWarn(tag, message) {
  */
 export function logError(tag, message) {
   const time = getTimestamp();
-  console.error(`${colors.gray}[${time}]${colors.reset} ${colors.red}❌ [${tag}]${colors.reset} ${message}`);
+  const cleanMsg = sanitizeForTerminal(message);
+  console.error(`${colors.gray}[${time}]${colors.reset} ${colors.red}[X] [${tag}]${colors.reset} ${cleanMsg}`);
 }
 
 /**
@@ -168,12 +212,14 @@ export function logError(tag, message) {
  */
 export function logInfo(tag, message) {
   const time = getTimestamp();
-  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightBlue}ℹ️  [${tag}]${colors.reset} ${message}`);
+  const cleanMsg = sanitizeForTerminal(message);
+  console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightBlue}[i] [${tag}]${colors.reset} ${cleanMsg}`);
 }
 
 export default {
   renderBanner,
   updateStatus,
+  sanitizeForTerminal,
   logIncoming,
   logOutgoing,
   logSiteBooking,
@@ -182,4 +228,5 @@ export default {
   logWarn,
   logError,
   logInfo,
+  logSuccess,
 };

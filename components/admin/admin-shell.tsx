@@ -21,6 +21,7 @@ import {
   Bell,
   Bot,
   SendHorizontal,
+  DollarSign,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -65,6 +66,7 @@ const links = [
   ['/admin/dashboard/agenda', 'Agenda', CalendarDays],
   ['/admin/dashboard/leads', 'Leads', MessageSquareText],
   ['/admin/dashboard/clientes', 'Clientes', ContactRound],
+  ['/admin/dashboard/financas', 'Finanças', DollarSign],
   ['/admin/dashboard/servicos', 'Serviços', Scissors],
   ['/admin/dashboard/galeria', 'Galeria', Image],
   ['/admin/dashboard/depoimentos', 'Depoimentos', HeartHandshake],
@@ -79,6 +81,7 @@ const pageNames: Record<string, string> = {
   '/admin/dashboard/agenda': 'Agenda',
   '/admin/dashboard/leads': 'Leads',
   '/admin/dashboard/clientes': 'Clientes',
+  '/admin/dashboard/financas': 'Finanças & Fluxo de Caixa',
   '/admin/dashboard/servicos': 'Serviços',
   '/admin/dashboard/galeria': 'Galeria',
   '/admin/dashboard/depoimentos': 'Depoimentos',

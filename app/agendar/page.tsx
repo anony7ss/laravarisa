@@ -283,23 +283,23 @@ export default function AgendarPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[var(--color-pumice)] text-[var(--color-obsidian)]">
+    <div className="min-h-screen flex flex-col justify-between bg-[var(--color-pumice)] text-[var(--color-obsidian)] overflow-x-hidden w-full max-w-full">
       {/* Header */}
-      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/95 backdrop-blur-md sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3.5">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-3">
+      <header className="border-b border-[#cfcfc9] bg-[var(--color-pumice)]/95 backdrop-blur-md sticky top-0 z-30 px-3 sm:px-6 py-2.5 sm:py-3.5 w-full max-w-full">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 w-full">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img
               src="/lv-monogram.svg"
               width="32"
               height="32"
               alt="Lara Varisa"
-              className="w-7 h-7 sm:w-9 sm:h-9"
+              className="w-7 h-7 sm:w-9 sm:h-9 shrink-0"
             />
-            <div className="flex items-baseline gap-1 sm:gap-1.5">
-              <span className="font-[family-name:var(--font-display)] text-lg sm:text-2xl uppercase tracking-tight text-[var(--color-obsidian)]">
+            <div className="flex items-baseline gap-1 sm:gap-1.5 min-w-0 truncate">
+              <span className="font-[family-name:var(--font-display)] text-lg sm:text-2xl uppercase tracking-tight text-[var(--color-obsidian)] truncate">
                 Lara Varisa
               </span>
-              <span className="text-[9px] sm:text-[11px] font-mono text-[var(--color-ember)] font-bold">
+              <span className="text-[9px] sm:text-[11px] font-mono text-[var(--color-ember)] font-bold shrink-0">
                 · AGENDAMENTO
               </span>
             </div>
@@ -308,25 +308,25 @@ export default function AgendarPage() {
           <button
             type="button"
             onClick={() => setShowMyAppointments(true)}
-            className="text-[11px] sm:text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-3 py-1.5 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="text-[11px] sm:text-xs font-semibold text-[var(--color-obsidian)] hover:bg-[var(--color-limestone)] px-2.5 sm:px-3 py-1.5 rounded-full border border-[#bdbdb7] transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
             <CalendarDays size={12} className="shrink-0" />
-            <span className="hidden xs:inline sm:inline">Meus agendamentos</span>
-            <span className="xs:hidden sm:hidden">Horários</span>
+            <span className="hidden sm:inline">Meus agendamentos</span>
+            <span className="sm:hidden">Horários</span>
           </button>
         </div>
       </header>
 
       {siteSettings?.booking_alert && (
-        <div className="bg-[var(--color-limestone)] border-b border-[#cfcfc9] px-4 py-2.5 text-center text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-2">
+        <div className="bg-[var(--color-limestone)] border-b border-[#cfcfc9] px-3 sm:px-4 py-2 sm:py-2.5 text-center text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-2 w-full">
           <Sparkles size={14} className="text-[var(--color-ember)] shrink-0" />
-          <span>{siteSettings.booking_alert}</span>
+          <span className="truncate">{siteSettings.booking_alert}</span>
         </div>
       )}
 
       {/* Main Multi-Step Wizard */}
       <main
-        className={`flex-1 max-w-4xl mx-auto w-full px-3.5 sm:px-6 py-4 sm:py-8 md:py-10 space-y-6 sm:space-y-8 ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}
+        className={`flex-1 max-w-4xl mx-auto w-full max-w-full px-3 sm:px-6 py-3.5 sm:py-8 md:py-10 space-y-4 sm:space-y-6 overflow-x-hidden ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}
       >
         {siteSettings?.booking_enabled === false && (
           <div className="bg-[#fff4e5] border border-[#ffcc99] text-[#8a4b08] p-4 rounded-2xl text-xs flex items-center gap-3">
@@ -527,28 +527,28 @@ export default function AgendarPage() {
             <StudioCard />
 
             {/* Final Order Summary Card & Confirm Button */}
-            <div className="bg-white p-5 sm:p-7 rounded-[28px] border border-[#e2e2df] shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#f0f0ed]">
-                <div>
+            <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-[28px] border border-[#e2e2df] shadow-sm space-y-4 overflow-hidden w-full max-w-full">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-[#f0f0ed] w-full">
+                <div className="min-w-0 w-full sm:w-auto">
                   <span className="text-[10px] uppercase font-bold tracking-[0.18em] text-[var(--color-ember)] font-mono block">
                     Resumo do Agendamento
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+                  <h3 className="text-xl sm:text-2xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5 truncate">
                     {selectedService?.name}
                   </h3>
-                  <div className="flex items-center gap-3 text-xs text-[#595952] mt-1">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-[#595952] mt-1">
                     <span className="flex items-center gap-1 text-[var(--color-obsidian)] font-medium">
-                      <CalendarDays size={13} className="text-[var(--color-ember)]" />
+                      <CalendarDays size={13} className="text-[var(--color-ember)] shrink-0" />
                       {selectedDateStr.split('-').reverse().join('/')} às {selectedSlot?.time}
                     </span>
                     <span className="flex items-center gap-1 text-[#8c8c84]">
-                      <Clock3 size={13} />
+                      <Clock3 size={13} className="shrink-0" />
                       {selectedService?.duration}
                     </span>
                   </div>
                 </div>
 
-                <div className="sm:text-right">
+                <div className="sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#f0f0ed] w-full sm:w-auto flex sm:block items-baseline justify-between">
                   <span className="text-[11px] text-[#8c8c84] block uppercase">
                     Investimento
                   </span>

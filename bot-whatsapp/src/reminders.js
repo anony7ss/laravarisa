@@ -11,7 +11,7 @@
 import { supabase } from './supabase.js';
 import config from './config.js';
 import { sendHumanizedMessage } from './queue.js';
-import { logReminder, logError } from './terminal.js';
+import { logReminder, logWarn, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
 import { obterConfiguracoesEmCache } from './cache.js';
 
@@ -141,10 +141,8 @@ export async function processarLembretes(sock) {
         .limit(10);
 
       if (errDia) {
-        console.warn('[reminders] Erro ao buscar agendamentos para lembrete no dia:', errDia.message);
+        logWarn('Lembretes', `Erro ao buscar agendamentos para lembrete no dia: ${errDia.message}`);
       } else if (pendentesDia && pendentesDia.length > 0) {
-        console.log(`[reminders] Encontrados ${pendentesDia.length} agendamento(s) para lembrete no dia (${horasAntesDia}h antes)...`);
-
         for (const ag of pendentesDia) {
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
@@ -164,7 +162,6 @@ export async function processarLembretes(sock) {
             local: config.studioCity,
           });
 
-          console.log(`[reminders] Enviando lembrete de mesmo dia para ${targetJid} (Agendamento #${ag.id})...`);
           await sendHumanizedMessage(sock, targetJid, mensagem);
 
           await supabase
@@ -172,12 +169,12 @@ export async function processarLembretes(sock) {
             .update({ reminder_same_day_sent_at: new Date().toISOString() })
             .eq('id', ag.id);
 
-          console.log(`[reminders] ✅ Lembrete de mesmo dia enviado com sucesso para ${targetJid}!`);
+          logReminder(nomeCliente, `${horasAntesDia}h`, nomeServico, horaFmt);
         }
       }
     }
   } catch (err) {
-    console.error('[reminders] Erro inesperado ao processar lembretes:', err);
+    logError('Lembretes', `Erro inesperado ao processar lembretes: ${err?.message || err}`);
   } finally {
     isProcessingReminders = false;
   }
@@ -193,8 +190,6 @@ export function iniciarLembretesAutomaticos(sock) {
   if (reminderInterval) {
     clearInterval(reminderInterval);
   }
-
-  console.log('⏰ [reminders] Sistema de Lembretes Automáticos ativo! Verificando a cada 2 minutos...');
 
   // Executa imediatamente na subida
   processarLembretes(sock);

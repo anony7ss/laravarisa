@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
 import { sendHumanizedMessage } from './queue.js';
-import { logSiteBooking, logWarn, logError } from './terminal.js';
+import { logSiteBooking, logInfo, logWarn, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
 import {
   obterServicosEmCache,
@@ -71,8 +71,6 @@ export function iniciarSincronizacaoSite(sock) {
     return realtimeChannel;
   }
 
-  console.log('[supabase-realtime] Inicializando canal de escuta Realtime para agendamentos, serviços e configurações...');
-
   realtimeChannel = supabase
     .channel('bot_whatsapp_site_sync')
     .on(
@@ -89,7 +87,7 @@ export function iniciarSincronizacaoSite(sock) {
 
           await notificarAgendamentoSite(sock, novo);
         } catch (error) {
-          console.error('[supabase-realtime] Erro ao processar novo agendamento:', error);
+          logError('Supabase', `Erro ao processar novo agendamento: ${error?.message || error}`);
         }
       }
     )
@@ -102,7 +100,7 @@ export function iniciarSincronizacaoSite(sock) {
       },
       () => {
         invalidarCacheServicos();
-        console.log('🔄 [cache] Alteração em serviços detectada. Cache de procedimentos renovado!');
+        logInfo('Cache', 'Serviços atualizados no painel. Cache de procedimentos renovado!');
       }
     )
     .on(
@@ -114,16 +112,16 @@ export function iniciarSincronizacaoSite(sock) {
       },
       () => {
         invalidarCacheConfiguracoes();
-        console.log('🔄 [cache] Alteração em configurações detectada. Cache de ajustes renovado!');
+        logInfo('Cache', 'Configurações atualizadas no painel. Cache de ajustes renovado!');
       }
     )
     .subscribe((status, error) => {
       if (status === 'SUBSCRIBED') {
-        console.log('✅ [supabase-realtime] Sincronização em tempo real ativa! Escutando novos agendamentos do site.');
+        // Silencioso - o status já é exibido no banner principal
       } else if (status === 'CHANNEL_ERROR') {
-        console.warn('⚠️ [supabase-realtime] Oscilação no canal Realtime (reconectando automaticamente)...');
+        logWarn('Supabase', 'Oscilação no canal Realtime (reconectando automaticamente)...');
       } else if (status === 'TIMED_OUT') {
-        console.warn('⚠️ [supabase-realtime] Conexão Realtime com o Supabase atingiu timeout.');
+        logWarn('Supabase', 'Conexão Realtime com o Supabase atingiu timeout.');
       } else if (status === 'CLOSED') {
         realtimeChannel = null;
       }

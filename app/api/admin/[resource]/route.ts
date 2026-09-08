@@ -5,6 +5,7 @@ import { serverCache } from '@/lib/memory-cache';
 import {
   appointmentSchema,
   clientSchema,
+  expenseSchema,
   gallerySchema,
   serviceSchema,
 } from '@/lib/validation';
@@ -22,6 +23,11 @@ const resources = {
     table: 'gallery_items',
     schema: gallerySchema,
     order: 'sort_order',
+  },
+  expenses: {
+    table: 'expenses',
+    schema: expenseSchema,
+    order: 'date',
   },
 } as const;
 

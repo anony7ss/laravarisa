@@ -16,6 +16,12 @@ export type ClientRow = {
   origin?: string;
   created_from_lead?: string | null;
   created_at: string;
+  lash_mapping?: string | null;
+  lash_curl?: string | null;
+  lash_thickness?: string | null;
+  lash_length?: string | null;
+  lash_adhesive?: string | null;
+  lash_notes?: string | null;
 };
 export type ServiceRow = {
   id: string;
@@ -56,6 +62,16 @@ export type AppointmentRow = {
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes: string;
   origin?: string;
+  is_blocked?: boolean;
+};
+export type ExpenseRow = {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  notes?: string | null;
+  created_at: string;
 };
 export type TestimonialRow = {
   id: string;
@@ -65,5 +81,18 @@ export type TestimonialRow = {
   rating: number;
   active: boolean;
   sort_order: number;
+  created_at: string;
+};
+
+export type AnamnesisRow = {
+  id: string;
+  client_name: string;
+  client_phone: string;
+  has_allergies: boolean;
+  allergies_detail?: string | null;
+  pregnant: boolean;
+  eye_surgery: boolean;
+  thyroid_issues: boolean;
+  signature: string;
   created_at: string;
 };

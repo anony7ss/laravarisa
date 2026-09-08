@@ -93,6 +93,7 @@ export function SettingsManager({
       // Regras de Agendamento
       booking_enabled: form.get('booking_enabled') === 'on',
       booking_closed_message: String(form.get('booking_closed_message') || ''),
+      buffer_minutes: Number(form.get('buffer_minutes') || 0),
       slot_interval_minutes: Number(form.get('slot_interval_minutes') || 30),
       min_lead_hours: Number(form.get('min_lead_hours') || 2),
       max_future_days: Number(form.get('max_future_days') || 30),
@@ -453,6 +454,24 @@ export function SettingsManager({
               <option value="45">A cada 45 minutos</option>
               <option value="60">A cada 1 hora</option>
             </select>
+          </label>
+
+          <label>
+            Intervalo entre Atendimentos (Buffer / Limpeza)
+            <select
+              name="buffer_minutes"
+              defaultValue={settings?.buffer_minutes ?? 0}
+              disabled={role !== 'admin'}
+            >
+              <option value="0">Sem intervalo extra (0 min)</option>
+              <option value="10">10 minutos de intervalo</option>
+              <option value="15">15 minutos (Limpeza e Preparação)</option>
+              <option value="20">20 minutos (Recomendado)</option>
+              <option value="30">30 minutos (Tempo generoso)</option>
+            </select>
+            <small style={{ color: 'var(--admin-muted)', fontSize: '11px', marginTop: '4px' }}>
+              Pausa automática após cada cliente para higienizar a maca e preparar os fios sem atrasar o próximo atendimento.
+            </small>
           </label>
 
           <label>

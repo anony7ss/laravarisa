@@ -97,6 +97,64 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
 }
 
 /**
+ * Envia uma nota de voz humanizada (PTT / gravador verde do WhatsApp)
+ * com simulação de leitura e presença de gravação de áudio.
+ * 
+ * @param {any} sock Instância do socket Baileys
+ * @param {string} jid WhatsApp JID destinatário
+ * @param {Buffer} audioBuffer Buffer do áudio (MP3 sintetizado pelo Edge TTS)
+ * @param {object} [options] Opções de controle
+ * @returns {Promise<any>}
+ */
+export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
+  if (!sock || !jid || !audioBuffer) {
+    throw new Error('Parâmetros inválidos: sock, jid e audioBuffer são obrigatórios');
+  }
+
+  return enqueue(jid, async () => {
+    if (!options.skipRecording && !options.immediate) {
+      // 1. Marca como lida se possível
+      try {
+        if (typeof sock.readMessages === 'function') {
+          await sock.readMessages([{ remoteJid: jid }]);
+        }
+      } catch {}
+
+      // 2. Simula presença 'gravando áudio...' (recording)
+      try {
+        if (typeof sock.sendPresenceUpdate === 'function') {
+          await sock.sendPresenceUpdate('recording', jid);
+        }
+      } catch {}
+
+      // Pequena pausa humana para dar sensação de gravação real (800ms)
+      await sleep(800);
+
+      try {
+        if (typeof sock.sendPresenceUpdate === 'function') {
+          await sock.sendPresenceUpdate('paused', jid);
+        }
+      } catch {}
+
+      await sleep(50);
+    }
+
+    // 3. Envia a nota de voz como PTT (Push To Talk - microfone do WhatsApp)
+    const sentMessage = await sock.sendMessage(jid, {
+      audio: audioBuffer,
+      mimetype: options.mimetype || 'audio/ogg; codecs=opus',
+      ptt: true,
+    });
+
+    if (!options.skipRecording && !options.immediate) {
+      await sleep(200);
+    }
+
+    return sentMessage;
+  });
+}
+
+/**
  * Reage com emoji a uma mensagem recebida (ex: '💕', '✨', '🔔')
  * @param {any} sock Socket Baileys
  * @param {any} key Chave da mensagem (msg.key)
@@ -118,5 +176,7 @@ export async function reactToMessage(sock, key, emoji = '💕') {
 
 export default {
   sendHumanizedMessage,
+  sendHumanizedVoice,
   reactToMessage,
 };
+

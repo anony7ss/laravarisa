@@ -17,6 +17,7 @@ import {
   Check,
   Globe,
   Store,
+  Lock,
 } from 'lucide-react';
 import { adminRequest } from './api';
 import { createBrowserSupabase } from '@/lib/supabase/client';
@@ -470,6 +471,73 @@ export function AppointmentsManager({
   const [kanbanScope, setKanbanScope] = useState<'today' | 'next7' | 'month' | 'all'>('next7');
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColId | null>(null);
 
+  // Estados para Bloqueio de Horário / Compromisso Pessoal
+  const [blockingModal, setBlockingModal] = useState(false);
+  const [blockDate, setBlockDate] = useState(selectedDate);
+  const [blockStart, setBlockStart] = useState('12:00');
+  const [blockEnd, setBlockEnd] = useState('13:00');
+  const [blockReason, setBlockReason] = useState('Almoço');
+  const [blockCustomReason, setBlockCustomReason] = useState('');
+  const [blockSaving, setBlockSaving] = useState(false);
+
+  function openBlockModal(targetDate?: string) {
+    if (targetDate) setBlockDate(targetDate);
+    else setBlockDate(selectedDate);
+    setBlockStart('12:00');
+    setBlockEnd('13:00');
+    setBlockReason('Almoço');
+    setBlockCustomReason('');
+    setBlockingModal(true);
+    setError('');
+  }
+
+  async function saveBlock(e: SyntheticEvent) {
+    e.preventDefault();
+    if (role === 'viewer') return;
+    setBlockSaving(true);
+    setError('');
+
+    const finalReason = blockReason === 'Outro' && blockCustomReason.trim()
+      ? blockCustomReason.trim()
+      : blockReason;
+
+    const startsAt = new Date(`${blockDate}T${blockStart}:00-03:00`).toISOString();
+    const endsAt = new Date(`${blockDate}T${blockEnd}:00-03:00`).toISOString();
+
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setError('O horário final do bloqueio deve ser posterior ao horário de início.');
+      setBlockSaving(false);
+      return;
+    }
+
+    const payload = {
+      client_name: `🔒 Bloqueio: ${finalReason}`,
+      client_phone: '',
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status: 'confirmed' as const,
+      notes: `Bloqueio de agenda / compromisso pessoal: ${finalReason}`,
+      origin: 'manual',
+      is_blocked: true,
+    };
+
+    isUpdatingRef.current = true;
+    try {
+      const saved = await adminRequest<AppointmentRow>('/api/admin/appointments', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      setItems((list) => [...list, saved]);
+      setBlockingModal(false);
+      setSelectedDate(blockDate);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Não foi possível bloquear o horário.');
+    } finally {
+      setBlockSaving(false);
+      isUpdatingRef.current = false;
+    }
+  }
+
   // Carrega e persiste a preferência de Kanban vs Calendário ao recarregar ou voltar à página
   useEffect(() => {
     try {
@@ -700,9 +768,20 @@ export function AppointmentsManager({
             </button>
           </div>
           {role !== 'viewer' && (
-            <button className="admin-primary" onClick={() => openCreate()}>
-              <Plus size={17} /> Novo horário
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="admin-secondary"
+                onClick={() => openBlockModal()}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#eab308', borderColor: 'rgba(234, 179, 8, 0.35)' }}
+                title="Bloquear período para almoço, consulta ou compromisso pessoal"
+              >
+                <Lock size={15} /> Bloquear horário
+              </button>
+              <button className="admin-primary" onClick={() => openCreate()}>
+                <Plus size={17} /> Novo horário
+              </button>
+            </div>
           )}
         </div>
       </section>
@@ -1039,10 +1118,20 @@ export function AppointmentsManager({
                             : item.origin === 'web' || item.origin === 'site'
                             ? 'Site'
                             : 'Balcão';
+                        const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
                         return (
                           <button
                             key={item.id}
                             className={`admin-calendar-event ${item.status}`}
+                            style={
+                              isBlocked
+                                ? {
+                                    background: 'rgba(234, 179, 8, 0.2)',
+                                    borderLeft: '3px solid #eab308',
+                                    color: '#fef08a',
+                                  }
+                                : undefined
+                            }
                             onClick={() => {
                               setSelectedDate(key);
                               setQuickFilter('selected');
@@ -1078,6 +1167,44 @@ export function AppointmentsManager({
             <div className="admin-day-list">
               {displayedItems.length ? (
                 displayedItems.map((item) => {
+                  const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
+
+                  if (isBlocked) {
+                    return (
+                      <article
+                        className="admin-appointment blocked"
+                        key={item.id}
+                        style={{
+                          borderLeft: '4px solid #eab308',
+                          background: 'rgba(234, 179, 8, 0.08)',
+                        }}
+                      >
+                        <div className="admin-appointment-time" style={{ color: '#eab308' }}>
+                          <Lock size={15} />
+                          <time>{timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}</time>
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <strong style={{ color: '#fef08a' }}>{item.client_name}</strong>
+                          <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--admin-muted)' }}>
+                            Compromisso pessoal • Bloqueado no site & WhatsApp
+                          </p>
+                        </div>
+                        <div className="admin-row-actions">
+                          {role !== 'viewer' && (
+                            <button
+                              className="admin-icon-button admin-danger"
+                              onClick={() => remove(item.id)}
+                              title="Desbloquear este horário"
+                              aria-label="Desbloquear"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  }
+
                   const waLink = getWhatsAppLink(item);
                   return (
                     <article
@@ -1296,6 +1423,136 @@ export function AppointmentsManager({
                 </button>
                 <button className="admin-primary" type="submit">
                   Salvar horário
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {blockingModal && (
+        <div className="admin-modal-backdrop" role="presentation">
+          <section
+            className="admin-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="block-dialog-title"
+            style={{ maxWidth: '480px' }}
+          >
+            <div className="admin-panel-head">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#eab308' }}><Lock size={20} /></span>
+                <div>
+                  <p className="admin-kicker">DISPONIBILIDADE</p>
+                  <h2 id="block-dialog-title">Bloquear Horário / Pessoal</h2>
+                </div>
+              </div>
+              <button
+                className="admin-icon-button"
+                onClick={() => setBlockingModal(false)}
+                aria-label="Fechar"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <form className="admin-form" onSubmit={saveBlock}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--admin-muted)', marginBottom: '8px', display: 'block' }}>
+                    Motivo do Bloqueio
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {['🍽️ Almoço', '🩺 Consulta Médica', '💆‍♀️ Pessoal', '📚 Curso / Estudo', '🏖️ Folga', 'Outro'].map((reason) => {
+                      const active = blockReason === reason;
+                      return (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => setBlockReason(reason)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '99px',
+                            border: active ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.1)',
+                            background: active ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255,255,255,0.03)',
+                            color: active ? '#fef08a' : 'inherit',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: active ? 600 : 400,
+                          }}
+                        >
+                          {reason}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {blockReason === 'Outro' && (
+                  <label>
+                    Descreva o motivo
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Treinamento de Volume Russo"
+                      value={blockCustomReason}
+                      onChange={(e) => setBlockCustomReason(e.target.value)}
+                    />
+                  </label>
+                )}
+
+                <label>
+                  Data
+                  <input
+                    type="date"
+                    required
+                    value={blockDate}
+                    onChange={(e) => setBlockDate(e.target.value)}
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label>
+                    Início
+                    <input
+                      type="time"
+                      required
+                      value={blockStart}
+                      onChange={(e) => setBlockStart(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Término
+                    <input
+                      type="time"
+                      required
+                      value={blockEnd}
+                      onChange={(e) => setBlockEnd(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ padding: '12px', background: 'rgba(234, 179, 8, 0.06)', border: '1px solid rgba(234, 179, 8, 0.2)', borderRadius: '8px', fontSize: '12px', color: '#fef08a', lineHeight: 1.4 }}>
+                  🔒 <strong>Bloqueio Automático:</strong> Este período será fechado na agenda. Clientes no site e no WhatsApp não conseguirão reservar essa faixa.
+                </div>
+              </div>
+
+              <div className="admin-dialog-actions" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  className="admin-icon-button"
+                  style={{ width: 'auto', padding: '0 16px', borderRadius: '99px' }}
+                  onClick={() => setBlockingModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="admin-primary"
+                  type="submit"
+                  disabled={blockSaving}
+                  style={{ background: '#eab308', color: '#000', borderColor: 'transparent' }}
+                >
+                  {blockSaving ? 'Bloqueando...' : 'Confirmar Bloqueio 🔒'}
                 </button>
               </div>
             </form>

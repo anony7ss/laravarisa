@@ -2,14 +2,15 @@ import OpenAI from 'openai';
 import config from './config.js';
 import { ferramentasSchema, executarFerramenta } from './tools.js';
 import { getHistory, addMessage } from './memory.js';
-import { sendHumanizedMessage, reactToMessage } from './queue.js';
+import { sendHumanizedMessage, sendHumanizedVoice, reactToMessage } from './queue.js';
 import { verificarSegurancaEntrada, verificarSegurancaSaida } from './guardrails.js';
 import { processarFallback } from './fallback.js';
 import { notificarLaraAtendimentoHumano } from './notifications.js';
 import { logIncoming, logOutgoing, logAction, logWarn, logError } from './terminal.js';
-import { obterServicosEmCache } from './cache.js';
+import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { transcreverAudio } from './transcribe.js';
+import { clientePediuAudio, gerarAudioVoz } from './tts.js';
 
 /**
  * Inicialização do cliente OpenAI apontando para o OpenCode Go (DeepSeek V4 Flash)
@@ -215,7 +216,18 @@ REGRAS VISUAIS INQUEBRÁVEIS:
      "Eu sou a assistente virtual do estúdio Lara Varisa. Posso te ajudar com horários, agendamentos e dúvidas. Se quiser falar com a Lara, é só me avisar que eu chamo ela 💕"
 4. TOM DE VOZ: 100% humano, natural, caloroso e conciso — exatamente como uma recepcionista real conversando no WhatsApp (mensagens curtas, sem menus burocráticos, sem textos robóticos ou formais demais).
 
+=== CAPACIDADE DE ÁUDIO E NOTAS DE VOZ (MUITO IMPORTANTE) ===
+1. O NOSSO ESTÚDIO POSSUI TECNOLOGIA DE VOZ INTEGRADA E ENVIA ÁUDIO PELO WHATSAPP!
+2. É TERMINANTEMENTE PROIBIDO DIZER QUE VOCÊ NÃO MANDA ÁUDIO OU QUE É SÓ POR TEXTO!
+   - NUNCA diga frases como: "Eu não mando áudio", "Não consigo mandar áudio", "Aqui é tudo por texto", "Não gravo áudio" ou "Sou apenas texto".
+3. Quando a cliente pedir áudio (ex: "manda um áudio", "me explica por áudio", "prefiro áudio", "grava um áudio", "pode ser por voz?"):
+   - Atenda o pedido com carinho e naturalidade! O nosso sistema converte automaticamente a sua resposta escrita em uma nota de voz gravada pela Lara.
+   - Responda amigavelmente como se você estivesse falando no áudio gravado, tirando a dúvida ou explicando o procedimento (ex: "Oi${temNomeVisivel ? ', ' + nomeReal : ''}! Gravei esse áudio pra te explicar: o Volume Russo custa R$ 180 e dura cerca de 2h30. Qual dia você prefere vir ao estúdio? 💕").
+4. Se a cliente perguntar se você manda áudio ou como mandou áudio:
+   - Confirme com simpatia: "Sim! Nosso estúdio conta com tecnologia de atendimento em áudio gravado para ficar mais fácil e acolhedor pra você 💕 Como posso te ajudar hoje?"
+
 === CONSULTA E OFERTA DE HORÁRIOS LIVRES ===
+
 1. Quando a cliente pedir horários (ex: "para amanhã depois das 16", "quinta à tarde"):
    - Chame IMEDIATAMENTE "consultarHorarios(data, duracaoMinutos)". Para amanhã, use ${amanhaIso}.
    - Veja a lista e os períodos retornados pela ferramenta.
@@ -330,6 +342,72 @@ Quando a cliente enviar uma foto:
 }
 
 /**
+ * Decide e envia a resposta ao cliente, seja por nota de voz (PTT) ou texto humanizado,
+ * respeitando a configuração de áudio do estúdio (site_settings / whatsapp_bot_session).
+ * 
+ * Modos de Áudio:
+ * - 'direct_request' (padrão): envia áudio se a cliente pedir explicitamente áudio/voz.
+ * - 'mirror': envia áudio se a mensagem recebida for áudio OU se a cliente pedir áudio.
+ * - 'always': responde sempre em áudio para qualquer mensagem.
+ * - 'disabled': responde sempre em texto.
+ */
+async function enviarRespostaHumanizadaOuVoz(sock, jid, textoResposta, pushName, { ehAudio, pediuAudio }) {
+  if (!sock || !jid || !textoResposta) return false;
+
+  let audioEnviado = false;
+
+  try {
+    const configuracoes = await obterConfiguracoesEmCache();
+    const modoAudio = configuracoes?.whatsapp_audio_mode || 'direct_request';
+    const vozAudio = configuracoes?.whatsapp_audio_voice || 'pt-BR-FranciscaNeural';
+
+    let responderEmAudio = false;
+    if (modoAudio === 'direct_request') {
+      responderEmAudio = Boolean(pediuAudio);
+    } else if (modoAudio === 'mirror') {
+      responderEmAudio = Boolean(ehAudio || pediuAudio);
+    } else if (modoAudio === 'always') {
+      responderEmAudio = true;
+    } else if (modoAudio === 'disabled') {
+      responderEmAudio = false;
+    }
+
+    if (responderEmAudio) {
+      const resTts = await gerarAudioVoz(textoResposta, vozAudio);
+      if (resTts.sucesso && resTts.buffer) {
+        await sendHumanizedVoice(sock, jid, resTts.buffer, { mimetype: resTts.mimetype });
+        audioEnviado = true;
+        logAction('Voz', `Nota de voz enviada para ${pushName}`);
+
+        // Se na resposta houver link de agendamento online, envia mensagem textual de apoio com link clicável
+        if (/https?:\/\/[^\s]+/i.test(textoResposta)) {
+          const match = textoResposta.match(/https?:\/\/[^\s]+/i);
+          const link = match ? match[0] : 'https://laravarisa.netlify.app/agendar';
+          await sendHumanizedMessage(
+            sock,
+            jid,
+            `✨ Agende online pelo link:\n🔗 ${link} 💕`,
+            { immediate: true }
+          );
+        }
+      } else {
+        logWarn('TTS', `Falha ao sintetizar áudio (${resTts.erro || 'desconhecido'}). Enviando texto.`);
+      }
+    }
+  } catch (audioErr) {
+    logWarn('TTS', `Erro no pipeline de áudio: ${audioErr?.message || audioErr}. Enviando texto.`);
+  }
+
+  if (!audioEnviado) {
+    await sendHumanizedMessage(sock, jid, textoResposta);
+  }
+
+  logOutgoing(pushName, audioEnviado ? `[Voz enviada]: "${textoResposta}"` : textoResposta);
+  return audioEnviado;
+}
+
+
+/**
  * Processa mensagens recebidas pelo WhatsApp através do motor de IA OpenCode Go
  * com suporte a Tool Calling e envio humanizado de resposta.
  * 
@@ -370,7 +448,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     const resAudio = await transcreverAudio(jidOrMsg, sock);
     if (resAudio.sucesso && resAudio.texto) {
       texto = resAudio.texto;
-      logIncoming(pushName, `🎤 [Áudio]: "${texto}"`);
+      logIncoming(pushName, `[Áudio]: "${texto}"`);
     } else {
       const msgFalhaAudio = 'Oi! Tive uma pequena dificuldade para ouvir seu áudio. Consegue me mandar por texto? Se preferir falar direto com a Lara, é só me avisar 💕';
       await sendHumanizedMessage(sock, jid, msgFalhaAudio);
@@ -404,6 +482,9 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     return '';
   }
 
+  // Detecta se a cliente pediu resposta em áudio / voz explicitamente
+  const pediuAudio = clientePediuAudio(texto);
+
   // Identificador limpo do JID para a sessão OpenCode Go (cache de prompt)
   const jidLimpo = String(jid).replace('@s.whatsapp.net', '').replace(/[^a-zA-Z0-9_-]/g, '');
 
@@ -425,10 +506,11 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
   // Registra chegada limpa da mensagem
   if (base64Imagem) {
-    logIncoming(pushName, `📸 [Foto enviada]${texto.trim() ? `: "${texto.trim()}"` : ''}`);
+    logIncoming(pushName, `[Foto enviada]${texto.trim() ? `: "${texto.trim()}"` : ''}`);
   } else if (!ehAudio) {
     logIncoming(pushName, texto.trim());
   }
+
 
   // Inicia imediatamente a digitação no WhatsApp para feedback visual instantâneo para a cliente
   if (sock) {
@@ -476,9 +558,10 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     const respostaFallback = await processarFallback(texto, context);
     addMessage(jid, 'assistant', respostaFallback);
     if (sock) {
-      await sendHumanizedMessage(sock, jid, respostaFallback);
+      await enviarRespostaHumanizadaOuVoz(sock, jid, respostaFallback, pushName, { ehAudio, pediuAudio });
+    } else {
+      logOutgoing(pushName, respostaFallback);
     }
-    logOutgoing(pushName, respostaFallback);
     return respostaFallback;
   }
   // Se a cliente pediu atendimento humano, dispara notificação imediata para a Lara
@@ -559,6 +642,15 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       });
     }
 
+    if (pediuAudio) {
+      messages.push({
+        role: 'system',
+        content:
+          '[INSTRUÇÃO CRÍTICA DESTE TURNO: A cliente pediu explicitamente uma resposta em áudio. A sua resposta será convertida e enviada como uma nota de voz gravada pela Lara no WhatsApp! Por isso, NUNCA DIGA que não manda áudio ou que é só texto! Responda de forma acolhedora, tirando a dúvida ou explicando o procedimento como se você estivesse falando no áudio gravado!]',
+      });
+    }
+
+
     const modeloUsado = base64Imagem
       ? (config.opencodeVisionModel || 'deepseek-v4-flash-vision-exp')
       : (config.opencodeModel || 'qwen3.8-flash');
@@ -638,12 +730,12 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     // Salva a resposta do assistente no histórico em memória
     addMessage(jid, 'assistant', respostaFinal);
 
-    // Envia resposta humanizada via Baileys com presença 'digitando...' e controle anti-ban
+    // Envia resposta humanizada via Baileys (áudio PTT ou texto) com controle anti-ban
     if (sock) {
-      await sendHumanizedMessage(sock, jid, respostaFinal);
+      await enviarRespostaHumanizadaOuVoz(sock, jid, respostaFinal, pushName, { ehAudio, pediuAudio });
+    } else {
+      logOutgoing(pushName, respostaFinal);
     }
-
-    logOutgoing(pushName, respostaFinal);
     return respostaFinal;
   } catch (error) {
     logError('IA', `Erro no modelo de IA: ${error?.message || error}. Ativando contingência...`);
@@ -652,9 +744,10 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       const fallbackResposta = await processarFallback(texto, context);
       addMessage(jid, 'assistant', fallbackResposta);
       if (sock) {
-        await sendHumanizedMessage(sock, jid, fallbackResposta);
+        await enviarRespostaHumanizadaOuVoz(sock, jid, fallbackResposta, pushName, { ehAudio, pediuAudio });
+      } else {
+        logOutgoing(pushName, fallbackResposta);
       }
-      logOutgoing(pushName, fallbackResposta);
       return fallbackResposta;
     } catch (fallbackErr) {
       logError('Fallback', `Erro no fallback: ${fallbackErr?.message || fallbackErr}`);

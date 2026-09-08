@@ -78,6 +78,12 @@ export async function POST(request: Request) {
     if (typeof (body as any).ai_enabled === 'boolean') {
       sessionUpdate.ai_enabled = (body as any).ai_enabled;
     }
+    if ('audio_mode' in body) {
+      sessionUpdate.audio_mode = (body as any).audio_mode;
+    }
+    if ('audio_voice' in body) {
+      sessionUpdate.audio_voice = (body as any).audio_voice;
+    }
 
     // Atualiza whatsapp_bot_session
     const { data, error } = await supabase
@@ -92,17 +98,31 @@ export async function POST(request: Request) {
     }
 
     // Atualiza também site_settings para manter paridade
-    await supabase
-      .from('site_settings')
-      .update({
-        lara_phone: sanitizedPhone || null,
-        notify_lara_on_human_transfer: notifyLara,
-      })
-      .eq('id', 'global');
+    const siteSettingsUpdate: Record<string, any> = {};
+    if ('lara_phone' in body) {
+      siteSettingsUpdate.lara_phone = sanitizedPhone || null;
+    }
+    if ('notify_lara_on_human_transfer' in body) {
+      siteSettingsUpdate.notify_lara_on_human_transfer = notifyLara;
+    }
+    if ('audio_mode' in body) {
+      siteSettingsUpdate.whatsapp_audio_mode = (body as any).audio_mode;
+    }
+    if ('audio_voice' in body) {
+      siteSettingsUpdate.whatsapp_audio_voice = (body as any).audio_voice;
+    }
+
+    if (Object.keys(siteSettingsUpdate).length > 0) {
+      await supabase
+        .from('site_settings')
+        .update(siteSettingsUpdate)
+        .eq('id', 'global');
+    }
 
     serverCache.delete(CACHE_KEY);
     return Response.json({ ok: true, session: data }, { headers: NO_STORE_HEADERS });
   }
+
 
   const { data, error } = await supabase
     .from('whatsapp_bot_session')

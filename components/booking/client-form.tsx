@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent } from 'react';
-import { User, Phone, Mail, Sparkles } from 'lucide-react';
+import { User, Phone } from 'lucide-react';
 
 export type ClientFormData = {
   name: string;
@@ -34,62 +34,62 @@ export function ClientForm({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="border-b border-[#cfcfc9] pb-3 flex items-baseline justify-between">
-        <div>
-          <span className="text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
+    <div className="space-y-3 sm:space-y-4 w-full max-w-full overflow-hidden">
+      <div className="border-b border-[#cfcfc9] pb-2.5 sm:pb-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-3 w-full">
+        <div className="min-w-0">
+          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
             Passo 03
           </span>
-          <h2 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5 truncate">
             Seus Dados
           </h2>
         </div>
-        <span className="text-xs text-[#7a7a72] whitespace-nowrap shrink-0 ml-3">
+        <span className="text-[11px] sm:text-xs text-[#7a7a72] shrink-0 font-medium">
           100% Seguro & Sigiloso
         </span>
       </div>
 
-      <div className="bg-white p-5 sm:p-7 rounded-[28px] border border-[#e2e2df] shadow-sm space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+      <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-[28px] border border-[#e2e2df] shadow-sm space-y-3.5 sm:space-y-4 w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
           {/* Name */}
-          <div>
+          <div className="w-full min-w-0">
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952] mb-1.5">
               Seu Nome Completo
             </label>
-            <div className="relative">
-              <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8c8c84]" />
+            <div className="relative w-full">
+              <User size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-[#8c8c84] shrink-0" />
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => onChange({ ...formData, name: e.target.value })}
                 placeholder="Como quer ser chamada"
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
+                className="w-full pl-10 sm:pl-11 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm sm:text-base focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
               />
             </div>
           </div>
 
           {/* WhatsApp */}
-          <div>
+          <div className="w-full min-w-0">
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952] mb-1.5">
               WhatsApp para Confirmação
             </label>
-            <div className="relative">
-              <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8c8c84]" />
+            <div className="relative w-full">
+              <Phone size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-[#8c8c84] shrink-0" />
               <input
                 type="tel"
                 required
                 value={formData.phone}
                 onChange={handlePhoneChange}
                 placeholder="(51) 99999-9999"
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors font-mono"
+                className="w-full pl-10 sm:pl-11 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm sm:text-base focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* Notes (minimal) */}
-        <div>
+        <div className="w-full min-w-0">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952] mb-1.5">
             Observações ou preferências <span className="text-[#8c8c84] font-normal">(opcional)</span>
           </label>
@@ -98,12 +98,12 @@ export function ClientForm({
             value={formData.notes}
             onChange={(e) => onChange({ ...formData, notes: e.target.value })}
             placeholder="Ex: Primeira vez com extensão, olhos sensíveis..."
-            className="w-full px-4 py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-base sm:text-xs focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
+            className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
           />
         </div>
 
         {/* LGPD Consent */}
-        <div className="pt-2 border-t border-[#f0f0ed]">
+        <div className="pt-2 border-t border-[#f0f0ed] w-full">
           <label className="flex items-start gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"

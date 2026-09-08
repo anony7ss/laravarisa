@@ -18,6 +18,8 @@ import {
   Save,
   SendHorizontal,
   Sparkles,
+  Mic,
+  Volume2,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/client';
@@ -37,8 +39,11 @@ export interface WhatsAppSession {
   action_requested?: string | null;
   lara_phone?: string | null;
   notify_lara_on_human_transfer?: boolean;
+  audio_mode?: 'direct_request' | 'mirror' | 'always' | 'disabled' | null;
+  audio_voice?: string | null;
   updated_at?: string | null;
 }
+
 
 export function WhatsAppManager({
   initialSession,
@@ -77,7 +82,17 @@ export function WhatsAppManager({
   const [savingLaraSettings, setSavingLaraSettings] = useState(false);
   const [laraFeedback, setLaraFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Sincroniza estado de Lara e IA se vier de polling / realtime
+  // Configurações de respostas em áudio (TTS)
+  const [audioMode, setAudioMode] = useState<'direct_request' | 'mirror' | 'always' | 'disabled'>(
+    initialSession.audio_mode || 'direct_request'
+  );
+  const [audioVoice, setAudioVoice] = useState<string>(
+    initialSession.audio_voice || 'pt-BR-FranciscaNeural'
+  );
+  const [savingAudioSettings, setSavingAudioSettings] = useState(false);
+  const [audioFeedback, setAudioFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Sincroniza estado de Lara, IA e Áudio se vier de polling / realtime
   useEffect(() => {
     if (session.lara_phone) setLaraPhone(session.lara_phone);
     if (session.notify_lara_on_human_transfer !== undefined) {
@@ -86,7 +101,81 @@ export function WhatsAppManager({
     if (session.ai_enabled !== undefined) {
       setAiEnabled(session.ai_enabled);
     }
-  }, [session.lara_phone, session.notify_lara_on_human_transfer, session.ai_enabled]);
+    if (session.audio_mode) {
+      setAudioMode(session.audio_mode as any);
+    }
+    if (session.audio_voice) {
+      setAudioVoice(session.audio_voice);
+    }
+  }, [session.lara_phone, session.notify_lara_on_human_transfer, session.ai_enabled, session.audio_mode, session.audio_voice]);
+
+  const handleSelectAudioVoice = async (newVoice: string) => {
+    if (role !== 'admin') return;
+    setAudioVoice(newVoice);
+    setSavingAudioSettings(true);
+    setAudioFeedback(null);
+    try {
+      const res = await fetch('/api/admin/whatsapp/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_settings',
+          audio_voice: newVoice,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setSession((prev) => ({ ...prev, audio_voice: newVoice }));
+        const nomes: Record<string, string> = {
+          'pt-BR-FranciscaNeural': 'Voz Francisca selecionada (calma, natural e acolhedora)',
+          'pt-BR-ThalitaMultilingualNeural': 'Voz Thalita selecionada (jovem, moderna e dinâmica)',
+        };
+        setAudioFeedback({ type: 'success', text: nomes[newVoice] || 'Voz atualizada com sucesso!' });
+      } else {
+        setAudioFeedback({ type: 'error', text: data.error || 'Erro ao alterar voz.' });
+      }
+    } catch {
+      setAudioFeedback({ type: 'error', text: 'Erro de conexão ao alterar a voz.' });
+    } finally {
+      setSavingAudioSettings(false);
+    }
+  };
+
+  const handleSelectAudioMode = async (newMode: 'direct_request' | 'mirror' | 'always' | 'disabled') => {
+    if (role !== 'admin') return;
+    setAudioMode(newMode);
+    setSavingAudioSettings(true);
+    setAudioFeedback(null);
+    try {
+      const res = await fetch('/api/admin/whatsapp/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_settings',
+          audio_mode: newMode,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setSession((prev) => ({ ...prev, audio_mode: newMode }));
+        const labels: Record<string, string> = {
+          direct_request: 'Modo Pedido Direto ativado! A IA responderá em áudio quando a cliente pedir.',
+          mirror: 'Modo Espelho ativado! Áudio com áudio e texto com texto.',
+          always: 'Modo Sempre em Áudio ativado! Todas as respostas serão notas de voz.',
+          disabled: 'Modo Apenas Texto ativado. Notas de voz desativadas.',
+        };
+        setAudioFeedback({ type: 'success', text: labels[newMode] || 'Modo de áudio atualizado com sucesso!' });
+      } else {
+        setAudioFeedback({ type: 'error', text: data.error || 'Não foi possível alterar o modo de áudio.' });
+      }
+    } catch {
+      setAudioFeedback({ type: 'error', text: 'Erro de conexão ao salvar modo de áudio.' });
+    } finally {
+      setSavingAudioSettings(false);
+    }
+  };
+
+
 
   const handleToggleAi = async (nextState: boolean) => {
     if (role !== 'admin') return;
@@ -1121,8 +1210,342 @@ export function WhatsAppManager({
           </div>
         </section>
 
+        {/* PAINEL: RESPOSTAS EM ÁUDIO (VOZ DA LARA) */}
+        <section className="admin-panel wa-hero-card">
+          <div className="admin-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: 'var(--admin-orange)', display: 'flex' }}>
+                <Mic size={20} />
+              </span>
+              <div>
+                <p className="admin-kicker">SÍNTESE DE VOZ NEURAL (TTS)</p>
+                <h2 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '18px', fontWeight: 600, margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
+                  Respostas em Áudio da Lara
+                </h2>
+              </div>
+            </div>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '4px 10px',
+                borderRadius: '999px',
+                background: 'rgba(249, 115, 22, 0.1)',
+                color: 'var(--admin-orange)',
+                border: '1px solid rgba(249, 115, 22, 0.25)',
+              }}
+            >
+              Voz: {audioVoice === 'pt-BR-ThalitaMultilingualNeural' ? 'Thalita (pt-BR)' : 'Francisca (pt-BR)'}
+            </span>
+          </div>
+
+          <p style={{ fontSize: '13px', color: 'var(--admin-muted)', lineHeight: 1.6, margin: '0 0 16px' }}>
+            Defina como a Lara deve responder às clientes no WhatsApp. O áudio é sintetizado em tempo real com voz neural brasileira de alta fidelidade e convertido para o formato nativo do WhatsApp (OGG Opus) para reprodução perfeita em qualquer celular.
+          </p>
+
+          {/* Seletor de Voz Neural Brasileira */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderRadius: '14px',
+              background: 'var(--admin-bg)',
+              border: '1px solid var(--admin-line)',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Volume2 size={18} style={{ color: 'var(--admin-orange)', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: 600, margin: 0, color: 'var(--admin-ink)' }}>
+                  Timbre da Voz Neural (pt-BR)
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: 0 }}>
+                  Escolha o estilo de locução feminina da Lara
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => handleSelectAudioVoice('pt-BR-FranciscaNeural')}
+                disabled={savingAudioSettings}
+                className={audioVoice === 'pt-BR-FranciscaNeural' ? 'admin-primary' : 'admin-secondary'}
+                style={{
+                  fontSize: '12px',
+                  padding: '6px 14px',
+                  minHeight: '32px',
+                  borderRadius: '999px',
+                  fontWeight: audioVoice === 'pt-BR-FranciscaNeural' ? 600 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Francisca (Calma & Acolhedora)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectAudioVoice('pt-BR-ThalitaMultilingualNeural')}
+                disabled={savingAudioSettings}
+                className={audioVoice === 'pt-BR-ThalitaMultilingualNeural' ? 'admin-primary' : 'admin-secondary'}
+                style={{
+                  fontSize: '12px',
+                  padding: '6px 14px',
+                  minHeight: '32px',
+                  borderRadius: '999px',
+                  fontWeight: audioVoice === 'pt-BR-ThalitaMultilingualNeural' ? 600 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Thalita (Jovem & Espontânea)
+              </button>
+            </div>
+          </div>
+
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            {/* Opção 1: Pedido Direto (Padrão) */}
+            <button
+              type="button"
+              onClick={() => handleSelectAudioMode('direct_request')}
+              disabled={savingAudioSettings}
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                border: audioMode === 'direct_request' ? '2px solid var(--admin-orange)' : '1px solid var(--admin-line)',
+                background: audioMode === 'direct_request' ? 'rgba(249, 115, 22, 0.05)' : 'var(--admin-card)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>🎙️</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                    Pedido Direto
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: audioMode === 'direct_request' ? 'var(--admin-orange)' : 'var(--admin-bg)',
+                    color: audioMode === 'direct_request' ? '#fff' : 'var(--admin-muted)',
+                  }}
+                >
+                  Padrão
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.5 }}>
+                Responde por texto. Se a cliente disser <i>&ldquo;manda um áudio&rdquo;</i>, <i>&ldquo;me explica por áudio&rdquo;</i> ou <i>&ldquo;prefiro áudio&rdquo;</i>, a Lara grava e envia áudio na hora.
+              </p>
+              {audioMode === 'direct_request' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-orange)', fontWeight: 600, marginTop: '4px' }}>
+                  <CheckCircle2 size={13} />
+                  <span>Modo Ativo</span>
+                </div>
+              )}
+            </button>
+
+            {/* Opção 2: Modo Espelho */}
+            <button
+              type="button"
+              onClick={() => handleSelectAudioMode('mirror')}
+              disabled={savingAudioSettings}
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                border: audioMode === 'mirror' ? '2px solid var(--admin-orange)' : '1px solid var(--admin-line)',
+                background: audioMode === 'mirror' ? 'rgba(249, 115, 22, 0.05)' : 'var(--admin-card)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>🔄</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                    Modo Espelho
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'var(--admin-bg)',
+                    color: 'var(--admin-muted)',
+                  }}
+                >
+                  Flexível
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.5 }}>
+                Se a cliente mandar áudio, a Lara responde com áudio. Se ela mandar texto, responde em texto (a não ser que ela peça áudio).
+              </p>
+              {audioMode === 'mirror' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-orange)', fontWeight: 600, marginTop: '4px' }}>
+                  <CheckCircle2 size={13} />
+                  <span>Modo Ativo</span>
+                </div>
+              )}
+            </button>
+
+            {/* Opção 3: Sempre em Áudio */}
+            <button
+              type="button"
+              onClick={() => handleSelectAudioMode('always')}
+              disabled={savingAudioSettings}
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                border: audioMode === 'always' ? '2px solid var(--admin-orange)' : '1px solid var(--admin-line)',
+                background: audioMode === 'always' ? 'rgba(249, 115, 22, 0.05)' : 'var(--admin-card)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>🔊</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                    Sempre em Áudio
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'var(--admin-bg)',
+                    color: 'var(--admin-muted)',
+                  }}
+                >
+                  Voz Total
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.5 }}>
+                Todas as mensagens da Lara serão enviadas como notas de voz gravadas, com envio complementar de links clicáveis quando necessário.
+              </p>
+              {audioMode === 'always' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-orange)', fontWeight: 600, marginTop: '4px' }}>
+                  <CheckCircle2 size={13} />
+                  <span>Modo Ativo</span>
+                </div>
+              )}
+            </button>
+
+            {/* Opção 4: Apenas Texto */}
+            <button
+              type="button"
+              onClick={() => handleSelectAudioMode('disabled')}
+              disabled={savingAudioSettings}
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                border: audioMode === 'disabled' ? '2px solid var(--admin-orange)' : '1px solid var(--admin-line)',
+                background: audioMode === 'disabled' ? 'rgba(249, 115, 22, 0.05)' : 'var(--admin-card)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>💬</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                    Apenas Texto
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    background: 'var(--admin-bg)',
+                    color: 'var(--admin-muted)',
+                  }}
+                >
+                  Sem Áudio
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.5 }}>
+                Desativa notas de voz. Todas as respostas serão enviadas exclusivamente por mensagem de texto convencional.
+              </p>
+              {audioMode === 'disabled' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-orange)', fontWeight: 600, marginTop: '4px' }}>
+                  <CheckCircle2 size={13} />
+                  <span>Modo Ativo</span>
+                </div>
+              )}
+            </button>
+          </div>
+
+          {savingAudioSettings && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--admin-muted)', marginBottom: '10px' }}>
+              <RefreshCw size={13} className="animate-spin" />
+              <span>Salvando configuração de áudio no bot...</span>
+            </div>
+          )}
+
+          {audioFeedback && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: audioFeedback.type === 'success' ? '#dcfce7' : '#fee2e2',
+                color: audioFeedback.type === 'success' ? '#15803d' : '#b91c1c',
+                border: `1px solid ${audioFeedback.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+              }}
+            >
+              {audioFeedback.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+              <span>{audioFeedback.text}</span>
+            </div>
+          )}
+        </section>
+
         {/* PAINEL 3: ATALHO PARA CONFIGURAÇÕES DE MENSAGENS */}
         <section className="admin-panel">
+
           <div className="admin-panel-head">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ color: 'var(--admin-orange)', display: 'flex' }}>

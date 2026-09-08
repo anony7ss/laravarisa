@@ -141,9 +141,9 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('\n┌───────────────────────────────────────────────┐');
-      console.log('│   📱 ESCANEIE O QR CODE NO SEU WHATSAPP:      │');
-      console.log('└───────────────────────────────────────────────┘\n');
+      console.log('\n+-----------------------------------------------+');
+      console.log('|   >> ESCANEIE O QR CODE NO SEU WHATSAPP:      |');
+      console.log('+-----------------------------------------------+\n');
       qrcode.generate(qr, { small: true });
       logInfo('WhatsApp', 'Aguardando leitura do QR Code no aplicativo...');
 
