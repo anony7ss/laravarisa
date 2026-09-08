@@ -17,6 +17,14 @@ const emptyGallery = {
   active: true,
 };
 
+function getGalleryImageUrl(item: { public_url?: string; image_path: string }) {
+  const url = item.public_url || item.image_path;
+  if (!url) return '';
+  if (/^https?:\/\//.test(url) || url.startsWith('/')) return url;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  return `${base}/storage/v1/object/public/gallery/${url}`;
+}
+
 export function GalleryManager({
   initial,
   role,
@@ -75,10 +83,14 @@ export function GalleryManager({
         editing ? `/api/admin/gallery/${editing.id}` : '/api/admin/gallery',
         { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(payload) },
       );
+      const savedWithUrl = {
+        ...saved,
+        public_url: getGalleryImageUrl(saved),
+      };
       setItems((list) =>
         editing
-          ? list.map((i) => (i.id === saved.id ? saved : i))
-          : [...list, saved],
+          ? list.map((i) => (i.id === savedWithUrl.id ? savedWithUrl : i))
+          : [...list, savedWithUrl],
       );
       setEditing(null);
       setCreating(false);
@@ -244,8 +256,9 @@ export function GalleryManager({
           items.map((item) => (
             <article className="admin-gallery-card" key={item.id}>
               <img
-                src={item.public_url || item.image_path}
+                src={getGalleryImageUrl(item)}
                 alt={item.alt_text}
+                loading="lazy"
               />
               <div>
                 <span>

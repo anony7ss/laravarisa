@@ -8,13 +8,17 @@ export default async function GalleryAdminPage() {
     .from('gallery_items')
     .select('*')
     .order('sort_order');
-  const items = (data ?? []).map((item) => ({
-    ...item,
-    public_url: /^https:\/\//.test(item.image_path)
-      ? item.image_path
-      : supabase.storage.from('gallery').getPublicUrl(item.image_path).data
-          .publicUrl,
-  })) as GalleryRow[];
+  const items = (data ?? []).map((item) => {
+    const isLocalOrExternal =
+      /^https?:\/\//.test(item.image_path) || item.image_path.startsWith('/');
+    return {
+      ...item,
+      public_url: isLocalOrExternal
+        ? item.image_path
+        : supabase.storage.from('gallery').getPublicUrl(item.image_path).data
+            .publicUrl,
+    };
+  }) as GalleryRow[];
   return (
     <main className="admin-page">
       <div className="admin-page-title">

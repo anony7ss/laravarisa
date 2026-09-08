@@ -36,7 +36,7 @@ export function ServiceSelector({
             Escolha o Procedimento
           </h2>
         </div>
-        <span className="text-xs text-[#595952]">
+        <span className="text-xs text-[#7a7a72] whitespace-nowrap shrink-0 ml-3 font-medium">
           {services.length} opções
         </span>
       </div>

@@ -19,6 +19,8 @@ import {
   Settings,
   HeartHandshake,
   Bell,
+  Bot,
+  SendHorizontal,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -66,6 +68,7 @@ const links = [
   ['/admin/dashboard/servicos', 'Serviços', Scissors],
   ['/admin/dashboard/galeria', 'Galeria', Image],
   ['/admin/dashboard/depoimentos', 'Depoimentos', HeartHandshake],
+  ['/admin/dashboard/whatsapp', 'WhatsApp Bot', Bot],
   ['/admin/dashboard/configuracoes', 'Configurações', Settings],
 ] as const;
 
@@ -79,8 +82,12 @@ const pageNames: Record<string, string> = {
   '/admin/dashboard/servicos': 'Serviços',
   '/admin/dashboard/galeria': 'Galeria',
   '/admin/dashboard/depoimentos': 'Depoimentos',
+  '/admin/dashboard/whatsapp': 'WhatsApp Bot',
   '/admin/dashboard/configuracoes': 'Configurações',
 };
+
+let lastAppointmentsFetchTime = 0;
+let cachedScheduledCount = 0;
 
 export function AdminShell({
   children,
@@ -94,13 +101,21 @@ export function AdminShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(cachedScheduledCount);
 
   useEffect(() => {
     let isMounted = true;
     let initialRun = true;
 
-    async function checkAppointments() {
+    async function checkAppointments(force = false) {
+      if (typeof document !== 'undefined' && document.hidden && !force) return;
+
+      const now = Date.now();
+      if (!force && now - lastAppointmentsFetchTime < 20000) {
+        if (isMounted) setPendingCount(cachedScheduledCount);
+        return;
+      }
+
       try {
         const res = await fetch('/api/admin/appointments');
         if (!res.ok) return;
@@ -110,6 +125,9 @@ export function AdminShell({
         const count = json.data.filter(
           (item: { status: string }) => item.status === 'scheduled',
         ).length;
+
+        lastAppointmentsFetchTime = Date.now();
+        cachedScheduledCount = count;
 
         if (!isMounted) return;
 
@@ -126,16 +144,35 @@ export function AdminShell({
     }
 
     checkAppointments();
-    const interval = setInterval(checkAppointments, 25000);
+    const interval = setInterval(() => checkAppointments(), 35000);
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        checkAppointments(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
   useEffect(() => {
-    const saved = localStorage.getItem('admin-theme');
-    if (saved === 'dark') setDarkMode(true);
+    try {
+      const saved = localStorage.getItem('admin-theme');
+      const hasDarkClass =
+        document.querySelector('.admin-root')?.classList.contains('dark') ||
+        document.documentElement.classList.contains('dark');
+      if (saved === 'dark' || (saved === null && hasDarkClass)) {
+        setDarkMode(true);
+        document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
+      } else if (saved === 'light') {
+        document.cookie = 'admin-theme=light; path=/; max-age=31536000; SameSite=Lax';
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -143,10 +180,18 @@ export function AdminShell({
     if (root) {
       if (darkMode) {
         root.classList.add('dark');
-        localStorage.setItem('admin-theme', 'dark');
+        document.documentElement.classList.add('dark');
+        try {
+          localStorage.setItem('admin-theme', 'dark');
+          document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
+        } catch {}
       } else {
         root.classList.remove('dark');
-        localStorage.setItem('admin-theme', 'light');
+        document.documentElement.classList.remove('dark');
+        try {
+          localStorage.setItem('admin-theme', 'light');
+          document.cookie = 'admin-theme=light; path=/; max-age=31536000; SameSite=Lax';
+        } catch {}
       }
     }
   }, [darkMode]);

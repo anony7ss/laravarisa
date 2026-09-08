@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Save,
   Sliders,
+  Bell,
 } from 'lucide-react';
 import { adminRequest } from './api';
 
@@ -31,6 +32,12 @@ export function SettingsManager({
   role: string;
 }) {
   const [settings, setSettings] = useState(initialSettings);
+  const [bookingEnabled, setBookingEnabled] = useState(
+    initialSettings?.booking_enabled ?? true,
+  );
+  const [notifyOnStatus, setNotifyOnStatus] = useState(
+    initialSettings?.notify_on_status_change ?? true,
+  );
   const [openDays, setOpenDays] = useState<number[]>(
     Array.isArray(initialSettings?.open_days)
       ? initialSettings.open_days
@@ -39,6 +46,9 @@ export function SettingsManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing'
+  >('horarios');
 
   function toggleDay(d: number) {
     if (role !== 'admin') return;
@@ -93,6 +103,29 @@ export function SettingsManager({
       whatsapp_confirmation_message: String(
         form.get('whatsapp_confirmation_message') || '',
       ),
+      whatsapp_booking_message: String(
+        form.get('whatsapp_booking_message') || '',
+      ),
+
+      // Lembretes Automáticos sem IA
+      reminder_active: form.get('reminder_active') === 'on',
+      reminder_hours_before: Number(form.get('reminder_hours_before') || 24),
+      reminder_message_template: String(
+        form.get('reminder_message_template') || '',
+      ),
+      reminder_same_day_active: form.get('reminder_same_day_active') === 'on',
+      reminder_same_day_hours_before: Number(
+        form.get('reminder_same_day_hours_before') || 2,
+      ),
+      reminder_same_day_message_template: String(
+        form.get('reminder_same_day_message_template') || '',
+      ),
+
+      // Notificações automáticas de status no WhatsApp
+      notify_on_status_change: form.get('notify_on_status_change') === 'on',
+      msg_cancelled_template: String(form.get('msg_cancelled_template') || ''),
+      msg_no_show_template: String(form.get('msg_no_show_template') || ''),
+      msg_completed_template: String(form.get('msg_completed_template') || ''),
     };
 
     try {
@@ -114,20 +147,158 @@ export function SettingsManager({
     <form
       className="admin-form"
       onSubmit={save}
-      style={{ display: 'grid', gap: '24px' }}
+      style={{ display: 'grid', gap: '20px' }}
     >
-      {/* SEÇÃO 1: DIAS E HORÁRIOS */}
-      <section className="admin-panel">
-        <div className="admin-panel-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: 'var(--admin-orange)' }}>
-              <CalendarDays size={20} />
-            </span>
-            <div>
-              <p className="admin-kicker">FUNCIONAMENTO</p>
-              <h2>Dias & Horários de Atendimento</h2>
+      {/* NAVEGAÇÃO POR SUBPÁGINAS / ABAS INTERNAS */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          overflowX: 'auto',
+          paddingBottom: '6px',
+          borderBottom: '1px solid var(--admin-line)',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {[
+          { id: 'horarios' as const, label: 'Horários & Estúdio', icon: CalendarDays },
+          { id: 'regras' as const, label: 'Regras da Agenda', icon: Sliders },
+          { id: 'mensagens' as const, label: 'Mensagens & WhatsApp', icon: MessageCircle },
+          { id: 'lembretes' as const, label: 'Lembretes Automáticos', icon: Bell },
+          { id: 'marketing' as const, label: 'Marketing & Banner', icon: Megaphone },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={isActive ? 'admin-primary' : 'admin-secondary'}
+              style={{
+                borderRadius: '999px',
+                fontSize: '13px',
+                padding: '8px 16px',
+                minHeight: '38px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap',
+                fontWeight: isActive ? 600 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ABA 1: DIAS E HORÁRIOS & ESTADO DO ESTÚDIO */}
+      <div style={{ display: activeTab === 'horarios' ? 'grid' : 'none', gap: '24px' }}>
+        {/* Card Destacado: Estado do Estúdio (Aberto / Fechado) */}
+        <section className="admin-panel">
+          <div className="admin-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: 'var(--admin-orange)' }}>
+                <Clock size={20} />
+              </span>
+              <div>
+                <p className="admin-kicker">DISPONIBILIDADE DO SALÃO</p>
+                <h2>Status de Funcionamento</h2>
+              </div>
             </div>
           </div>
+
+          <div className="admin-form-grid">
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                padding: '16px 20px',
+                borderRadius: '16px',
+                background: bookingEnabled
+                  ? 'rgba(34, 197, 94, 0.06)'
+                  : 'rgba(239, 68, 68, 0.07)',
+                border: `1px solid ${
+                  bookingEnabled
+                    ? 'rgba(34, 197, 94, 0.28)'
+                    : 'rgba(239, 68, 68, 0.3)'
+                }`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '15px' }}>{bookingEnabled ? '🟢' : '🔴'}</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--admin-ink)' }}>
+                    {bookingEnabled
+                      ? 'Estúdio Aberto para Novos Agendamentos'
+                      : 'Estúdio Fechado / Agendamentos Pausados'}
+                  </strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
+                  {bookingEnabled
+                    ? 'Clientes conseguem agendar horários livremente através do site e do WhatsApp Bot.'
+                    : 'O site e o WhatsApp Bot bloquearão novas reservas e exibirão a mensagem explicativa abaixo.'}
+                </p>
+              </div>
+
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: role === 'admin' ? 'pointer' : 'default',
+                  margin: 0,
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: bookingEnabled ? '#15803d' : '#b91c1c',
+                }}
+              >
+                <input
+                  name="booking_enabled"
+                  type="checkbox"
+                  checked={bookingEnabled}
+                  onChange={(e) => setBookingEnabled(e.target.checked)}
+                  disabled={role !== 'admin'}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>{bookingEnabled ? 'Aberto (Online)' : 'Fechado (Pausado)'}</span>
+              </label>
+            </div>
+
+            <label className="wide">
+              Mensagem exibida quando a agenda estiver fechada/pausada
+              <input
+                name="booking_closed_message"
+                defaultValue={
+                  settings?.booking_closed_message ||
+                  'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'
+                }
+                disabled={role !== 'admin'}
+                placeholder="Ex: Estúdio temporariamente em recesso/férias. Voltamos em breve!"
+              />
+            </label>
+          </div>
+        </section>
+
+        {/* SEÇÃO 1: DIAS E HORÁRIOS */}
+        <section className="admin-panel">
+          <div className="admin-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: 'var(--admin-orange)' }}>
+                <CalendarDays size={20} />
+              </span>
+              <div>
+                <p className="admin-kicker">FUNCIONAMENTO</p>
+                <h2>Dias & Horários de Atendimento</h2>
+              </div>
+            </div>
           {role === 'admin' && (
             <div style={{ display: 'flex', gap: '6px' }}>
               <button
@@ -250,8 +421,10 @@ export function SettingsManager({
           </label>
         </div>
       </section>
+    </div>
 
-      {/* SEÇÃO 2: REGRAS DE AGENDAMENTO */}
+    {/* ABA 2: REGRAS DA AGENDA ONLINE */}
+    <div style={{ display: activeTab === 'regras' ? 'grid' : 'none', gap: '24px' }}>
       <section className="admin-panel">
         <div className="admin-panel-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -266,28 +439,6 @@ export function SettingsManager({
         </div>
 
         <div className="admin-form-grid">
-          <label className="admin-check wide">
-            <input
-              name="booking_enabled"
-              type="checkbox"
-              defaultChecked={settings?.booking_enabled ?? true}
-              disabled={role !== 'admin'}
-            />{' '}
-            <strong>Permitir Novos Agendamentos Online</strong>
-          </label>
-
-          <label className="wide">
-            Mensagem quando a agenda estiver pausada
-            <input
-              name="booking_closed_message"
-              defaultValue={
-                settings?.booking_closed_message ||
-                'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'
-              }
-              disabled={role !== 'admin'}
-              placeholder="Ex: Agenda temporariamente fechada para novos agendamentos."
-            />
-          </label>
 
           <label>
             Intervalo entre Horários na Grade
@@ -349,7 +500,10 @@ export function SettingsManager({
           </label>
         </div>
       </section>
+    </div>
 
+    {/* ABA 3: WHATSAPP & COMUNICAÇÃO (MENSAGENS & STATUS) */}
+    <div style={{ display: activeTab === 'mensagens' ? 'grid' : 'none', gap: '24px' }}>
       {/* SEÇÃO 3: WHATSAPP & COMUNICAÇÃO */}
       <section className="admin-panel">
         <div className="admin-panel-head">
@@ -379,26 +533,255 @@ export function SettingsManager({
           </label>
 
           <label className="wide">
-            Modelo de Mensagem de Confirmação (1 Clique)
+            Modelo de Mensagem de Confirmação Manual (WhatsApp 1 Clique na Agenda)
             <textarea
               name="whatsapp_confirmation_message"
               rows={3}
               defaultValue={
                 settings?.whatsapp_confirmation_message ||
-                'Olá, {nome}! ✨ Aqui é da Lara Varisa · Lash Designer. Passando para confirmar seu horário agendado para o dia {data} às {horario}. Podemos confirmar sua presença? 💖'
+                'Oi, {nome}! Passando para confirmar seu horário no dia {data} às {horario}. Consegue me confirmar? 💕'
               }
               disabled={role !== 'admin'}
               placeholder="Use {nome}, {data} e {horario} como variáveis dinâmicas."
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
-              Variáveis disponíveis: <code>&#123;nome&#125;</code>,{' '}
-              <code>&#123;data&#125;</code>, <code>&#123;horario&#125;</code>
+              Disparada manualmente ao clicar no botão de WhatsApp na lista de agendamentos.
+            </small>
+          </label>
+
+          <label className="wide">
+            Mensagem Automática Imediata (Disparada assim que a cliente agenda no Site)
+            <textarea
+              name="whatsapp_booking_message"
+              rows={4}
+              defaultValue={
+                settings?.whatsapp_booking_message ||
+                'Oi, {nome}! Seu horário para {procedimento} tá confirmado para {data} às {horario}. Qualquer dúvida estou por aqui 💕'
+              }
+              disabled={role !== 'admin'}
+              placeholder="Variáveis: {nome}, {procedimento}, {data}, {horario}, {local}."
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Variáveis disponíveis: <code>&#123;nome&#125;</code>, <code>&#123;procedimento&#125;</code>, <code>&#123;data&#125;</code>, <code>&#123;horario&#125;</code>, <code>&#123;local&#125;</code>
             </small>
           </label>
         </div>
       </section>
 
-      {/* SEÇÃO 4: BANNER PROMOCIONAL */}
+      {/* SEÇÃO 5: NOTIFICAÇÕES AUTOMÁTICAS NO WHATSAPP POR MUDANÇA DE STATUS */}
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ color: '#25d366' }}>
+              <MessageCircle size={20} />
+            </span>
+            <div>
+              <p className="admin-kicker">PÓS-ATENDIMENTO & RELACIONAMENTO</p>
+              <h2>Notificações Automáticas no WhatsApp por Status</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-form-grid">
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: 'var(--admin-bg)',
+              border: '1px solid var(--admin-line)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                Enviar mensagem no WhatsApp da cliente ao alterar status
+              </strong>
+              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--admin-muted)' }}>
+                Ao arrastar no Kanban ou mudar o status para Falta, Cancelado ou Concluído, o bot envia a mensagem correspondente.
+              </p>
+            </div>
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: role === 'admin' ? 'pointer' : 'default',
+                margin: 0,
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
+            >
+              <input
+                name="notify_on_status_change"
+                type="checkbox"
+                checked={notifyOnStatus}
+                onChange={(e) => setNotifyOnStatus(e.target.checked)}
+                disabled={role !== 'admin'}
+                style={{ width: '16px', height: '16px' }}
+              />
+              <span>{notifyOnStatus ? 'Ativo' : 'Desativado'}</span>
+            </label>
+          </div>
+
+          <p style={{ gridColumn: '1 / -1', margin: '4px 0 0', fontSize: '11px', color: 'var(--admin-muted)' }}>
+            Variáveis suportadas: <code>{'{primeiro_nome}'}</code>, <code>{'{nome}'}</code>, <code>{'{servico}'}</code>, <code>{'{data}'}</code>, <code>{'{horario}'}</code>
+          </p>
+
+          <label className="wide">
+            💬 Mensagem de Falta / Não Compareceu (Status: Falta)
+            <textarea
+              name="msg_no_show_template"
+              defaultValue={
+                settings?.msg_no_show_template ||
+                'Oi, {primeiro_nome}! Sentimos sua falta hoje no estúdio. Quando quiser reagendar, é só me chamar por aqui 💕'
+              }
+              disabled={role !== 'admin' || !notifyOnStatus}
+              rows={3}
+            />
+          </label>
+
+          <label className="wide">
+            💬 Mensagem de Cancelamento (Status: Cancelado)
+            <textarea
+              name="msg_cancelled_template"
+              defaultValue={
+                settings?.msg_cancelled_template ||
+                'Oi, {primeiro_nome}! Seu horário de {servico} para {data} às {horario} foi cancelado. Se quiser remarcar para outro dia, é só me avisar 💕'
+              }
+              disabled={role !== 'admin' || !notifyOnStatus}
+              rows={3}
+            />
+          </label>
+
+          <label className="wide">
+            💬 Mensagem de Atendimento Concluído / Cuidados Pós (Status: Concluído)
+            <textarea
+              name="msg_completed_template"
+              defaultValue={
+                settings?.msg_completed_template ||
+                'Oi, {primeiro_nome}! Amei te receber hoje no estúdio. Lembre-se dos cuidados com o seu {servico} nas primeiras 24h. Até a próxima 💕'
+              }
+              disabled={role !== 'admin' || !notifyOnStatus}
+              rows={3}
+            />
+          </label>
+        </div>
+      </section>
+    </div>
+
+    {/* ABA 4: LEMBRETES AUTOMÁTICOS (SEM IA) */}
+    <div style={{ display: activeTab === 'lembretes' ? 'grid' : 'none', gap: '24px' }}>
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ color: '#F59E0B' }}>
+              <Bell size={20} />
+            </span>
+            <div>
+              <p className="admin-kicker">AUTOMAÇÃO SEM IA</p>
+              <h2>Lembretes Automáticos de Atendimento</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-form-grid">
+          {/* Lembrete 1: Antecedência Principal */}
+          <label className="admin-check wide">
+            <input
+              name="reminder_active"
+              type="checkbox"
+              defaultChecked={settings?.reminder_active ?? true}
+              disabled={role !== 'admin'}
+            />{' '}
+            <strong>Ativar Lembrete Automático de Antecedência (Ex: 24h antes)</strong>
+          </label>
+
+          <label>
+            Tempo de Antecedência do Lembrete Principal
+            <select
+              name="reminder_hours_before"
+              defaultValue={settings?.reminder_hours_before ?? 24}
+              disabled={role !== 'admin'}
+            >
+              <option value="6">6 horas antes</option>
+              <option value="12">12 horas antes</option>
+              <option value="24">24 horas antes (1 dia antes - Recomendado)</option>
+              <option value="48">48 horas antes (2 dias antes)</option>
+              <option value="72">72 horas antes (3 dias antes)</option>
+            </select>
+          </label>
+
+          <label className="wide">
+            Texto do Lembrete Principal
+            <textarea
+              name="reminder_message_template"
+              rows={4}
+              defaultValue={
+                settings?.reminder_message_template ||
+                'Oi, {nome}! Passando pra lembrar do seu horário de {procedimento} amanhã às {horario}. Consegue me confirmar se você vem? 💕'
+              }
+              disabled={role !== 'admin'}
+              placeholder="Variáveis: {nome}, {procedimento}, {data}, {horario}, {local}."
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Variáveis disponíveis: <code>&#123;nome&#125;</code>, <code>&#123;procedimento&#125;</code>, <code>&#123;data&#125;</code>, <code>&#123;horario&#125;</code>, <code>&#123;local&#125;</code>
+            </small>
+          </label>
+
+          <hr style={{ gridColumn: '1 / -1', border: 'none', borderTop: '1px solid var(--admin-line)', margin: '8px 0' }} />
+
+          {/* Lembrete 2: No Dia do Atendimento */}
+          <label className="admin-check wide">
+            <input
+              name="reminder_same_day_active"
+              type="checkbox"
+              defaultChecked={settings?.reminder_same_day_active ?? true}
+              disabled={role !== 'admin'}
+            />{' '}
+            <strong>Ativar Lembrete Rápido no Dia do Atendimento (Ex: 2h antes)</strong>
+          </label>
+
+          <label>
+            Tempo de Antecedência no Dia
+            <select
+              name="reminder_same_day_hours_before"
+              defaultValue={settings?.reminder_same_day_hours_before ?? 2}
+              disabled={role !== 'admin'}
+            >
+              <option value="1">1 hora antes</option>
+              <option value="2">2 horas antes (Recomendado)</option>
+              <option value="3">3 horas antes</option>
+              <option value="4">4 horas antes</option>
+            </select>
+          </label>
+
+          <label className="wide">
+            Texto do Lembrete no Dia
+            <textarea
+              name="reminder_same_day_message_template"
+              rows={3}
+              defaultValue={
+                settings?.reminder_same_day_message_template ||
+                'Oi, {nome}! Tudo pronto pra te receber hoje às {horario} no estúdio ({local}). Até já 💕'
+              }
+              disabled={role !== 'admin'}
+              placeholder="Variáveis: {nome}, {procedimento}, {horario}, {local}."
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Variáveis disponíveis: <code>&#123;nome&#125;</code>, <code>&#123;procedimento&#125;</code>, <code>&#123;horario&#125;</code>, <code>&#123;local&#125;</code>
+            </small>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    {/* ABA 5: MARKETING & BANNER */}
+    <div style={{ display: activeTab === 'marketing' ? 'grid' : 'none', gap: '24px' }}>
       <section className="admin-panel">
         <div className="admin-panel-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -469,7 +852,9 @@ export function SettingsManager({
         </div>
       </section>
 
-      {/* BARRA DE SALVAMENTO */}
+    </div>
+
+    {/* BARRA DE SALVAMENTO */}
       <div
         style={{
           position: 'sticky',

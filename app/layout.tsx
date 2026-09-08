@@ -46,8 +46,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" className={`${anton.variable} ${dmSans.variable}`}>
+    <html lang="pt-BR" suppressHydrationWarning className={`${anton.variable} ${dmSans.variable}`}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];if(s==='dark'||c==='dark'||(!s&&!c&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';}}}catch(e){}})();`,
+          }}
+        />
         <link
           rel="preload"
           as="image"

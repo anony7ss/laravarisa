@@ -228,14 +228,21 @@ export function ServicesManager({
         {items.length ? (
           items.map((item) => (
             <article className="admin-resource-card" key={item.id}>
-              <div>
-                <span
-                  className={`admin-status ${item.active ? 'converted' : 'archived'}`}
-                >
-                  {item.active ? 'Ativo' : 'Oculto'}
-                </span>
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <h3 style={{ margin: 0, font: '400 26px/1.1 var(--font-display)', color: 'var(--admin-ink)' }}>
+                    {item.name}
+                  </h3>
+                  <span
+                    className={`admin-status ${item.active ? 'converted' : 'archived'}`}
+                    style={{ flexShrink: 0, marginTop: '2px' }}
+                  >
+                    {item.active ? 'Ativo' : 'Oculto'}
+                  </span>
+                </div>
+                <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '13px', lineHeight: 1.5 }}>
+                  {item.description}
+                </p>
               </div>
               <div className="admin-resource-meta">
                 <span>{item.price_label}</span>

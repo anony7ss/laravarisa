@@ -59,13 +59,10 @@ export function BookingSuccessModal({
         </button>
 
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-full bg-[var(--color-ember)] text-white flex items-center justify-center shadow-md">
-            <Check size={26} strokeWidth={3} />
+          <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shadow-sm">
+            <Check size={24} strokeWidth={2.5} />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-ember)] font-mono block">
-            Reserva Confirmada
-          </span>
-          <h3 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+          <h3 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] pt-1">
             Tudo Pronto, {booking.client_name.split(' ')[0]}!
           </h3>
           <p className="text-xs text-[#595952]">

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { serverCache } from '@/lib/memory-cache';
 
 export type AppRole = 'admin' | 'editor' | 'viewer';
 
@@ -10,16 +11,25 @@ export async function getStaffContext() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name, role')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (!profile) return null;
+
+  const cacheKey = `staff_profile:${user.id}`;
+  let profile = serverCache.get<{ id: string; full_name: string; role: AppRole }>(cacheKey);
+
+  if (!profile) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, role')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!data) return null;
+    profile = data as { id: string; full_name: string; role: AppRole };
+    serverCache.set(cacheKey, profile, 15);
+  }
+
   return {
     supabase,
     user,
-    profile: profile as { id: string; full_name: string; role: AppRole },
+    profile,
   };
 }
 

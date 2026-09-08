@@ -2,29 +2,29 @@ import { MapPin, Clock3, Sparkles } from 'lucide-react';
 
 export function StudioCard() {
   return (
-    <div className="bg-[var(--color-limestone)] p-5 md:p-6 rounded-[32px] border border-[#d6d6cf] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-[#595952]">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#e2e2df] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
-          <MapPin size={18} />
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#e2e2df] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#595952]">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-8 h-8 rounded-full bg-[#f7f6f2] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
+          <MapPin size={15} className="text-[var(--color-ember)]" />
         </div>
-        <div>
-          <strong className="text-sm font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] block">
-            Lara Varisa · Lash Designer · Zona Norte
+        <div className="min-w-0">
+          <strong className="text-xs sm:text-sm font-semibold text-[var(--color-obsidian)] block truncate">
+            Studio Lara Varisa · Zona Norte, Porto Alegre
           </strong>
-          <p className="text-[12px] mt-0.5">
-            Porto Alegre, RS · O endereço detalhado e orientações de chegada são enviados no seu WhatsApp após a confirmação.
+          <p className="text-[11px] text-[#7a7a72] truncate">
+            O endereço exato e orientações são enviados no seu WhatsApp.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-[11px] pt-3 md:pt-0 border-t md:border-t-0 border-[#e2e2df] w-full md:w-auto">
-        <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-[#d6d6cf]">
-          <Clock3 size={13} className="text-[var(--color-ember)]" />
-          10 min de tolerância
+      <div className="flex items-center gap-2 text-[11px] shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#f0f0ed] w-full sm:w-auto">
+        <span className="flex items-center gap-1 bg-[#f7f6f2] px-2.5 py-1 rounded-full text-[#595952]">
+          <Clock3 size={11} className="text-[var(--color-ember)]" />
+          10 min tolerância
         </span>
-        <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full border border-[#d6d6cf]">
-          <Sparkles size={13} className="text-[var(--color-ember)]" />
-          Atendimento 100% individual
+        <span className="flex items-center gap-1 bg-[#f7f6f2] px-2.5 py-1 rounded-full text-[#595952]">
+          <Sparkles size={11} className="text-[var(--color-ember)]" />
+          Individual
         </span>
       </div>
     </div>

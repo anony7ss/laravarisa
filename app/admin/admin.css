@@ -1,3 +1,21 @@
+html.dark,
+html.dark body {
+  background: #11110f !important;
+  color: #f7f7f2 !important;
+}
+
+html.dark .admin-root {
+  --admin-bg: #11110f;
+  --admin-card: #181815;
+  --admin-soft: #242420;
+  --admin-ink: #f7f7f2;
+  --admin-muted: #8b8b83;
+  --admin-line: #2a2a26;
+  --admin-orange: #ff6622;
+  background: var(--admin-bg);
+  color: var(--admin-ink);
+}
+
 .admin-root {
   --admin-bg: #efefeb;
   --admin-card: #fbfaf6;
@@ -779,30 +797,47 @@
 }
 .admin-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 13px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
 .admin-gallery-card {
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--admin-card);
+  border: 1px solid var(--admin-line);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.admin-gallery-card:hover {
+  border-color: rgba(230, 81, 0, 0.35);
 }
 .admin-gallery-card img {
   width: 100%;
-  aspect-ratio: 4/3;
+  height: 145px;
   object-fit: cover;
   display: block;
+  background: var(--admin-bg);
 }
 .admin-gallery-card > div {
-  padding: 15px;
+  padding: 10px 12px;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
+}
+.admin-gallery-card strong {
+  font-size: 13px;
+  color: var(--admin-ink);
+  font-weight: 600;
+  display: block;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .admin-gallery-card p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: var(--admin-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 .admin-resource-cards {
   display: grid;
@@ -841,9 +876,6 @@
 }
 @media (max-width: 1100px) {
   .admin-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .admin-gallery-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .admin-calendar-layout {
@@ -915,9 +947,15 @@
     width: 100%;
   }
   .admin-stat-grid,
-  .admin-resource-cards,
-  .admin-gallery-grid {
+  .admin-resource-cards {
     grid-template-columns: 1fr;
+  }
+  .admin-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 10px;
+  }
+  .admin-gallery-card img {
+    height: 120px;
   }
   .admin-stat-card {
     min-height: 165px;
@@ -1765,6 +1803,69 @@ a.admin-stat-card:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Origem do Agendamento (Site vs WhatsApp vs Balcão) */
+.admin-origin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.admin-origin-badge.whatsapp {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-origin-badge.web {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.admin-origin-badge.manual {
+  background: #f4f4f5;
+  color: #52525b;
+  border: 1px solid #e4e4e7;
+}
+
+/* Visualização na lista do dia (tema escuro do card) */
+.admin-day-list .admin-origin-badge.whatsapp {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.admin-day-list .admin-origin-badge.web {
+  background: rgba(59, 130, 246, 0.16);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.admin-day-list .admin-origin-badge.manual {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.admin-origin-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #fbfbfa;
+  border: 1px solid #e5e5e4;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  grid-column: 1 / -1;
 }
 
 .admin-kanban-card-body {

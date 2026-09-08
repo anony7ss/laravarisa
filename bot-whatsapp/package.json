@@ -1,0 +1,17 @@
+{
+  "name": "lara-whatsapp-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test-guardrails.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "@supabase/supabase-js": "^2.48.0",
+    "openai": "^4.85.0",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^9.6.0",
+    "dotenv": "^16.4.7"
+  }
+}

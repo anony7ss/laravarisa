@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createPublicSupabase } from '@/lib/supabase/server';
+import { serverCache } from '@/lib/memory-cache';
 import {
   checkRateLimit,
   getClientIp,
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
       p_client_email: cleanEmail,
       p_notes: cleanNotes,
       p_fingerprint_hash: fingerprint,
+      p_origin: 'web',
     });
 
     if (error) {
@@ -107,10 +109,21 @@ export async function POST(request: Request) {
       return jsonError(error.message || 'Não foi possível concluir o agendamento.', 400);
     }
 
+    const appointmentData = {
+      ...(typeof data === 'object' && data !== null ? data : {}),
+      id: data?.appointment_id || data?.id,
+      client_name: cleanName,
+      client_phone: clientPhone,
+      service_price: data?.price_label || '',
+    };
+
+    serverCache.delete('admin_resource:appointments');
+    serverCache.delete('admin_resource:clients');
+
     return Response.json(
       {
         ok: true,
-        data,
+        data: appointmentData,
         message: 'Agendamento reservado com sucesso!',
       },
       { status: 201, headers: NO_STORE_HEADERS },

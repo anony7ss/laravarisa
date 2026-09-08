@@ -10,9 +10,12 @@ export function PromoBanner() {
   const pathname = usePathname();
   const settings = usePublicSettings();
   const [showModal, setShowModal] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
-  if (pathname?.startsWith('/admin')) return null;
-  if (!settings || !settings.promo_active) return null;
+  // Aparece ESTRITAMENTE na página inicial (Landing Page)
+  // Nunca polui o fluxo de agendamento (/agendar), confirmações ou painel admin
+  if (pathname !== '/') return null;
+  if (!settings || !settings.promo_active || dismissed) return null;
 
   const conditionsText =
     settings.promo_conditions?.trim() ||
@@ -36,6 +39,15 @@ export function PromoBanner() {
               {settings.promo_link_text}
             </a>
           )}
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className="p-1 rounded-full text-[#a3a39e] hover:text-white transition-colors cursor-pointer ml-2 inline-flex items-center"
+            aria-label="Fechar banner"
+            title="Fechar"
+          >
+            <X size={13} />
+          </button>
         </div>
       </div>
 

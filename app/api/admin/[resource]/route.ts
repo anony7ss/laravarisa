@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getStaffContext } from '@/lib/admin-auth';
 import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { serverCache } from '@/lib/memory-cache';
 import {
   appointmentSchema,
   clientSchema,
@@ -37,12 +38,32 @@ export async function GET(
   const { resource } = await context.params;
   const config = resourceFor(resource);
   if (!config) return jsonError('Recurso inválido.', 404);
+
+  const cacheKey = `admin_resource:${resource}`;
+  const cached = serverCache.get(cacheKey);
+  if (cached) {
+    return Response.json({ ok: true, data: cached }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Cache': 'HIT',
+      },
+    });
+  }
+
   const { data, error } = await staff.supabase
     .from(config.table)
     .select('*')
     .order(config.order, { ascending: resource === 'appointments' });
   if (error) return jsonError('Não foi possível carregar os dados.', 500);
-  return Response.json({ ok: true, data }, { headers: NO_STORE_HEADERS });
+
+  serverCache.set(cacheKey, data, 8);
+
+  return Response.json({ ok: true, data }, {
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Cache': 'MISS',
+    },
+  });
 }
 
 export async function POST(
@@ -70,11 +91,27 @@ export async function POST(
       ? { ...(parsed.data as object), created_by: staff.user.id }
       : parsed.data
   ) as Record<string, unknown>;
+
+  if (resource === 'appointments' && payload.client_id) {
+    if (!payload.client_name || !payload.client_phone) {
+      const { data: client } = await staff.supabase
+        .from('clients')
+        .select('name, phone')
+        .eq('id', payload.client_id)
+        .maybeSingle();
+      if (client) {
+        if (!payload.client_name && client.name) payload.client_name = client.name;
+        if (!payload.client_phone && client.phone) payload.client_phone = client.phone;
+      }
+    }
+  }
+
   const { data, error } = await staff.supabase
     .from(config.table)
     .insert(payload)
     .select('*')
     .single();
   if (error) return jsonError('Não foi possível salvar.', 500);
+  serverCache.delete(`admin_resource:${resource}`);
   return Response.json({ ok: true, data }, { status: 201, headers: NO_STORE_HEADERS });
 }

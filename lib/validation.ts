@@ -37,6 +37,7 @@ export const clientSchema = z.object({
     .default(''),
   phone: z.string().trim().max(24).default(''),
   notes: z.string().trim().max(3000).default(''),
+  origin: z.string().trim().max(32).default('manual').optional(),
   created_from_lead: z.string().uuid().nullable().optional(),
 });
 
@@ -86,6 +87,7 @@ export const appointmentBaseSchema = z.object({
     'no_show',
   ]),
   notes: z.string().trim().max(2000).default(''),
+  origin: z.string().trim().max(40).optional(),
 });
 
 export const appointmentSchema = appointmentBaseSchema.refine(
@@ -128,8 +130,21 @@ export const settingsSchema = z.object({
   max_future_days: z.coerce.number().int().min(1).max(120).default(30),
   // Communication & studio
   whatsapp_phone: z.string().trim().max(25).default('5551989601662'),
-  whatsapp_confirmation_message: z.string().trim().max(1000).default(''),
+  whatsapp_confirmation_message: z.string().trim().max(1500).default(''),
+  whatsapp_booking_message: z.string().trim().max(1500).default(''),
   booking_alert: z.string().trim().max(300).default(''),
+  // Reminders (Lembretes Automáticos)
+  reminder_active: z.boolean().default(true),
+  reminder_hours_before: z.coerce.number().int().min(1).max(168).default(24),
+  reminder_message_template: z.string().trim().max(1500).default(''),
+  reminder_same_day_active: z.boolean().default(true),
+  reminder_same_day_hours_before: z.coerce.number().int().min(1).max(24).default(2),
+  reminder_same_day_message_template: z.string().trim().max(1500).default(''),
+  // Status change notifications
+  notify_on_status_change: z.boolean().default(true),
+  msg_cancelled_template: z.string().trim().max(1500).default(''),
+  msg_no_show_template: z.string().trim().max(1500).default(''),
+  msg_completed_template: z.string().trim().max(1500).default(''),
 });
 
 export const testimonialSchema = z.object({

@@ -95,10 +95,17 @@ export function DateTimePicker({
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        if (data.ok && Array.isArray(data.slots)) {
-          setSlots(data.slots);
-          if (data.slots.length === 0) {
-            setSlotError('Nenhum horário livre nesta data. Por favor, selecione outro dia.');
+        if (data.ok) {
+          if (data.closed) {
+            setSlots([]);
+            setSlotError(data.message || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
+            return;
+          }
+          if (Array.isArray(data.slots)) {
+            setSlots(data.slots);
+            if (data.slots.length === 0) {
+              setSlotError('Nenhum horário livre nesta data. Por favor, selecione outro dia.');
+            }
           }
         } else {
           setSlotError(data.error || 'Erro ao carregar horários.');
@@ -118,16 +125,21 @@ export function DateTimePicker({
 
   return (
     <div className="space-y-4">
-      <div className="border-b border-[#cfcfc9] pb-3">
-        <span className="text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
-          Passo 02
+      <div className="border-b border-[#cfcfc9] pb-3 flex items-baseline justify-between">
+        <div>
+          <span className="text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
+            Passo 02
+          </span>
+          <h2 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+            Data & Horário
+          </h2>
+        </div>
+        <span className="text-xs text-[#7a7a72] whitespace-nowrap shrink-0 ml-3">
+          Atendimento Seg a Sáb
         </span>
-        <h2 className="text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
-          Data & Horário
-        </h2>
       </div>
 
-      <div className="bg-[var(--color-limestone)] p-4 sm:p-7 rounded-[24px] sm:rounded-[32px] border border-[#d6d6cf] space-y-5 sm:space-y-6">
+      <div className="bg-white p-5 sm:p-7 rounded-[28px] border border-[#e2e2df] shadow-sm space-y-5 sm:space-y-6">
         {/* Month & Year header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
@@ -136,13 +148,13 @@ export function DateTimePicker({
               {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
             </span>
           </div>
-          <span className="text-[11px] sm:text-xs text-[#595952] text-right">
-            Seg a Sáb · 09h às 19h
+          <span className="text-[11px] sm:text-xs text-[#7a7a72] text-right">
+            09h às 19h
           </span>
         </div>
 
         {/* Horizontal Days Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
+        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
             const disabled = item.isSunday;
@@ -157,17 +169,21 @@ export function DateTimePicker({
                   onSelectDate(item.dateStr);
                 }}
                 style={{
-                  backgroundColor: isSelected ? '#070607' : disabled ? 'transparent' : '#ffffff',
+                  backgroundColor: isSelected ? '#070607' : disabled ? 'transparent' : '#f7f6f2',
                   color: isSelected ? '#ffffff' : '#070607',
-                  borderColor: isSelected ? '#070607' : '#d6d6cf',
+                  borderColor: isSelected ? '#070607' : '#e8e8e4',
                 }}
-                className={`flex-shrink-0 w-14 sm:w-16 py-2.5 sm:py-3 rounded-[16px] sm:rounded-[18px] text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
-                  disabled ? 'opacity-30 cursor-not-allowed border-transparent' : 'shadow-sm active:scale-95'
+                className={`flex-shrink-0 w-14 sm:w-16 py-3 rounded-2xl text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
+                  disabled
+                    ? 'opacity-30 cursor-not-allowed border-transparent'
+                    : isSelected
+                    ? 'shadow-sm scale-[1.02]'
+                    : 'hover:bg-white hover:border-[#b5b5ac] active:scale-95'
                 }`}
               >
                 <span
                   className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: isSelected ? '#f5f28e' : '#595952' }}
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#7a7a72' }}
                 >
                   {item.weekDayShort}
                 </span>
@@ -179,7 +195,7 @@ export function DateTimePicker({
                 </span>
                 <span
                   className="text-[10px]"
-                  style={{ color: isSelected ? 'rgba(255,255,255,0.85)' : '#8c8c84' }}
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#8c8c84' }}
                 >
                   {item.isToday ? 'Hoje' : item.isSunday ? 'Fech.' : 'Livre'}
                 </span>
@@ -189,30 +205,30 @@ export function DateTimePicker({
         </div>
 
         {/* Time Slots Area */}
-        <div className="pt-4 border-t border-[#e2e2df] space-y-3">
+        <div className="pt-4 border-t border-[#f0f0ed] space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#595952]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#7a7a72]">
               Horários Livres
             </span>
             {slots.length > 0 && (
-              <span className="text-xs text-[#595952]">
+              <span className="text-xs text-[#7a7a72] whitespace-nowrap">
                 {slots.length} opções disponíveis
               </span>
             )}
           </div>
 
           {loadingSlots ? (
-            <div className="py-8 flex items-center justify-center gap-2 text-xs text-[#595952]">
-              <Loader2 size={16} className="animate-spin text-[var(--color-ember)]" />
+            <div className="py-8 flex items-center justify-center gap-2 text-xs text-[#7a7a72]">
+              <Loader2 size={16} className="animate-spin text-[var(--color-obsidian)]" />
               <span>Verificando horários disponíveis...</span>
             </div>
           ) : slotError ? (
-            <div className="py-6 px-4 text-center rounded-[20px] bg-white border border-[#e2e2df] text-xs text-[#595952] flex items-center justify-center gap-2">
+            <div className="py-6 px-4 text-center rounded-2xl bg-[#f7f6f2] border border-[#e2e2df] text-xs text-[#595952] flex items-center justify-center gap-2">
               <AlertCircle size={16} className="text-[var(--color-ember)] shrink-0" />
               <span>{slotError}</span>
             </div>
           ) : slots.length === 0 ? (
-            <p className="py-6 text-center text-xs text-[#595952]">
+            <p className="py-6 text-center text-xs text-[#7a7a72]">
               Selecione um dia acima para visualizar os horários.
             </p>
           ) : (
@@ -228,11 +244,15 @@ export function DateTimePicker({
                       onSelectSlot(slot);
                     }}
                     style={{
-                      backgroundColor: isSlotSelected ? '#fc5000' : '#ffffff',
+                      backgroundColor: isSlotSelected ? '#070607' : '#f7f6f2',
                       color: isSlotSelected ? '#ffffff' : '#070607',
-                      borderColor: isSlotSelected ? '#fc5000' : '#d6d6cf',
+                      borderColor: isSlotSelected ? '#070607' : '#e8e8e4',
                     }}
-                    className="py-2.5 px-3 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer border shadow-xs"
+                    className={`py-2.5 px-3 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer border ${
+                      isSlotSelected
+                        ? 'shadow-sm scale-[1.02]'
+                        : 'hover:bg-white hover:border-[#b5b5ac]'
+                    }`}
                   >
                     {slot.time}
                   </button>

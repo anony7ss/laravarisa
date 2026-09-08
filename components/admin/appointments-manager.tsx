@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type SyntheticEvent } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef, type SyntheticEvent } from 'react';
 import {
   CalendarDays,
   ChevronLeft,
@@ -15,9 +15,42 @@ import {
   CheckCircle2,
   RotateCcw,
   Check,
+  Globe,
+  Store,
 } from 'lucide-react';
 import { adminRequest } from './api';
+import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
+
+function renderOriginBadge(origin?: string) {
+  const isWa = origin === 'whatsapp_bot' || origin === 'whatsapp';
+  const isWeb = origin === 'web' || origin === 'site';
+
+  if (isWa) {
+    return (
+      <span className="admin-origin-badge whatsapp" title="Agendado via WhatsApp Bot">
+        <MessageCircle size={10} />
+        <span>WhatsApp</span>
+      </span>
+    );
+  }
+
+  if (isWeb) {
+    return (
+      <span className="admin-origin-badge web" title="Agendado pelo Site">
+        <Globe size={10} />
+        <span>Site</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="admin-origin-badge manual" title="Agendamento manual / balcão">
+      <Store size={10} />
+      <span>Balcão</span>
+    </span>
+  );
+}
 
 const statusLabels: Record<AppointmentRow['status'], string> = {
   scheduled: 'Agendado',
@@ -132,6 +165,7 @@ function emptyAppointment(selectedDate?: string) {
     ends_at: toLocalInput(end.toISOString()),
     status: 'scheduled' as AppointmentRow['status'],
     notes: '',
+    origin: 'manual',
   };
 }
 
@@ -172,6 +206,91 @@ export function AppointmentsManager({
   const [editing, setEditing] = useState<AppointmentRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+
+  const isUpdatingRef = useRef(false);
+
+  const fetchFreshAppointments = useCallback(async () => {
+    if (isUpdatingRef.current) return;
+    try {
+      const res = await fetch('/api/admin/appointments', {
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.ok && Array.isArray(json.data)) {
+        setItems((prev) => {
+          if (
+            prev.length === json.data.length &&
+            prev.every((p, idx) => {
+              const j = json.data[idx];
+              return (
+                j &&
+                p.id === j.id &&
+                p.status === j.status &&
+                p.starts_at === j.starts_at &&
+                p.client_name === j.client_name &&
+                p.client_phone === j.client_phone
+              );
+            })
+          ) {
+            return prev;
+          }
+          return json.data;
+        });
+      }
+    } catch {
+      // Falha silenciosa de rede
+    }
+  }, []);
+
+  // Sincronização automática em TEMPO REAL (Realtime Supabase + Polling inteligente a cada 6s)
+  useEffect(() => {
+    // 1. Polling a cada 6s quando a aba estiver em foco / visível
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchFreshAppointments();
+      }
+    }, 6000);
+
+    // 2. Atualiza imediatamente ao voltar para a aba ou focar na tela
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchFreshAppointments();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    // 3. Canal Realtime do Supabase (para atualização em 0ms quando disponível)
+    const supabase = createBrowserSupabase();
+    let channel: any = null;
+
+    if (supabase) {
+      channel = supabase
+        .channel('realtime_admin_appointments_live')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+          },
+          () => {
+            fetchFreshAppointments();
+          },
+        )
+        .subscribe();
+    }
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [fetchFreshAppointments]);
 
   const current = editing
     ? {
@@ -317,7 +436,9 @@ export function AppointmentsManager({
       ends_at: new Date(value('ends_at')).toISOString(),
       status: value('status'),
       notes: value('notes'),
+      origin: editing ? (editing.origin || 'manual') : 'manual',
     };
+    isUpdatingRef.current = true;
     try {
       const saved = await adminRequest<AppointmentRow>(
         editing
@@ -339,6 +460,8 @@ export function AppointmentsManager({
       setError(
         caught instanceof Error ? caught.message : 'Não foi possível salvar.',
       );
+    } finally {
+      isUpdatingRef.current = false;
     }
   }
 
@@ -346,6 +469,34 @@ export function AppointmentsManager({
   const [viewMode, setViewMode] = useState<'calendar' | 'kanban'>('calendar');
   const [kanbanScope, setKanbanScope] = useState<'today' | 'next7' | 'month' | 'all'>('next7');
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColId | null>(null);
+
+  // Carrega e persiste a preferência de Kanban vs Calendário ao recarregar ou voltar à página
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('admin-agenda-view-mode');
+      if (savedMode === 'kanban' || savedMode === 'calendar') {
+        setViewMode(savedMode);
+      }
+      const savedScope = localStorage.getItem('admin-kanban-scope');
+      if (savedScope === 'today' || savedScope === 'next7' || savedScope === 'month' || savedScope === 'all') {
+        setKanbanScope(savedScope);
+      }
+    } catch {}
+  }, []);
+
+  const changeViewMode = (mode: 'calendar' | 'kanban') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('admin-agenda-view-mode', mode);
+    } catch {}
+  };
+
+  const changeKanbanScope = (scope: 'today' | 'next7' | 'month' | 'all') => {
+    setKanbanScope(scope);
+    try {
+      localStorage.setItem('admin-kanban-scope', scope);
+    } catch {}
+  };
 
   const serviceMap = useMemo(() => {
     const map = new Map<string, ServiceRow>();
@@ -425,6 +576,7 @@ export function AppointmentsManager({
         item.id === id ? { ...item, status: newStatus } : item,
       ),
     );
+    isUpdatingRef.current = true;
     try {
       const saved = await adminRequest<AppointmentRow>(
         `/api/admin/appointments/${id}`,
@@ -443,10 +595,13 @@ export function AppointmentsManager({
           ? caught.message
           : 'Não foi possível atualizar o status.',
       );
+    } finally {
+      isUpdatingRef.current = false;
     }
   }
 
   async function remove(id: string) {
+    isUpdatingRef.current = true;
     try {
       await adminRequest(`/api/admin/appointments/${id}`, { method: 'DELETE' });
       setItems((list) => list.filter((item) => item.id !== id));
@@ -455,6 +610,8 @@ export function AppointmentsManager({
       setError(
         caught instanceof Error ? caught.message : 'Não foi possível excluir.',
       );
+    } finally {
+      isUpdatingRef.current = false;
     }
   }
 
@@ -526,7 +683,7 @@ export function AppointmentsManager({
             <button
               type="button"
               className={viewMode === 'calendar' ? 'active' : ''}
-              onClick={() => setViewMode('calendar')}
+              onClick={() => changeViewMode('calendar')}
               aria-pressed={viewMode === 'calendar'}
             >
               <CalendarDays size={15} />
@@ -535,7 +692,7 @@ export function AppointmentsManager({
             <button
               type="button"
               className={viewMode === 'kanban' ? 'active' : ''}
-              onClick={() => setViewMode('kanban')}
+              onClick={() => changeViewMode('kanban')}
               aria-pressed={viewMode === 'kanban'}
             >
               <Kanban size={15} />
@@ -555,28 +712,28 @@ export function AppointmentsManager({
           <button
             type="button"
             className={`admin-filter-pill ${kanbanScope === 'today' ? 'active' : ''}`}
-            onClick={() => setKanbanScope('today')}
+            onClick={() => changeKanbanScope('today')}
           >
             Hoje ({kanbanCounts.today})
           </button>
           <button
             type="button"
             className={`admin-filter-pill ${kanbanScope === 'next7' ? 'active' : ''}`}
-            onClick={() => setKanbanScope('next7')}
+            onClick={() => changeKanbanScope('next7')}
           >
             Próximos 7 dias ({kanbanCounts.next7})
           </button>
           <button
             type="button"
             className={`admin-filter-pill ${kanbanScope === 'month' ? 'active' : ''}`}
-            onClick={() => setKanbanScope('month')}
+            onClick={() => changeKanbanScope('month')}
           >
             Este mês ({kanbanCounts.month})
           </button>
           <button
             type="button"
             className={`admin-filter-pill ${kanbanScope === 'all' ? 'active' : ''}`}
-            onClick={() => setKanbanScope('all')}
+            onClick={() => changeKanbanScope('all')}
           >
             Todos ({items.length})
           </button>
@@ -687,11 +844,14 @@ export function AppointmentsManager({
                             <Clock3 size={13} />
                             {formatAppointmentSchedule(item.starts_at)}
                           </span>
-                          {service && (
-                            <span className="admin-kanban-service-tag">
-                              {service.name}
-                            </span>
-                          )}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {renderOriginBadge(item.origin)}
+                            {service && (
+                              <span className="admin-kanban-service-tag">
+                                {service.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="admin-kanban-card-body">
@@ -872,20 +1032,29 @@ export function AppointmentsManager({
                       {dayItems.length > 0 && <i>{dayItems.length}</i>}
                     </button>
                     <div className="admin-calendar-events">
-                      {dayItems.slice(0, 3).map((item) => (
-                        <button
-                          key={item.id}
-                          className={`admin-calendar-event ${item.status}`}
-                          onClick={() => {
-                            setSelectedDate(key);
-                            setQuickFilter('selected');
-                            if (role !== 'viewer') setEditing(item);
-                          }}
-                        >
-                          <time>{timeLabel(item.starts_at)}</time>
-                          <span>{item.client_name}</span>
-                        </button>
-                      ))}
+                      {dayItems.slice(0, 3).map((item) => {
+                        const originLabel =
+                          item.origin === 'whatsapp_bot' || item.origin === 'whatsapp'
+                            ? 'WhatsApp'
+                            : item.origin === 'web' || item.origin === 'site'
+                            ? 'Site'
+                            : 'Balcão';
+                        return (
+                          <button
+                            key={item.id}
+                            className={`admin-calendar-event ${item.status}`}
+                            onClick={() => {
+                              setSelectedDate(key);
+                              setQuickFilter('selected');
+                              if (role !== 'viewer') setEditing(item);
+                            }}
+                            title={`${item.client_name} • Canal: ${originLabel}`}
+                          >
+                            <time>{timeLabel(item.starts_at)}</time>
+                            <span>{item.client_name}</span>
+                          </button>
+                        );
+                      })}
                       {dayItems.length > 3 && (
                         <small>+{dayItems.length - 3} horários</small>
                       )}
@@ -919,9 +1088,12 @@ export function AppointmentsManager({
                         <Clock3 size={15} />
                         <time>{timeLabel(item.starts_at)}</time>
                       </div>
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <strong>{item.client_name}</strong>
-                        <p>{statusLabels[item.status]}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+                          <p style={{ margin: 0 }}>{statusLabels[item.status]}</p>
+                          {renderOriginBadge(item.origin)}
+                        </div>
                       </div>
                       <div className="admin-row-actions">
                         {waLink && (
@@ -1011,6 +1183,21 @@ export function AppointmentsManager({
               key={editing?.id ?? `new-${selectedDate}`}
             >
               <div className="admin-form-grid">
+                {editing && (
+                  <div className="admin-origin-banner">
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)' }}>
+                      Canal de entrada:
+                    </span>
+                    {renderOriginBadge(editing.origin)}
+                    <span style={{ fontSize: '11px', color: 'var(--admin-muted)', marginLeft: 'auto' }}>
+                      {editing.origin === 'whatsapp_bot' || editing.origin === 'whatsapp'
+                        ? 'Registrado via WhatsApp Bot'
+                        : editing.origin === 'web' || editing.origin === 'site'
+                        ? 'Agendado pela cliente no site'
+                        : 'Criado no painel administrativo'}
+                    </span>
+                  </div>
+                )}
                 <label>
                   Cliente cadastrada
                   <select

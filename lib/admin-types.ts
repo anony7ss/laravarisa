@@ -13,6 +13,7 @@ export type ClientRow = {
   email: string;
   phone: string;
   notes: string;
+  origin?: string;
   created_from_lead?: string | null;
   created_at: string;
 };
@@ -54,6 +55,7 @@ export type AppointmentRow = {
   ends_at: string;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
   notes: string;
+  origin?: string;
 };
 export type TestimonialRow = {
   id: string;

@@ -28,6 +28,12 @@ yarn-error.log*
 
 # local environment
 .env*
+!.env.example
+bot-whatsapp/.env*
+!bot-whatsapp/.env.example
+bot-whatsapp/auth_info_baileys/
+bot-whatsapp/node_modules/
+
 
 # deployment and generated files
 .vercel

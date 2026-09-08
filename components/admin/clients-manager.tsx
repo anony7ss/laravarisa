@@ -1,11 +1,41 @@
 'use client';
 
 import { useMemo, useState, type SyntheticEvent } from 'react';
-import { Edit3, Plus, Search, Trash2, X, MessageCircle } from 'lucide-react';
+import { Edit3, Plus, Search, Trash2, X, MessageCircle, Globe, Store } from 'lucide-react';
 import { adminRequest } from './api';
 import type { ClientRow } from '@/lib/admin-types';
 
-const emptyClient = { name: '', email: '', phone: '', notes: '' };
+function renderOriginBadge(origin?: string) {
+  const isWa = origin === 'whatsapp_bot' || origin === 'whatsapp';
+  const isWeb = origin === 'web' || origin === 'site';
+
+  if (isWa) {
+    return (
+      <span className="admin-origin-badge whatsapp" title="Cadastrada via WhatsApp Bot">
+        <MessageCircle size={10} />
+        <span>WhatsApp</span>
+      </span>
+    );
+  }
+
+  if (isWeb) {
+    return (
+      <span className="admin-origin-badge web" title="Cadastrada pelo Site">
+        <Globe size={10} />
+        <span>Site</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="admin-origin-badge manual" title="Cadastrada no Balcão / Manual">
+      <Store size={10} />
+      <span>Balcão</span>
+    </span>
+  );
+}
+
+const emptyClient = { name: '', email: '', phone: '', notes: '', origin: 'manual' };
 
 export function ClientsManager({
   initial,
@@ -158,6 +188,7 @@ export function ClientsManager({
               <thead>
                 <tr>
                   <th>Cliente</th>
+                  <th>Origem</th>
                   <th>WhatsApp</th>
                   <th>Notas</th>
                   <th>Desde</th>
@@ -172,6 +203,7 @@ export function ClientsManager({
                       <br />
                       <small>{item.email}</small>
                     </td>
+                    <td>{renderOriginBadge(item.origin)}</td>
                     <td>{item.phone || '—'}</td>
                     <td>{item.notes || '—'}</td>
                     <td>

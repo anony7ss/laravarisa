@@ -1,0 +1,217 @@
+/**
+ * Sistema Autônomo de Lembretes Automáticos para Agendamentos (Sem IA)
+ * 
+ * Executa periodicamente:
+ * 1. Consulta preferências e templates configurados no site (/admin/dashboard/configuracoes)
+ * 2. Localiza agendamentos na janela de antecedência (ex: 24h antes e 2h antes)
+ * 3. Envia o lembrete humanizado via WhatsApp
+ * 4. Registra no banco que o lembrete já foi enviado para prevenir repetições
+ */
+
+import { supabase } from './supabase.js';
+import config from './config.js';
+import { sendHumanizedMessage } from './queue.js';
+import { logReminder, logError } from './terminal.js';
+import { resolverJidWhatsApp } from './phone-utils.js';
+import { obterConfiguracoesEmCache } from './cache.js';
+
+let reminderInterval = null;
+let isProcessingReminders = false;
+
+/**
+ * Formata data no fuso de Brasília (America/Sao_Paulo)
+ */
+function formatarDataHora(isoString) {
+  const d = new Date(isoString);
+  const data = d.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const horario = d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return { data, horario };
+}
+
+/**
+ * Substitui variáveis do template
+ */
+function preencherTemplate(template, vars) {
+  let texto = template || '';
+  for (const [k, v] of Object.entries(vars)) {
+    texto = texto.replaceAll(`{${k}}`, v || '');
+  }
+  return texto
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .trim();
+}
+
+/**
+ * Processa a fila de lembretes automáticos
+ * @param {any} sock Instância ativa do Baileys Socket
+ */
+export async function processarLembretes(sock) {
+  if (!sock) return;
+  if (isProcessingReminders) return;
+  isProcessingReminders = true;
+
+  try {
+    // 1. Obtém as configurações com cache em memória
+    const settings = await obterConfiguracoesEmCache();
+
+    if (!settings) {
+      return;
+    }
+
+    const agora = new Date();
+    const agoraIso = agora.toISOString();
+
+    // -------------------------------------------------------------
+    // FLUXO 1: LEMBRETE PRINCIPAL DE ANTECEDÊNCIA (Ex: 24h antes)
+    // -------------------------------------------------------------
+    if (settings.reminder_active) {
+      const horasAntes = Number(settings.reminder_hours_before) || 24;
+      const janelaLimite = new Date(agora.getTime() + horasAntes * 60 * 60 * 1000).toISOString();
+
+      const { data: pendentes, error: errPendentes } = await supabase
+        .from('appointments')
+        .select('id, starts_at, client_name, client_phone, service:services(name)')
+        .in('status', ['scheduled', 'confirmed'])
+        .gte('starts_at', agoraIso)
+        .lte('starts_at', janelaLimite)
+        .is('reminder_sent_at', null)
+        .order('starts_at', { ascending: true })
+        .limit(10);
+
+      if (!errPendentes && pendentes && pendentes.length > 0) {
+        for (const ag of pendentes) {
+          const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
+          if (!targetJid) continue;
+
+          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
+          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
+          const nomeServico = ag.service?.name || 'Procedimento';
+
+          const templatePadrao =
+            'Oi, {nome}! Passando pra lembrar do seu horário de {procedimento} amanhã às {horario}. Consegue me confirmar se você vem? 💕';
+
+          const mensagem = preencherTemplate(settings.reminder_message_template || templatePadrao, {
+            nome: nomeCliente,
+            procedimento: nomeServico,
+            data: dataFmt,
+            horario: horaFmt,
+            local: config.studioCity,
+          });
+
+          await sendHumanizedMessage(sock, targetJid, mensagem);
+
+          // Marca como enviado no banco
+          await supabase
+            .from('appointments')
+            .update({ reminder_sent_at: new Date().toISOString() })
+            .eq('id', ag.id);
+
+          logReminder(nomeCliente, `${horasAntes}h`, nomeServico, horaFmt);
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // FLUXO 2: LEMBRETE RÁPIDO NO DIA DO ATENDIMENTO (Ex: 2h antes)
+    // -------------------------------------------------------------
+    if (settings.reminder_same_day_active) {
+      const horasAntesDia = Number(settings.reminder_same_day_hours_before) || 2;
+      const janelaLimiteDia = new Date(agora.getTime() + horasAntesDia * 60 * 60 * 1000).toISOString();
+
+      const { data: pendentesDia, error: errDia } = await supabase
+        .from('appointments')
+        .select('id, starts_at, client_name, client_phone, service:services(name)')
+        .in('status', ['scheduled', 'confirmed'])
+        .gte('starts_at', agoraIso)
+        .lte('starts_at', janelaLimiteDia)
+        .is('reminder_same_day_sent_at', null)
+        .order('starts_at', { ascending: true })
+        .limit(10);
+
+      if (errDia) {
+        console.warn('[reminders] Erro ao buscar agendamentos para lembrete no dia:', errDia.message);
+      } else if (pendentesDia && pendentesDia.length > 0) {
+        console.log(`[reminders] Encontrados ${pendentesDia.length} agendamento(s) para lembrete no dia (${horasAntesDia}h antes)...`);
+
+        for (const ag of pendentesDia) {
+          const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
+          if (!targetJid) continue;
+
+          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
+          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
+          const nomeServico = ag.service?.name || 'Procedimento';
+
+          const templatePadraoDia =
+            'Oi, {nome}! Tudo pronto pra te receber hoje às {horario} no estúdio ({local}). Até já 💕';
+
+          const mensagem = preencherTemplate(settings.reminder_same_day_message_template || templatePadraoDia, {
+            nome: nomeCliente,
+            procedimento: nomeServico,
+            data: dataFmt,
+            horario: horaFmt,
+            local: config.studioCity,
+          });
+
+          console.log(`[reminders] Enviando lembrete de mesmo dia para ${targetJid} (Agendamento #${ag.id})...`);
+          await sendHumanizedMessage(sock, targetJid, mensagem);
+
+          await supabase
+            .from('appointments')
+            .update({ reminder_same_day_sent_at: new Date().toISOString() })
+            .eq('id', ag.id);
+
+          console.log(`[reminders] ✅ Lembrete de mesmo dia enviado com sucesso para ${targetJid}!`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[reminders] Erro inesperado ao processar lembretes:', err);
+  } finally {
+    isProcessingReminders = false;
+  }
+}
+
+/**
+ * Inicia o cron em segundo plano para verificação periódica de lembretes (a cada 2 minutos)
+ * @param {any} sock Instância do socket Baileys
+ */
+export function iniciarLembretesAutomaticos(sock) {
+  if (!sock) return;
+
+  if (reminderInterval) {
+    clearInterval(reminderInterval);
+  }
+
+  console.log('⏰ [reminders] Sistema de Lembretes Automáticos ativo! Verificando a cada 2 minutos...');
+
+  // Executa imediatamente na subida
+  processarLembretes(sock);
+
+  // E roda a cada 2 minutos
+  reminderInterval = setInterval(() => {
+    processarLembretes(sock);
+  }, 2 * 60 * 1000);
+
+  if (reminderInterval.unref) {
+    reminderInterval.unref();
+  }
+
+  return reminderInterval;
+}
+
+export default {
+  processarLembretes,
+  iniciarLembretesAutomaticos,
+};
