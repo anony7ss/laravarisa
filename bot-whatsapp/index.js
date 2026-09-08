@@ -47,7 +47,7 @@ import { initWhatsApp } from './src/whatsapp.js';
 import { iniciarSincronizacaoSite } from './src/supabase.js';
 import { iniciarLembretesAutomaticos } from './src/reminders.js';
 import { iniciarProcessadorOutbox } from './src/outbox.js';
-import { testarConexaoIA, processarMensagemComIA } from './src/ai.js';
+import { testarConexaoIA, processarMensagemComIA, extrairPrimeiroNome } from './src/ai.js';
 import { iniciarHeartbeat, escutarAcoesAdmin, publicarStatusBot, isAiEnabled } from './src/web-sync.js';
 import { renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError } from './src/terminal.js';
 
@@ -115,7 +115,7 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
                         msg.message?.imageMessage?.caption ||
                         '';
 
-          const pushName = msg.pushName || 'Cliente';
+          const pushName = extrairPrimeiroNome(msg.pushName);
           if (!texto.trim() && !ehAudio && !ehImagem) return;
 
           if (!isAiEnabled()) {

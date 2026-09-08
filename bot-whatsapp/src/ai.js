@@ -82,32 +82,53 @@ export function getModeloIA() {
 }
 
 /**
- * Verifica se o nome do perfil do WhatsApp é um nome humano válido e visível
- * @param {string} pushName 
- * @returns {string|null} Nome limpo ou null se não for visível/genérico
+ * Extrai APENAS o primeiro nome do cliente, limpando emojis, sobrenomes e caracteres especiais.
+ * Ex: "Gabriel Segurity" -> "Gabriel"
+ *     "Maria Eduarda Silva" -> "Maria"
+ *     "Lara Lash ✨" -> "Lara"
+ * @param {string} nome 
+ * @returns {string} Primeiro nome limpo e capitalizado, ou 'Cliente'
  */
-export function verificarNomeVisivel(pushName) {
-  if (!pushName || typeof pushName !== 'string') return null;
-  const limpo = pushName.trim();
-  if (limpo.length < 2) return null;
+export function extrairPrimeiroNome(nome) {
+  if (!nome || typeof nome !== 'string') return 'Cliente';
+  const limpo = nome.trim();
+  if (!limpo) return 'Cliente';
 
-  // Nomes genéricos que indicam ausência de nome real
-  const genericos = ['cliente', 'user', 'usuario', 'whatsapp', 'você', 'voce', 'unknown', 'contato'];
-  if (genericos.includes(limpo.toLowerCase())) return null;
-
-  // Se for formato de telefone (ex: +55..., 519999...)
+  // Se for número de telefone ou formato numérico (ex: +55..., 519999...)
   const apenasDigitos = limpo.replace(/\D/g, '');
   if (apenasDigitos.length >= 8 && limpo.replace(/[\d\s+\-().]/g, '').length === 0) {
-    return null;
+    return 'Cliente';
   }
 
-  // Precisa conter letras reais (evita apenas emojis ou pontuação)
-  const letras = limpo.match(/[a-zA-ZÀ-ÿ]/g);
-  if (!letras || letras.length < 2) {
-    return null;
+  // Divide por espaços, traços, pontos ou underscores
+  const partes = limpo.split(/[\s_\-\.]+/);
+  for (const parte of partes) {
+    // Mantém apenas letras alfabéticas com acentos
+    const apenasLetras = parte.replace(/[^a-zA-ZÀ-ÿ]/g, '');
+    if (apenasLetras.length >= 2) {
+      const genericos = ['cliente', 'user', 'usuario', 'whatsapp', 'você', 'voce', 'unknown', 'contato'];
+      if (genericos.includes(apenasLetras.toLowerCase())) {
+        return 'Cliente';
+      }
+      // Capitalização elegante: primeira maiúscula, restante minúscula
+      return apenasLetras.charAt(0).toUpperCase() + apenasLetras.slice(1).toLowerCase();
+    }
   }
 
-  return limpo;
+  return 'Cliente';
+}
+
+/**
+ * Verifica se o nome do perfil do WhatsApp é um nome humano válido e visível
+ * @param {string} pushName 
+ * @returns {string|null} Primeiro nome limpo ou null se não for visível/genérico
+ */
+export function verificarNomeVisivel(pushName) {
+  const primeiro = extrairPrimeiroNome(pushName);
+  if (!primeiro || primeiro === 'Cliente') {
+    return null;
+  }
+  return primeiro;
 }
 
 /**
@@ -170,10 +191,14 @@ Manutenção — a partir de R$ 85 (1h30)
 Remoção segura — R$ 45 (40min)`;
 
   const instrucaoNome = temNomeVisivel
-    ? `Nome visível no perfil do WhatsApp: "${nomeReal}".
-A cliente já tem o nome visível no perfil! Trate-a por esse nome com naturalidade (ex: "Oi, ${nomeReal}!") e use "${nomeReal}" ao registrar o agendamento. Não precisa perguntar o nome dela.`
+    ? `Nome visível da cliente: "${nomeReal}".
+REGRA OBRIGATÓRIA DO PRIMEIRO NOME:
+- Trate a cliente EXCLUSIVAMENTE pelo primeiro nome: "${nomeReal}" (ex: "Oi, ${nomeReal}!", "Perfeito, ${nomeReal}!").
+- NUNCA use sobrenomes, nomes compostos, apelidos de perfil ou nome completo (JAMAIS use mais de um nome para chamá-la).
+- Responda SEMPRE usando apenas "${nomeReal}", tanto nas mensagens de TEXTO quanto nas respostas em ÁUDIO/VOZ.
+- Use "${nomeReal}" ao registrar o agendamento.`
     : `Nome no perfil do WhatsApp: NÃO VISÍVEL (perfil sem nome público ou privado).
-REGRA DO NOME: Como o perfil do WhatsApp da cliente não tem nome visível, pergunte com gentileza: "Como posso te chamar? 💕" (pode ser logo na primeira saudação ou ao combinar o agendamento). Assim que ela te disser o nome, chame-a por esse nome e use-o para gravar o agendamento no sistema. NUNCA a chame de "Cliente" nem por número de telefone.`;
+REGRA OBRIGATÓRIA DO PRIMEIRO NOME: Como o perfil do WhatsApp da cliente não tem nome visível, pergunte com gentileza: "Como posso te chamar? 💕" (pode ser logo na primeira saudação ou ao combinar o agendamento). Assim que ela te disser o nome, use SEMPRE e APENAS o primeiro nome dela (tanto em texto quanto em áudio) e para gravar o agendamento. NUNCA use sobrenomes e NUNCA a chame de "Cliente" nem por número de telefone.`;
 
   return `Você é a assistente virtual inteligente do estúdio de beleza "${config.studioName}" em Porto Alegre - RS.
 Você atende clientes no WhatsApp oficial do estúdio com linguagem acolhedora, humana, rápida e simpática.
@@ -420,6 +445,7 @@ async function enviarRespostaHumanizadaOuVoz(sock, jid, textoResposta, pushName,
 export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNameParam) {
   let jid, texto, pushName;
 
+  let rawPushName = '';
   // Suporte flexível para assinatura (sock, msg) ou (sock, jid, texto, pushName)
   if (jidOrMsg && typeof jidOrMsg === 'object' && jidOrMsg.key) {
     jid = jidOrMsg.key.remoteJid;
@@ -428,11 +454,13 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       jidOrMsg.message?.extendedTextMessage?.text ||
       jidOrMsg.message?.imageMessage?.caption ||
       '';
-    pushName = jidOrMsg.pushName || 'Cliente';
+    rawPushName = jidOrMsg.pushName || '';
+    pushName = extrairPrimeiroNome(rawPushName);
   } else {
     jid = jidOrMsg;
     texto = textoParam || '';
-    pushName = pushNameParam || 'Cliente';
+    rawPushName = pushNameParam || '';
+    pushName = extrairPrimeiroNome(rawPushName);
   }
 
   // Detecta se a mensagem recebida é um áudio ou mensagem de voz
@@ -599,8 +627,9 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
   }
 
   try {
-    // Carrega histórico recente da sessão
-    const historico = getHistory(jid);
+    // Carrega histórico recente da sessão (limita aos últimos 8 turnos para velocidade máxima de resposta)
+    const historicoCompleto = getHistory(jid);
+    const historico = historicoCompleto.slice(-8);
 
     // Monta mensagens com o system prompt atualizado
     const messages = [
@@ -669,8 +698,8 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
           messages,
           tools: ferramentasSchema,
           tool_choice: 'auto',
-          temperature: 0.6,
-          max_tokens: base64Imagem ? 1500 : undefined,
+          temperature: 0.5,
+          max_tokens: base64Imagem ? 1000 : 250,
         },
         {
           headers: {
@@ -727,6 +756,11 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     // 2. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves
     respostaFinal = verificarSegurancaSaida(respostaFinal);
 
+    // 3. Sanitização do Nome: Garante que NUNCA fale sobrenome ou nome composto
+    if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
+      respostaFinal = respostaFinal.replaceAll(rawPushName, pushName);
+    }
+
     // Salva a resposta do assistente no histórico em memória
     addMessage(jid, 'assistant', respostaFinal);
 
@@ -741,7 +775,10 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     logError('IA', `Erro no modelo de IA: ${error?.message || error}. Ativando contingência...`);
 
     try {
-      const fallbackResposta = await processarFallback(texto, context);
+      let fallbackResposta = await processarFallback(texto, context);
+      if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
+        fallbackResposta = fallbackResposta.replaceAll(rawPushName, pushName);
+      }
       addMessage(jid, 'assistant', fallbackResposta);
       if (sock) {
         await enviarRespostaHumanizadaOuVoz(sock, jid, fallbackResposta, pushName, { ehAudio, pediuAudio });

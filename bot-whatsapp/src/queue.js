@@ -63,42 +63,32 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
         }
       } catch {}
 
-      // 2. Digitação ágil e natural (300ms a 650ms, super fluida sem travar o cliente)
+      // 2. Disparo ágil e imediato (micro-presença de digitação de 80ms a 150ms)
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
-          await sock.sendPresenceUpdate('composing', jid);
+          sock.sendPresenceUpdate('composing', jid).catch(() => {});
         }
       } catch {}
 
       const textLength = formattedText.length;
-      const typingDuration = Math.min(Math.max(textLength * 8, 300), 650);
+      const typingDuration = Math.min(Math.max(textLength * 2, 80), 160);
       await sleep(typingDuration);
 
-      // 3. Pausa digitação
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
-          await sock.sendPresenceUpdate('paused', jid);
+          sock.sendPresenceUpdate('paused', jid).catch(() => {});
         }
       } catch {}
-
-      await sleep(50);
     }
 
-    // 4. Envia a mensagem imediatamente com quebras reais
-    const sentMessage = await sock.sendMessage(jid, { text: formattedText });
-
-    if (!options.skipTyping && !options.immediate) {
-      // Pequeno intervalo de segurança anti-flood
-      await sleep(150);
-    }
-
-    return sentMessage;
+    // 3. Envia a mensagem imediatamente com quebras reais
+    return await sock.sendMessage(jid, { text: formattedText });
   });
 }
 
 /**
  * Envia uma nota de voz humanizada (PTT / gravador verde do WhatsApp)
- * com simulação de leitura e presença de gravação de áudio.
+ * com simulação de leitura e presença de gravação de áudio ágil.
  * 
  * @param {any} sock Instância do socket Baileys
  * @param {string} jid WhatsApp JID destinatário
@@ -116,41 +106,32 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
       // 1. Marca como lida se possível
       try {
         if (typeof sock.readMessages === 'function') {
-          await sock.readMessages([{ remoteJid: jid }]);
+          sock.readMessages([{ remoteJid: jid }]).catch(() => {});
         }
       } catch {}
 
-      // 2. Simula presença 'gravando áudio...' (recording)
+      // 2. Simula presença 'gravando áudio...' instantânea (150ms)
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
-          await sock.sendPresenceUpdate('recording', jid);
+          sock.sendPresenceUpdate('recording', jid).catch(() => {});
         }
       } catch {}
 
-      // Pequena pausa humana para dar sensação de gravação real (800ms)
-      await sleep(800);
+      await sleep(150);
 
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
-          await sock.sendPresenceUpdate('paused', jid);
+          sock.sendPresenceUpdate('paused', jid).catch(() => {});
         }
       } catch {}
-
-      await sleep(50);
     }
 
     // 3. Envia a nota de voz como PTT (Push To Talk - microfone do WhatsApp)
-    const sentMessage = await sock.sendMessage(jid, {
+    return await sock.sendMessage(jid, {
       audio: audioBuffer,
       mimetype: options.mimetype || 'audio/ogg; codecs=opus',
       ptt: true,
     });
-
-    if (!options.skipRecording && !options.immediate) {
-      await sleep(200);
-    }
-
-    return sentMessage;
   });
 }
 
