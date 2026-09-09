@@ -11,6 +11,7 @@ import {
   Save,
   Sliders,
   Bell,
+  Store,
 } from 'lucide-react';
 import { adminRequest } from './api';
 
@@ -47,7 +48,7 @@ export function SettingsManager({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing'
+    'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing' | 'estudio'
   >('horarios');
 
   function toggleDay(d: number) {
@@ -127,6 +128,17 @@ export function SettingsManager({
       msg_cancelled_template: String(form.get('msg_cancelled_template') || ''),
       msg_no_show_template: String(form.get('msg_no_show_template') || ''),
       msg_completed_template: String(form.get('msg_completed_template') || ''),
+
+      // Dados Comerciais do Estúdio
+      studio_name: String(form.get('studio_name') || 'Lara Varisa - Lash Designer'),
+      studio_instagram: String(form.get('studio_instagram') || '@laravarisa.lashes'),
+      studio_instagram_url: String(form.get('studio_instagram_url') || 'https://www.instagram.com/laravarisa.lashes/'),
+      studio_email: String(form.get('studio_email') || 'contato@laravarisa.com.br'),
+      studio_address: String(form.get('studio_address') || 'Atendimento presencial na Zona Norte'),
+      studio_city: String(form.get('studio_city') || 'Porto Alegre, RS — Endereço completo enviado no agendamento'),
+      studio_hours: String(form.get('studio_hours') || 'Segunda a sábado · com agendamento'),
+      studio_map_url: String(form.get('studio_map_url') || 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'),
+      studio_directions_url: String(form.get('studio_directions_url') || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'),
     };
 
     try {
@@ -167,6 +179,7 @@ export function SettingsManager({
           { id: 'mensagens' as const, label: 'Mensagens & WhatsApp', icon: MessageCircle },
           { id: 'lembretes' as const, label: 'Lembretes Automáticos', icon: Bell },
           { id: 'marketing' as const, label: 'Marketing & Banner', icon: Megaphone },
+          { id: 'estudio' as const, label: 'Dados do Estúdio', icon: Store },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -919,6 +932,126 @@ export function SettingsManager({
         </div>
       </section>
 
+    </div>
+
+    {/* ABA 6: DADOS COMERCIAIS DO ESTÚDIO */}
+    <div style={{ display: activeTab === 'estudio' ? 'grid' : 'none', gap: '24px' }}>
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ color: 'var(--admin-orange)' }}>
+              <Store size={20} />
+            </span>
+            <div>
+              <p className="admin-kicker">INFORMAÇÕES COMERCIAIS</p>
+              <h2>Identidade e Localização do Estúdio</h2>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-form-grid">
+          <label>
+            Nome do Estúdio / Marca
+            <input
+              name="studio_name"
+              defaultValue={settings?.studio_name || 'Lara Varisa - Lash Designer'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: Lara Varisa - Lash Designer"
+            />
+          </label>
+
+          <label>
+            Telefone WhatsApp Comercial (DDI + DDD + Número)
+            <input
+              name="whatsapp_phone"
+              defaultValue={settings?.whatsapp_phone || '5551989601662'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: 5551989601662"
+            />
+          </label>
+
+          <label>
+            Instagram (@)
+            <input
+              name="studio_instagram"
+              defaultValue={settings?.studio_instagram || '@laravarisa.lashes'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: @laravarisa.lashes"
+            />
+          </label>
+
+          <label>
+            URL do Perfil no Instagram
+            <input
+              name="studio_instagram_url"
+              defaultValue={settings?.studio_instagram_url || 'https://www.instagram.com/laravarisa.lashes/'}
+              disabled={role !== 'admin'}
+              placeholder="https://www.instagram.com/..."
+            />
+          </label>
+
+          <label>
+            E-mail de Contato
+            <input
+              name="studio_email"
+              type="email"
+              defaultValue={settings?.studio_email || 'contato@laravarisa.com.br'}
+              disabled={role !== 'admin'}
+              placeholder="contato@laravarisa.com.br"
+            />
+          </label>
+
+          <label>
+            Texto de Horários de Exibição
+            <input
+              name="studio_hours"
+              defaultValue={settings?.studio_hours || 'Segunda a sábado · com agendamento'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: Segunda a sábado · 09:00 às 19:00"
+            />
+          </label>
+
+          <label className="wide">
+            Endereço / Bairro / Referência
+            <input
+              name="studio_address"
+              defaultValue={settings?.studio_address || 'Atendimento presencial na Zona Norte'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: Atendimento presencial na Zona Norte"
+            />
+          </label>
+
+          <label className="wide">
+            Cidade / Estado e Orientações
+            <input
+              name="studio_city"
+              defaultValue={settings?.studio_city || 'Porto Alegre, RS — Endereço completo enviado no agendamento'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: Porto Alegre, RS — Endereço completo enviado no agendamento"
+            />
+          </label>
+
+          <label className="wide">
+            URL do Google Maps (Embed Iframe)
+            <input
+              name="studio_map_url"
+              defaultValue={settings?.studio_map_url || 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'}
+              disabled={role !== 'admin'}
+              placeholder="https://www.google.com/maps/embed?..."
+            />
+          </label>
+
+          <label className="wide">
+            URL de Traçar Rota / Como Chegar (Google Maps / Waze)
+            <input
+              name="studio_directions_url"
+              defaultValue={settings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
+              disabled={role !== 'admin'}
+              placeholder="https://www.google.com/maps/search/?api=1&query=..."
+            />
+          </label>
+        </div>
+      </section>
     </div>
 
     {/* BARRA DE SALVAMENTO */}

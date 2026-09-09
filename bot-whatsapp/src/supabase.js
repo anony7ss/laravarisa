@@ -35,17 +35,21 @@ export const supabase = createClient(
 const agendamentosNotificados = new Set();
 let realtimeChannel = null;
 let currentSocket = null;
-let syncInterval = null;
-let isCheckingPending = false;
+let isRealtimeHealthy = false;
+let adaptivePollTimer = null;
+const PROGRESSIVE_DELAYS = [3000, 5000, 10000, 30000];
+let progressiveDelayIndex = 0;
 
 /**
- * Varre o banco em busca de agendamentos pendentes de notificação (origem web)
+ * Varre o banco em busca de agendamentos pendentes de notificação (origem web).
+ * Retorna se encontrou e processou novos agendamentos.
  * @param {any} sock Instância ativa do Baileys
+ * @returns {Promise<boolean>}
  */
 export async function verificarAgendamentosPendentes(sock) {
   const activeSock = sock || currentSocket;
-  if (!activeSock) return;
-  if (isCheckingPending) return;
+  if (!activeSock) return false;
+  if (isCheckingPending) return false;
   isCheckingPending = true;
 
   try {
@@ -63,17 +67,54 @@ export async function verificarAgendamentosPendentes(sock) {
       for (const ag of recentes) {
         await notificarAgendamentoSite(activeSock, ag);
       }
+      return true;
     }
+    return false;
   } catch {
-    // Silencioso em caso de verificação vazia
+    return false;
   } finally {
     isCheckingPending = false;
   }
 }
 
 /**
- * Inicia a sincronização em tempo real dos agendamentos vindos do site.
- * Usa Realtime E polling contínuo a cada 3s para NUNCA falhar ou depender de reinício.
+ * Executa o agendador de verificação adaptativa:
+ * - Se Realtime saudável: checagem leve de segurança a cada 45s
+ * - Se Realtime fora (fallback): polling progressivo 3s -> 5s -> 10s -> 30s
+ */
+function agendarProximaVerificacao() {
+  if (adaptivePollTimer) {
+    clearTimeout(adaptivePollTimer);
+    adaptivePollTimer = null;
+  }
+
+  const delay = isRealtimeHealthy
+    ? 45000 // Realtime saudável: checagem esparsa de segurança
+    : PROGRESSIVE_DELAYS[progressiveDelayIndex]; // Fallback: progressivo 3s -> 5s -> 10s -> 30s
+
+  adaptivePollTimer = setTimeout(async () => {
+    if (!currentSocket) return;
+    const encontrouRegistros = await verificarAgendamentosPendentes(currentSocket);
+
+    if (encontrouRegistros) {
+      // Houve atividade recente: reseta para verificação rápida (3s)
+      progressiveDelayIndex = 0;
+    } else if (!isRealtimeHealthy) {
+      // Sem eventos no fallback: avança progressivamente até 30s
+      progressiveDelayIndex = Math.min(progressiveDelayIndex + 1, PROGRESSIVE_DELAYS.length - 1);
+    }
+
+    agendarProximaVerificacao();
+  }, delay);
+
+  if (adaptivePollTimer.unref) {
+    adaptivePollTimer.unref();
+  }
+}
+
+/**
+ * Inicia a sincronização inteligente dos agendamentos vindos do site.
+ * Prioriza Realtime (WebSockets) com fallback de polling progressivo adaptativo (3s -> 5s -> 10s -> 30s).
  * 
  * @param {any} sock Instância ativa do Baileys Socket
  * @returns {any} Canal Realtime do Supabase
@@ -84,22 +125,13 @@ export function iniciarSincronizacaoSite(sock) {
   }
   if (!currentSocket) return null;
 
-  // 1. Executa verificação imediata na subida
-  verificarAgendamentosPendentes(currentSocket);
+  // 1. Verificação imediata na inicialização
+  verificarAgendamentosPendentes(currentSocket).then((encontrou) => {
+    if (encontrou) progressiveDelayIndex = 0;
+    agendarProximaVerificacao();
+  });
 
-  // 2. Polling ativo contínuo a cada 3s para NUNCA depender apenas de WebSockets ou reinício
-  if (syncInterval) {
-    clearInterval(syncInterval);
-  }
-  syncInterval = setInterval(() => {
-    verificarAgendamentosPendentes(currentSocket);
-  }, 3000);
-
-  if (syncInterval.unref) {
-    syncInterval.unref();
-  }
-
-  // 3. Realtime (escuta instantânea se o canal estiver conectado)
+  // 2. Realtime (escuta instantânea de alta performance)
   if (realtimeChannel) {
     return realtimeChannel;
   }
@@ -118,6 +150,8 @@ export function iniciarSincronizacaoSite(sock) {
           const novo = payload.new;
           if (!novo) return;
 
+          // Evento em tempo real recebido: processa e reseta o índice de polling para resposta imediata
+          progressiveDelayIndex = 0;
           await notificarAgendamentoSite(currentSocket, novo);
         } catch (error) {
           logError('Supabase', `Erro ao processar novo agendamento: ${error?.message || error}`);
@@ -148,15 +182,15 @@ export function iniciarSincronizacaoSite(sock) {
         logInfo('Cache', 'Configurações atualizadas no painel. Cache de ajustes renovado!');
       }
     )
-    .subscribe((status, error) => {
+    .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        // Silencioso - o status já é exibido no banner principal
-      } else if (status === 'CHANNEL_ERROR') {
-        logWarn('Supabase', 'Oscilação no canal Realtime (mantendo polling ativo)...');
-      } else if (status === 'TIMED_OUT') {
-        logWarn('Supabase', 'Conexão Realtime com o Supabase atingiu timeout (polling ativo).');
-      } else if (status === 'CLOSED') {
-        realtimeChannel = null;
+        isRealtimeHealthy = true;
+        agendarProximaVerificacao();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        isRealtimeHealthy = false;
+        logWarn('Supabase', `Realtime em estado "${status}". Ativando polling progressivo de fallback (3s a 30s)...`);
+        progressiveDelayIndex = 0;
+        agendarProximaVerificacao();
       }
     });
 

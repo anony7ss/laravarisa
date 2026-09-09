@@ -108,16 +108,47 @@ export async function processarFilaOutbox(sock) {
           .eq('id', item.id);
       }
     }
+    return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logError('Outbox WhatsApp', `Erro ao verificar fila: ${msg}`);
+    return false;
   } finally {
     isProcessing = false;
   }
 }
 
+let isRealtimeHealthy = false;
+let adaptiveTimer = null;
+const OUTBOX_DELAYS = [3000, 5000, 10000, 30000];
+let outboxDelayIndex = 0;
+
+function agendarProximaExecucaoOutbox() {
+  if (adaptiveTimer) {
+    clearTimeout(adaptiveTimer);
+    adaptiveTimer = null;
+  }
+
+  const delay = isRealtimeHealthy ? 45000 : OUTBOX_DELAYS[outboxDelayIndex];
+  adaptiveTimer = setTimeout(async () => {
+    if (!currentSocket) return;
+    const processou = await processarFilaOutbox(currentSocket);
+
+    if (processou) {
+      outboxDelayIndex = 0;
+    } else if (!isRealtimeHealthy) {
+      outboxDelayIndex = Math.min(outboxDelayIndex + 1, OUTBOX_DELAYS.length - 1);
+    }
+    agendarProximaExecucaoOutbox();
+  }, delay);
+
+  if (adaptiveTimer.unref) {
+    adaptiveTimer.unref();
+  }
+}
+
 /**
- * Inicia a escuta da fila Outbox (Realtime + Polling 5s)
+ * Inicia a escuta da fila Outbox (Realtime prioritário + Polling progressivo adaptativo)
  * @param {any} sock Socket do Baileys
  */
 export function iniciarProcessadorOutbox(sock) {
@@ -136,31 +167,36 @@ export function iniciarProcessadorOutbox(sock) {
           table: 'whatsapp_outbox',
         },
         () => {
+          outboxDelayIndex = 0;
           processarFilaOutbox(currentSocket);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          isRealtimeHealthy = true;
+          agendarProximaExecucaoOutbox();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          isRealtimeHealthy = false;
+          outboxDelayIndex = 0;
+          agendarProximaExecucaoOutbox();
+        }
+      });
   }
 
-  // 2. Polling de contingência a cada 5 segundos
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = setInterval(() => {
-    processarFilaOutbox(currentSocket);
-  }, 5000);
-
-  if (pollingInterval.unref) pollingInterval.unref();
-
-  // Executa uma primeira vez ao conectar
-  processarFilaOutbox(currentSocket);
+  // 2. Executa uma primeira vez ao conectar e inicia agendamento adaptativo
+  processarFilaOutbox(currentSocket).then((processou) => {
+    if (processou) outboxDelayIndex = 0;
+    agendarProximaExecucaoOutbox();
+  });
 }
 
 /**
  * Para os ouvintes da outbox
  */
 export function pararProcessadorOutbox() {
-  if (pollingInterval) {
-    clearInterval(pollingInterval);
-    pollingInterval = null;
+  if (adaptiveTimer) {
+    clearTimeout(adaptiveTimer);
+    adaptiveTimer = null;
   }
   if (realtimeSubscription) {
     supabase.removeChannel(realtimeSubscription);

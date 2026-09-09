@@ -24,6 +24,8 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar';
 import { NotificationCenter } from '@/components/admin/notification-center';
 
 function playAppointmentChime() {
@@ -221,104 +223,182 @@ export function AdminShell({
 
   return (
     <div className="admin-shell">
-      <aside className={open ? 'admin-sidebar open' : 'admin-sidebar'}>
-        <div className="admin-sidebar-head">
-          <Link href="/admin/dashboard" onClick={() => setOpen(false)}>
-            <span className="admin-brand-copy">
-              <strong>Lara Varisa</strong>
-              <small>Lash designer</small>
-            </span>
-          </Link>
-          <div className="admin-sidebar-head-actions">
-            <button
-              type="button"
-              onClick={() => setNotificationsOpen(true)}
-              className="admin-bell-btn"
-              title={
-                notificationsCount > 0
-                  ? `${notificationsCount} novidade(s) na central`
-                  : 'Central de Notificações'
-              }
-              aria-label="Abrir central de notificações"
-            >
-              <Bell size={17} />
-              {notificationsCount > 0 && (
-                <span className="admin-bell-badge">{notificationsCount}</span>
-              )}
-            </button>
-            <button
-              className="admin-sidebar-close"
-              aria-label="Fechar menu"
-              onClick={() => setOpen(false)}
-            >
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-        <p className="admin-nav-label">GESTÃO</p>
-        <nav aria-label="Navegação administrativa">
-          {links.map(([href, label, Icon]) => (
-            <Link
-              key={href}
-              href={href}
-              className={pathname === href ? 'active' : ''}
-              aria-current={pathname === href ? 'page' : undefined}
-              onClick={() => setOpen(false)}
-            >
-              <span className="admin-nav-icon">
-                <Icon size={18} />
-              </span>
-              <span>{label}</span>
-              {href === '/admin/dashboard/agenda' && pendingCount > 0 && (
-                <span
-                  className="admin-nav-badge"
-                  title={`${pendingCount} aguardando`}
-                >
-                  {pendingCount}
-                </span>
-              )}
-              {pathname === href &&
-                (href !== '/admin/dashboard/agenda' || pendingCount === 0) && (
-                  <span className="admin-active-dot" />
+      <Sidebar open={open} setOpen={setOpen} animate={true}>
+        <SidebarBody className="justify-between gap-6">
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Top Logo */}
+            <div className="flex items-center justify-between py-1 mb-5 px-1">
+              <Link
+                href="/admin/dashboard"
+                className="flex items-center gap-3 group overflow-hidden"
+                onClick={() => setOpen(false)}
+              >
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#fc5000] to-[#e04000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-md shadow-[#fc5000]/25 flex-shrink-0">
+                  LV
+                </div>
+                {open && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex flex-col min-w-0"
+                  >
+                    <strong className="text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
+                      Lara Varisa
+                    </strong>
+                    <small className="text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
+                      Lash Designer
+                    </small>
+                  </motion.div>
                 )}
-            </Link>
-          ))}
-        </nav>
-        <Link className="admin-site-link" href="/" target="_blank">
-          <span>
-            <ExternalLink size={17} /> Abrir o site
-          </span>
-          <ArrowUpRight size={16} />
-        </Link>
-        <div className="admin-user">
-          <span className="admin-avatar">
-            {(name || 'A').trim().slice(0, 1).toUpperCase()}
-          </span>
-          <span className="admin-user-copy">
-            <strong>{name || 'Conta administrativa'}</strong>
-            <small>{roleLabel}</small>
-          </span>
-          <div className="admin-user-actions">
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              aria-label="Alternar tema"
-              title="Alternar tema"
-            >
-              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <button onClick={logout} aria-label="Sair do painel" title="Sair">
-              <LogOut size={16} />
-            </button>
+              </Link>
+            </div>
+
+            {/* Navigation links */}
+            <div className="flex flex-col gap-1">
+              {links.map(([href, label, Icon]) => (
+                <SidebarLink
+                  key={href}
+                  link={{
+                    label,
+                    href,
+                    icon: <Icon size={18} className="flex-shrink-0" />,
+                    active: pathname === href,
+                    badge:
+                      href === '/admin/dashboard/agenda' && pendingCount > 0 ? (
+                        <span
+                          className="px-1.5 py-0.5 rounded-full bg-[#fc5000] text-white text-[10px] font-bold leading-none animate-pulse shadow-sm"
+                          title={`${pendingCount} aguardando`}
+                        >
+                          {pendingCount}
+                        </span>
+                      ) : undefined,
+                    onClick: () => setOpen(false),
+                  }}
+                />
+              ))}
+
+              <div className="my-2 border-t border-white/10" />
+
+              <SidebarLink
+                link={{
+                  label: 'Abrir o site',
+                  href: '/',
+                  target: '_blank',
+                  icon: <ExternalLink size={17} className="flex-shrink-0" />,
+                  badge: <ArrowUpRight size={14} className="text-neutral-400" />,
+                  onClick: () => setOpen(false),
+                }}
+              />
+            </div>
           </div>
-        </div>
-      </aside>
-      {open && (
-        <button
-          className="admin-overlay"
-          aria-label="Fechar menu"
-          onClick={() => setOpen(false)}
-        />
-      )}
+
+          {/* User Profile & Actions Footer */}
+          <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
+                {(name || 'A').trim().slice(0, 1).toUpperCase()}
+              </div>
+              {open && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex flex-col min-w-0 flex-1 overflow-hidden"
+                >
+                  <strong className="text-white text-xs font-medium truncate block leading-tight">
+                    {name || 'Conta administrativa'}
+                  </strong>
+                  <small className="text-neutral-400 text-[10px] truncate block">
+                    {roleLabel}
+                  </small>
+                </motion.div>
+              )}
+            </div>
+
+            {open ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center justify-between gap-1.5 px-1 py-1"
+              >
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(true)}
+                  className="relative p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+                  title={
+                    notificationsCount > 0
+                      ? `${notificationsCount} novidade(s) na central`
+                      : 'Central de Notificações'
+                  }
+                  aria-label="Abrir central de notificações"
+                >
+                  <Bell size={16} />
+                  {notificationsCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#fc5000]" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Alternar tema"
+                  title="Alternar tema"
+                >
+                  {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
+                  aria-label="Sair do painel"
+                  title="Sair"
+                >
+                  <LogOut size={16} />
+                </button>
+              </motion.div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(true)}
+                  className="relative p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Notificações"
+                  aria-label="Notificações"
+                >
+                  <Bell size={16} />
+                  {notificationsCount > 0 && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#fc5000]" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Tema"
+                  aria-label="Tema"
+                >
+                  {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  title="Sair"
+                  aria-label="Sair"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        </SidebarBody>
+      </Sidebar>
       <div className="admin-main">
         <header className="admin-mobile-head">
           <span>

@@ -262,8 +262,7 @@ body:has(.admin-shell) {
 }
 .admin-shell {
   min-height: 100dvh;
-  display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
+  display: flex;
   position: relative;
   z-index: 0;
 }
