@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   CalendarDays,
   Sparkles,
+  Images,
   Star,
   MapPin,
   Clock3,
@@ -443,7 +444,7 @@ export default function AgendarPage() {
                   : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
               }`}
             >
-              <Sparkles size={14} className={activeTab === 'galeria' ? 'text-[var(--color-ember)]' : ''} />
+              <Images size={14} className={activeTab === 'galeria' ? 'text-[var(--color-ember)]' : ''} />
               <span>Galeria</span>
             </button>
 
@@ -533,33 +534,28 @@ export default function AgendarPage() {
                       </span>
                     </div>
 
-                    {/* BANNER PROMOÇÃO ESPECIAL */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1c1b18] via-[#2a2924] to-[#1c1b18] p-3.5 sm:p-4 text-white shadow-sm border border-[#383733]">
-                      <div className="flex items-center justify-between gap-3 relative z-10">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[var(--color-ember)]/20 border border-[var(--color-ember)]/40 flex items-center justify-center shrink-0">
-                            <Sparkles size={18} className="text-[var(--color-ember)]" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] font-mono">
-                                PROMOÇÃO ESPECIAL
-                              </span>
-                              <span className="text-[9px] bg-[var(--color-ember)] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                                TEMPO LIMITADO
-                              </span>
-                            </div>
-                            <p className="text-xs sm:text-sm font-semibold text-white/95 mt-0.5 m-0">
-                              Todos os procedimentos de cílios por apenas <strong className="text-amber-400 font-bold">R$ 80,00</strong>!
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-xl sm:text-2xl font-bold text-amber-400 font-[family-name:var(--font-display)] block leading-none">
-                            R$ 80
+                    {/* BANNER 1ª VEZ · ULTRA CLEAN */}
+                    <div className="bg-white rounded-2xl border border-[#d6d6cf] p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] font-mono">
+                            Primeira Aplicação
                           </span>
-                          <span className="text-[10px] text-white/60 uppercase font-mono block mt-0.5">qualquer modelo</span>
+                          <span className="text-[9px] text-[#595952] bg-[#f4f4f0] border border-[#e2e2dc] px-1.5 py-0.2 rounded font-semibold">
+                            Exclusivo 1ª vez
+                          </span>
                         </div>
+                        <p className="text-xs sm:text-sm text-[#4a4a44] mt-0.5 m-0 leading-snug">
+                          Qualquer modelo por apenas <strong className="text-[var(--color-obsidian)] font-bold">R$ 80,00</strong> na sua primeira vez no estúdio.
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 pl-3 border-l border-[#f0f0ed]">
+                        <span className="text-lg sm:text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none">
+                          R$ 80
+                        </span>
+                        <span className="text-[9px] text-[#8c8c84] uppercase font-mono block mt-0.5 whitespace-nowrap">
+                          1ª sessão
+                        </span>
                       </div>
                     </div>
 
@@ -649,6 +645,9 @@ export default function AgendarPage() {
                                   <span className="text-base sm:text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                                     R$ 80
                                   </span>
+                                  <span className="text-[9px] text-[#8c8c84] block leading-none mt-0.5">
+                                    1ª sessão
+                                  </span>
                                 </div>
 
                                 <div className="w-8 h-8 rounded-full bg-[var(--color-limestone)] group-hover:bg-[var(--color-obsidian)] text-[var(--color-obsidian)] group-hover:text-white flex items-center justify-center transition-colors">
@@ -684,8 +683,8 @@ export default function AgendarPage() {
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] block font-mono">
                               Procedimento Escolhido
                             </span>
-                            <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300/60 px-1.5 py-0.2 rounded font-bold uppercase">
-                              PROMOÇÃO
+                            <span className="text-[9px] bg-[#f4f4f0] text-[#595952] border border-[#e2e2dc] px-1.5 py-0.2 rounded font-semibold uppercase">
+                              1ª VEZ · R$ 80
                             </span>
                           </div>
                           <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block">
@@ -801,7 +800,7 @@ export default function AgendarPage() {
                         </button>
 
                         <p className="text-center text-[11px] text-[#8c8c84]">
-                          Pagamento apenas no dia do atendimento. Cancelamento gratuito com 24h de antecedência.
+                          Valor de R$ 80 exclusivo para sua primeira aplicação. Pagamento no dia do atendimento.
                         </p>
                       </div>
                     )}
@@ -837,13 +836,13 @@ export default function AgendarPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-[#8c8c84] block font-mono">
-                            Valor Promocional
+                            Valor (1ª Aplicação)
                           </span>
                           <span className="text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)]">
                             R$ 80,00
                           </span>
                           <span className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold block mt-0.5">
-                            Promoção Especial
+                            Exclusivo 1ª Vez
                           </span>
                         </div>
                       </div>
@@ -896,7 +895,7 @@ export default function AgendarPage() {
                         className="w-full flex items-center justify-between text-xs font-semibold text-[#595952] hover:text-[var(--color-obsidian)] cursor-pointer"
                       >
                         <div className="flex items-center gap-1.5">
-                          <Sparkles size={13} className="text-[var(--color-ember)]" />
+                          <Info size={13} className="text-[var(--color-ember)]" />
                           <span>Orientações para o atendimento</span>
                         </div>
                         <ChevronDown size={14} className={`transition-transform duration-200 ${showCareTips ? 'rotate-180' : ''}`} />
