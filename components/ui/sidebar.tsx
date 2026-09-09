@@ -93,7 +93,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#161614]/95 backdrop-blur-2xl text-[#f7f6f2] w-[280px] flex-shrink-0 border-r border-white/10 select-none overflow-hidden transition-all duration-200 ease-in-out z-30',
+        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#161614]/95 backdrop-blur-2xl text-[#f7f6f2] w-[280px] flex-shrink-0 border-r border-white/10 select-none overflow-hidden z-30',
         className,
       )}
       animate={{
@@ -196,7 +196,7 @@ export const SidebarLink = ({
         setOpen(false);
       }}
       className={cn(
-        'flex items-center gap-3 px-2.5 py-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-all duration-150 group/sidebar relative',
+        'flex items-center gap-3 px-2.5 h-10 rounded-xl text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-colors duration-150 group/sidebar relative overflow-hidden',
         isActive &&
           'bg-gradient-to-r from-[#fc5000]/20 to-[#fc5000]/10 text-white font-medium shadow-sm border border-[#fc5000]/30',
         className,
@@ -220,7 +220,7 @@ export const SidebarLink = ({
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
         transition={{ duration: 0.15 }}
-        className="text-sm group-hover/sidebar:translate-x-0.5 transition duration-150 whitespace-nowrap overflow-hidden text-ellipsis flex-1 !p-0 !m-0"
+        className="text-sm group-hover/sidebar:translate-x-0.5 transition-transform duration-150 whitespace-nowrap overflow-hidden text-ellipsis flex-1 !p-0 !m-0"
       >
         {link.label}
       </motion.span>
@@ -235,10 +235,6 @@ export const SidebarLink = ({
         >
           {link.badge}
         </motion.div>
-      )}
-
-      {!open && isActive && (
-        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#fc5000] shadow-[0_0_6px_#fc5000]" />
       )}
     </Link>
   );

@@ -227,31 +227,30 @@ export function AdminShell({
         <SidebarBody className="justify-between gap-6">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {/* Top Logo */}
-            <div className="flex items-center justify-between py-1 mb-5 px-1">
+            <div className="flex items-center justify-between py-1 mb-5 px-1 h-11 flex-shrink-0 overflow-hidden">
               <Link
                 href="/admin/dashboard"
-                className="flex items-center gap-3 group overflow-hidden"
+                className="flex items-center gap-3 group overflow-hidden h-full"
                 onClick={() => setOpen(false)}
               >
                 <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#fc5000] to-[#e04000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-md shadow-[#fc5000]/25 flex-shrink-0">
                   LV
                 </div>
-                {open && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex flex-col min-w-0"
-                  >
-                    <strong className="text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
-                      Lara Varisa
-                    </strong>
-                    <small className="text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
-                      Lash Designer
-                    </small>
-                  </motion.div>
-                )}
+                <motion.div
+                  animate={{
+                    opacity: open ? 1 : 0,
+                    display: open ? 'flex' : 'none',
+                  }}
+                  transition={{ duration: 0.15 }}
+                  className="flex flex-col min-w-0 overflow-hidden whitespace-nowrap"
+                >
+                  <strong className="text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
+                    Lara Varisa
+                  </strong>
+                  <small className="text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
+                    Lash Designer
+                  </small>
+                </motion.div>
               </Link>
             </div>
 
@@ -295,107 +294,76 @@ export function AdminShell({
           </div>
 
           {/* User Profile & Actions Footer */}
-          <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+          <div className="pt-3 border-t border-white/10 flex flex-col gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] h-12 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
                 {(name || 'A').trim().slice(0, 1).toUpperCase()}
               </div>
-              {open && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="flex flex-col min-w-0 flex-1 overflow-hidden"
-                >
-                  <strong className="text-white text-xs font-medium truncate block leading-tight">
-                    {name || 'Conta administrativa'}
-                  </strong>
-                  <small className="text-neutral-400 text-[10px] truncate block">
-                    {roleLabel}
-                  </small>
-                </motion.div>
-              )}
+              <motion.div
+                animate={{
+                  opacity: open ? 1 : 0,
+                  display: open ? 'flex' : 'none',
+                }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col min-w-0 flex-1 overflow-hidden whitespace-nowrap"
+              >
+                <strong className="text-white text-xs font-medium truncate block leading-tight">
+                  {name || 'Conta administrativa'}
+                </strong>
+                <small className="text-neutral-400 text-[10px] truncate block">
+                  {roleLabel}
+                </small>
+              </motion.div>
             </div>
 
-            {open ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-between gap-1.5 px-1 py-1"
+            <div className="flex items-center justify-between h-9 px-1 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(true)}
+                className="relative p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                title={
+                  notificationsCount > 0
+                    ? `${notificationsCount} novidade(s) na central`
+                    : 'Central de Notificações'
+                }
+                aria-label="Abrir central de notificações"
               >
-                <button
-                  type="button"
-                  onClick={() => setNotificationsOpen(true)}
-                  className="relative p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
-                  title={
-                    notificationsCount > 0
-                      ? `${notificationsCount} novidade(s) na central`
-                      : 'Central de Notificações'
-                  }
-                  aria-label="Abrir central de notificações"
-                >
-                  <Bell size={16} />
-                  {notificationsCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#fc5000]" />
-                  )}
-                </button>
+                <Bell size={16} />
+                {notificationsCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#fc5000]" />
+                )}
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
-                  aria-label="Alternar tema"
-                  title="Alternar tema"
-                >
-                  {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-                </button>
+              <motion.button
+                type="button"
+                onClick={() => setDarkMode(!darkMode)}
+                animate={{
+                  opacity: open ? 1 : 0,
+                  display: open ? 'inline-flex' : 'none',
+                }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                aria-label="Alternar tema"
+                title="Alternar tema"
+              >
+                {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+              </motion.button>
 
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
-                  aria-label="Sair do painel"
-                  title="Sair"
-                >
-                  <LogOut size={16} />
-                </button>
-              </motion.div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setNotificationsOpen(true)}
-                  className="relative p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="Notificações"
-                  aria-label="Notificações"
-                >
-                  <Bell size={16} />
-                  {notificationsCount > 0 && (
-                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#fc5000]" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="Tema"
-                  aria-label="Tema"
-                >
-                  {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-                </button>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                  title="Sair"
-                  aria-label="Sair"
-                >
-                  <LogOut size={16} />
-                </button>
-              </div>
-            )}
+              <motion.button
+                type="button"
+                onClick={logout}
+                animate={{
+                  opacity: open ? 1 : 0,
+                  display: open ? 'inline-flex' : 'none',
+                }}
+                transition={{ duration: 0.15 }}
+                className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-auto"
+                aria-label="Sair do painel"
+                title="Sair"
+              >
+                <LogOut size={16} />
+              </motion.button>
+            </div>
           </div>
         </SidebarBody>
       </Sidebar>
