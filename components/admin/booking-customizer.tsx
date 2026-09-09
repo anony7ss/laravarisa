@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   Palette,
   Type,
   Image as ImageIcon,
-  Sparkles,
   ExternalLink,
   RotateCcw,
   Check,
@@ -14,14 +13,34 @@ import {
   Clock3,
   ChevronRight,
   ShieldCheck,
+  Smartphone,
+  Monitor,
+  Maximize2,
+  Minimize2,
+  Upload,
+  Download,
+  FileJson,
+  Calendar,
+  User,
+  Star,
+  CheckCircle2,
+  ArrowLeft,
+  Search,
+  MessageCircle,
+  Sparkles,
+  Sliders,
+  Copy,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
+import { services as defaultFallbackServices, type LashService } from '@/lib/services';
+import { galleryPhotos as fallbackGalleryPhotos } from '@/lib/gallery';
 
 export interface BookingCustomizerProps {
   settings: Record<string, any>;
   disabled?: boolean;
 }
 
+// 10 TEMAS DE LUXO PRÉ-DEFINIDOS
 export const THEME_PRESETS = [
   {
     id: 'classic-noir',
@@ -88,28 +107,164 @@ export const THEME_PRESETS = [
     fontHeading: 'Montserrat',
     fontBody: 'Inter',
   },
+  {
+    id: 'cyber-minimal',
+    name: 'Cyber Minimal',
+    desc: 'Preto absoluto, cartões monocromáticos e branco puro',
+    bg: '#050505',
+    card: '#111111',
+    primary: '#ffffff',
+    accent: '#d4d4d4',
+    text: '#f2f2f2',
+    border: '#222222',
+    fontHeading: 'Outfit',
+    fontBody: 'Inter',
+  },
+  {
+    id: 'velvet-violet',
+    name: 'Velvet Violet',
+    desc: 'Púrpura imperial escuro, ametista e platina',
+    bg: '#120b17',
+    card: '#1d1324',
+    primary: '#a855f7',
+    accent: '#c084fc',
+    text: '#faf5ff',
+    border: '#321f40',
+    fontHeading: 'Fraunces',
+    fontBody: 'Plus Jakarta Sans',
+  },
+  {
+    id: 'bronze-goddess',
+    name: 'Bronze Goddess',
+    desc: 'Terracota nobre, marrom chocolate e ouro antigo',
+    bg: '#14100d',
+    card: '#201a15',
+    primary: '#d97706',
+    accent: '#f59e0b',
+    text: '#fef3c7',
+    border: '#382b21',
+    fontHeading: 'Bodoni Moda',
+    fontBody: 'DM Sans',
+  },
+  {
+    id: 'pearl-platinum',
+    name: 'Pearl & Platinum',
+    desc: 'Cinza pérola etéreo, prata e marfim puro',
+    bg: '#f0f2f5',
+    card: '#ffffff',
+    primary: '#1e293b',
+    accent: '#64748b',
+    text: '#0f172a',
+    border: '#cbd5e1',
+    fontHeading: 'Marcellus',
+    fontBody: 'Outfit',
+  },
+  {
+    id: 'midnight-sapphire',
+    name: 'Midnight Sapphire',
+    desc: 'Azul noturno abissal, safira e prata refinada',
+    bg: '#070d18',
+    card: '#0d1829',
+    primary: '#38bdf8',
+    accent: '#7dd3fc',
+    text: '#f0f9ff',
+    border: '#1a2e4a',
+    fontHeading: 'Syne',
+    fontBody: 'Plus Jakarta Sans',
+  },
 ];
 
+// FONTES DE TÍTULOS (HEADINGS)
 export const HEADING_FONTS = [
-  { id: 'Anton', name: 'Anton (Impactante Original)' },
+  { id: 'Anton', name: 'Anton (Original Impactante)' },
   { id: 'Playfair Display', name: 'Playfair Display (Editorial Luxo)' },
-  { id: 'Cinzel', name: 'Cinzel (Romano Elegante / Jóia)' },
-  { id: 'Montserrat', name: 'Montserrat (Moderno Geométrico)' },
+  { id: 'Cinzel', name: 'Cinzel (Romano Nobre / Alta Joalheria)' },
   { id: 'Cormorant Garamond', name: 'Cormorant Garamond (Alta Moda)' },
+  { id: 'Montserrat', name: 'Montserrat (Moderno Geométrico)' },
   { id: 'Outfit', name: 'Outfit (Modernista Sofisticado)' },
+  { id: 'Syne', name: 'Syne (Vanguardista Avant-Garde)' },
+  { id: 'Fraunces', name: 'Fraunces (Vintage Expressivo)' },
+  { id: 'Bodoni Moda', name: 'Bodoni Moda (Clássico Vogue)' },
+  { id: 'Marcellus', name: 'Marcellus (Elegância Clássica)' },
+  { id: 'Italiana', name: 'Italiana (Design Italiano Fino)' },
+  { id: 'Unna', name: 'Unna (Serifa Delicada)' },
+  { id: 'Plus Jakarta Sans', name: 'Plus Jakarta Sans (Ultra Clean)' },
   { id: 'Inter', name: 'Inter (Minimalista Contemporâneo)' },
 ];
 
+// FONTES DE CORPO (BODY)
 export const BODY_FONTS = [
   { id: 'DM Sans', name: 'DM Sans (Original Refinado)' },
   { id: 'Plus Jakarta Sans', name: 'Plus Jakarta Sans (Design Clean)' },
   { id: 'Inter', name: 'Inter (Máxima Legibilidade)' },
-  { id: 'Poppins', name: 'Poppins (Arredondado Amigável)' },
-  { id: 'Montserrat', name: 'Montserrat (Geométrico)' },
+  { id: 'Outfit', name: 'Outfit (Moderno & Arredondado)' },
+  { id: 'Poppins', name: 'Poppins (Geométrico Amigável)' },
+  { id: 'Montserrat', name: 'Montserrat (Modernista)' },
+  { id: 'Manrope', name: 'Manrope (Equilibrado & Tech)' },
+  { id: 'Figtree', name: 'Figtree (Contemporâneo Elegante)' },
+  { id: 'Nunito', name: 'Nunito (Suave & Convidativo)' },
+  { id: 'Urbanist', name: 'Urbanist (Minimalista Geométrico)' },
+  { id: 'Lato', name: 'Lato (Corporativo Neutro)' },
 ];
 
+// SIMULADOR DE CLIENTE E SERVIÇOS PARA O PREVIEW
+const SAMPLE_REVIEWS = [
+  {
+    name: 'Carolina Mendes',
+    role: 'Cliente VIP · Volume Brasileiro',
+    text: 'A Lara é uma artista impecável! Meus cílios duram 3 semanas perfeitos, sem nenhum incômodo. Melhor estúdio de POA.',
+    rating: 5,
+  },
+  {
+    name: 'Mariana Duarte',
+    role: 'Cliente Frequente · Fio a Fio',
+    text: 'Ambiente super cheiroso e relaxante. Dormi durante o procedimento e acordei com o olhar dos sonhos!',
+    rating: 5,
+  },
+  {
+    name: 'Beatriz Vasconcelos',
+    role: 'Fox Eyes · Manutenção',
+    text: 'Biossegurança total e atendimento de rainha. Não troco a Lara por ninguém.',
+    rating: 5,
+  },
+];
+
+// Função utilitária para compressão WebP em Canvas
+async function compressImageToWebp(file: File, maxWidth: number, maxHeight: number, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/webp', quality));
+      };
+      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function BookingCustomizer({ settings, disabled = false }: BookingCustomizerProps) {
-  // Estados locais sincronizados com as configurações
+  // Estados principais
   const [theme, setTheme] = useState(settings?.booking_theme || 'classic-noir');
   const [bgColor, setBgColor] = useState(settings?.booking_bg_color || '#e7e7e2');
   const [cardBg, setCardBg] = useState(settings?.booking_card_bg || '#ffffff');
@@ -133,6 +288,40 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
       'Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa.'
   );
 
+  // Estados do Simulador Interativo
+  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [simTab, setSimTab] = useState<'agendar' | 'galeria' | 'avaliacoes' | 'estudio'>('agendar');
+  const [simStep, setSimStep] = useState<1 | 2 | 3 | 4>(1);
+  const [simSelectedCategory, setSimSelectedCategory] = useState<string>('all');
+  const [simSearch, setSimSearch] = useState<string>('');
+  const [simSelectedService, setSimSelectedService] = useState<LashService | null>(null);
+  const [simSelectedDate, setSimSelectedDate] = useState<string>('Amanhã');
+  const [simSelectedSlot, setSimSelectedSlot] = useState<string | null>('14:30');
+  const [simClientName, setSimClientName] = useState<string>('Camila Rodrigues');
+  const [simClientPhone, setSimClientPhone] = useState<string>('(51) 98765-4321');
+  const [simClientNotes, setSimClientNotes] = useState<string>('Gostaria de um olhar marcante, mas leve.');
+
+  // Estados de Upload
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+
+  // Reiniciar Simulação
+  const resetSimulation = () => {
+    triggerHaptic('light');
+    setSimStep(1);
+    setSimTab('agendar');
+    setSimSelectedService(null);
+    setSimSearch('');
+    setSimSelectedCategory('all');
+    setSimSelectedSlot('14:30');
+  };
+
   // Aplicar Preset de Tema
   const applyPreset = (preset: (typeof THEME_PRESETS)[0]) => {
     triggerHaptic('light');
@@ -147,8 +336,144 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
     setFontBody(preset.fontBody);
   };
 
+  // Upload e Otimização Automática de Imagem
+  const handleFileUpload = async (file: File, type: 'banner' | 'avatar') => {
+    if (!file) return;
+    const isBanner = type === 'banner';
+    if (isBanner) setUploadingBanner(true);
+    else setUploadingAvatar(true);
+
+    try {
+      // 1. Converte e comprime no cliente para WebP instantaneamente
+      const maxWidth = isBanner ? 1920 : 400;
+      const maxHeight = isBanner ? 800 : 400;
+      const quality = isBanner ? 0.82 : 0.85;
+      const compressedWebp = await compressImageToWebp(file, maxWidth, maxHeight, quality);
+
+      // Aplica preview imediato
+      if (isBanner) setCoverUrl(compressedWebp);
+      else setAvatarUrl(compressedWebp);
+
+      // 2. Envia para o servidor para armazenar de forma permanente no bucket Supabase
+      const form = new FormData();
+      form.append('file', file);
+      form.append('type', type);
+
+      const res = await fetch('/api/admin/booking-asset-upload', {
+        method: 'POST',
+        body: form,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          if (isBanner) setCoverUrl(data.url);
+          else setAvatarUrl(data.url);
+        }
+      }
+    } catch (err) {
+      console.error('[Upload Error]:', err);
+    } finally {
+      if (isBanner) setUploadingBanner(false);
+      else setUploadingAvatar(false);
+    }
+  };
+
+  // Exportar Tema como JSON
+  const handleExportJson = () => {
+    const config = {
+      theme,
+      bgColor,
+      cardBg,
+      primaryColor,
+      accentColor,
+      textColor,
+      borderColor,
+      fontHeading,
+      fontBody,
+      title,
+      subtitle,
+      locationLabel,
+      promoTag,
+      guaranteeText,
+      coverUrl,
+      avatarUrl,
+      exportedAt: new Date().toISOString(),
+    };
+
+    const jsonStr = JSON.stringify(config, null, 2);
+    // Cria download de arquivo
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lara-varisa-tema-${theme}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // Também copia para clipboard
+    navigator.clipboard?.writeText(jsonStr);
+    setCopyFeedback('Tema exportado em arquivo e copiado!');
+    setTimeout(() => setCopyFeedback(null), 3000);
+  };
+
+  // Importar Tema de JSON
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed.bgColor) setBgColor(parsed.bgColor);
+        if (parsed.cardBg) setCardBg(parsed.cardBg);
+        if (parsed.primaryColor) setPrimaryColor(parsed.primaryColor);
+        if (parsed.accentColor) setAccentColor(parsed.accentColor);
+        if (parsed.textColor) setTextColor(parsed.textColor);
+        if (parsed.borderColor) setBorderColor(parsed.borderColor);
+        if (parsed.fontHeading) setFontHeading(parsed.fontHeading);
+        if (parsed.fontBody) setFontBody(parsed.fontBody);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.subtitle) setSubtitle(parsed.subtitle);
+        if (parsed.locationLabel) setLocationLabel(parsed.locationLabel);
+        if (parsed.promoTag) setPromoTag(parsed.promoTag);
+        if (parsed.guaranteeText) setGuaranteeText(parsed.guaranteeText);
+        if (parsed.coverUrl) setCoverUrl(parsed.coverUrl);
+        if (parsed.avatarUrl) setAvatarUrl(parsed.avatarUrl);
+        if (parsed.theme) setTheme(parsed.theme);
+
+        setCopyFeedback('Tema importado com sucesso!');
+        setTimeout(() => setCopyFeedback(null), 3000);
+      } catch {
+        alert('Arquivo JSON inválido.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Filtro de Serviços no Simulador
+  const filteredServices = useMemo(() => {
+    return defaultFallbackServices.filter((s) => {
+      const matchesCategory = simSelectedCategory === 'all' || s.category.toLowerCase().includes(simSelectedCategory);
+      const matchesSearch =
+        !simSearch ||
+        s.name.toLowerCase().includes(simSearch.toLowerCase()) ||
+        s.description.toLowerCase().includes(simSearch.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [simSelectedCategory, simSearch]);
+
+  // Google Fonts URL para renderizar os estilos com 100% de fidelidade
+  const googleFontsUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(
+    fontHeading
+  )}:wght@400;600;700;800;900&family=${encodeURIComponent(fontBody)}:wght@400;500;600;700&display=swap`;
+
   return (
     <div style={{ display: 'grid', gap: '24px' }}>
+      {/* Carrega fontes dinamicamente */}
+      <link rel="stylesheet" href={googleFontsUrl} />
+
       {/* CAMPOS OCULTOS QUE SERÃO ENVIADOS NO FORMULÁRIO PRINCIPAL */}
       <input type="hidden" name="booking_theme" value={theme} />
       <input type="hidden" name="booking_bg_color" value={bgColor} />
@@ -167,376 +492,311 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
       <input type="hidden" name="booking_promo_tag" value={promoTag} />
       <input type="hidden" name="booking_guarantee_text" value={guaranteeText} />
 
-      {/* CABEÇALHO DO PAINEL */}
+      {/* BARRA SUPERIOR DE AÇÕES & EXPORTAÇÃO */}
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
-          paddingBottom: '16px',
-          borderBottom: '1px solid var(--admin-line)',
+          padding: '12px 18px',
+          borderRadius: '14px',
+          background: 'var(--admin-card)',
+          border: '1px solid var(--admin-line)',
         }}
       >
-        <div>
-          <p className="admin-kicker">PERSONALIZAÇÃO DA EXPERIÊNCIA DA CLIENTE</p>
-          <h2
-            style={{
-              fontFamily: 'var(--font-body), sans-serif',
-              fontSize: '18px',
-              fontWeight: 600,
-              margin: 0,
-              textTransform: 'none',
-              letterSpacing: 'normal',
-            }}
-          >
-            Personalizar Página de Agendamento (/agendar)
-          </h2>
-          <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: '4px 0 0 0' }}>
-            Ajuste 100% das cores, temas, fontes, banner de capa, logotipo e textos sem alterar o layout boutique.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+            Personalização do Visual (/agendar)
+          </span>
+          {copyFeedback && (
+            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Check size={14} /> {copyFeedback}
+            </span>
+          )}
         </div>
 
-        <a
-          href="/agendar"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="admin-secondary"
-          style={{
-            height: '34px',
-            minHeight: '34px',
-            padding: '0 14px',
-            fontSize: '12px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <ExternalLink size={13} />
-          <span>Ver Página /agendar</span>
-        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <input
+            type="file"
+            ref={jsonInputRef}
+            accept=".json"
+            onChange={handleImportJson}
+            style={{ display: 'none' }}
+          />
+
+          <button
+            type="button"
+            onClick={() => jsonInputRef.current?.click()}
+            className="admin-secondary"
+            style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
+            title="Importar tema de arquivo JSON"
+          >
+            <Upload size={13} /> Importar Tema
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportJson}
+            className="admin-secondary"
+            style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
+            title="Exportar tema atual para arquivo JSON"
+          >
+            <Download size={13} /> Exportar Tema
+          </button>
+
+          <button
+            type="button"
+            onClick={() => applyPreset(THEME_PRESETS[0])}
+            className="admin-secondary"
+            style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
+            title="Restaurar padrão Lara Varisa"
+          >
+            <RotateCcw size={13} /> Restaurar Padrão
+          </button>
+
+          <a
+            href="/agendar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-secondary"
+            style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
+          >
+            <ExternalLink size={13} /> Abrir Página Real
+          </a>
+        </div>
       </div>
 
-      {/* 1. TEMAS PRÉ-DEFINIDOS (PRESETS 1-CLIQUE) */}
-      <section className="admin-panel">
-        <div className="admin-panel-head">
-          <div>
-            <p className="admin-kicker">TEMAS INSTANTÂNEOS</p>
-            <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-              Selecione um Estilo de Luxo ou Crie o Seu
-            </h3>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-          {THEME_PRESETS.map((preset) => {
-            const isSelected = theme === preset.id;
-            return (
-              <div
-                key={preset.id}
-                onClick={() => !disabled && applyPreset(preset)}
-                style={{
-                  padding: '14px',
-                  borderRadius: '14px',
-                  border: `2px solid ${isSelected ? 'var(--admin-ink)' : 'var(--admin-line)'}`,
-                  background: isSelected ? 'var(--admin-soft)' : 'var(--admin-card)',
-                  cursor: disabled ? 'default' : 'pointer',
-                  transition: 'all 0.15s ease',
-                  position: 'relative',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--admin-ink)' }}>
-                    {preset.name}
-                  </span>
-                  {isSelected && (
-                    <span
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        background: 'var(--admin-ink)',
-                        color: 'var(--admin-bg)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Check size={11} strokeWidth={3} />
-                    </span>
-                  )}
-                </div>
-
-                <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: '0 0 10px 0', minHeight: '30px' }}>
-                  {preset.desc}
-                </p>
-
-                {/* Paleta visual em bolinhas */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span
-                    title={`Fundo: ${preset.bg}`}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', background: preset.bg, border: '1px solid #ccc' }}
-                  />
-                  <span
-                    title={`Cartão: ${preset.card}`}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', background: preset.card, border: '1px solid #ccc' }}
-                  />
-                  <span
-                    title={`Primária: ${preset.primary}`}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', background: preset.primary }}
-                  />
-                  <span
-                    title={`Acento: ${preset.accent}`}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', background: preset.accent }}
-                  />
-                  <span style={{ fontSize: '10px', color: 'var(--admin-muted)', marginLeft: 'auto', fontFamily: 'monospace' }}>
-                    {preset.fontHeading}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 2. GRADE DE CONTROLE FINO: CORES + FONTES + IMAGENS (2 COLUNAS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-        {/* COLUNA ESQUERDA: PALETA DE CORES */}
-        <section className="admin-panel">
-          <div className="admin-panel-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Palette size={16} />
+      {/* SEÇÃO PRINCIPAL: CONTROLES À ESQUERDA + SIMULADOR INTERATIVO À DIREITA */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px', alignItems: 'start' }}>
+        
+        {/* COLUNA ESQUERDA: CONTROLES DE DESIGN */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* 1. TEMAS PRÉ-DEFINIDOS (PRESETS 1-CLIQUE) */}
+          <section className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-head">
               <div>
-                <p className="admin-kicker">PALETA DE CORES</p>
+                <p className="admin-kicker">COLEÇÃO DE ESTILOS</p>
                 <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-                  Controle Manual de Cores
+                  10 Temas Prontos de Luxo
                 </h3>
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {/* Cor de Fundo da Página */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Fundo da Página
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Cor de fundo geral de /agendar</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={bgColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setBgColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={bgColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setBgColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px', maxHeight: '340px', overflowY: 'auto', paddingRight: '4px' }}>
+              {THEME_PRESETS.map((preset) => {
+                const isSelected = theme === preset.id;
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => !disabled && applyPreset(preset)}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px solid ${isSelected ? 'var(--admin-ink)' : 'var(--admin-line)'}`,
+                      background: isSelected ? 'var(--admin-soft)' : 'var(--admin-card)',
+                      cursor: disabled ? 'default' : 'pointer',
+                      transition: 'all 0.15s ease',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                        {preset.name}
+                      </span>
+                      {isSelected && (
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: '#10b981',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Check size={11} strokeWidth={3} />
+                        </div>
+                      )}
+                    </div>
+
+                    <p style={{ fontSize: '10.5px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.3 }}>
+                      {preset.desc}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '4px', marginTop: 'auto', paddingTop: '4px' }}>
+                      <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: preset.bg, border: '1px solid rgba(0,0,0,0.1)' }} title="Fundo" />
+                      <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: preset.card, border: '1px solid rgba(0,0,0,0.1)' }} title="Cartão" />
+                      <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: preset.primary }} title="Primária" />
+                      <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: preset.accent }} title="Destaque" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          </section>
 
-            {/* Cor dos Cartões */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '10px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Fundo dos Cartões & Cards
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Procedimentos, calendário e resumo</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={cardBg}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setCardBg(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={cardBg}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setCardBg(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
-            </div>
-
-            {/* Cor Primária */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '10px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Cor Primária (Botões de Ação)
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Botões Agendar, Confirmar e Abas</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={primaryColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setPrimaryColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={primaryColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setPrimaryColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
-            </div>
-
-            {/* Cor de Acento / Ouro */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '10px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Cor de Destaque / Acento
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Ícones, estrelas e selos</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={accentColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setAccentColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={accentColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setAccentColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
-            </div>
-
-            {/* Cor do Texto Principal */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '10px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Cor do Texto Principal
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Títulos, nomes e valores</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={textColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setTextColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={textColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setTextColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
-            </div>
-
-            {/* Cor das Bordas */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '10px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', display: 'block' }}>
-                  Cor das Bordas e Divisórias
-                </label>
-                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Linhas sutis dos cartões</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="color"
-                  value={borderColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setBorderColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '32px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                />
-                <input
-                  type="text"
-                  value={borderColor}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    setBorderColor(e.target.value);
-                    setTheme('custom');
-                  }}
-                  style={{ width: '80px', height: '32px', fontSize: '12px', fontFamily: 'monospace', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 8px' }}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* COLUNA DIREITA: TIPOGRAFIA & IMAGENS */}
-        <div style={{ display: 'grid', gap: '20px' }}>
-          {/* TIPOGRAFIA */}
-          <section className="admin-panel">
+          {/* 2. PALETA DE CORES PERSONALIZADA */}
+          <section className="admin-panel" style={{ margin: 0 }}>
             <div className="admin-panel-head">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Type size={16} />
-                <div>
-                  <p className="admin-kicker">FONTES & TIPOGRAFIA</p>
-                  <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-                    Famílias de Fontes da Página
-                  </h3>
+              <div>
+                <p className="admin-kicker">PALETA DE CORES</p>
+                <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+                  Ajuste Fino de Cada Tom
+                </h3>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Fundo da Página</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={bgColor}
+                    disabled={disabled}
+                    onChange={(e) => { setBgColor(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={bgColor}
+                    disabled={disabled}
+                    onChange={(e) => { setBgColor(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Cartões / Superfície</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={cardBg}
+                    disabled={disabled}
+                    onChange={(e) => { setCardBg(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={cardBg}
+                    disabled={disabled}
+                    onChange={(e) => { setCardBg(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Cor Primária (Botões)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    disabled={disabled}
+                    onChange={(e) => { setPrimaryColor(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={primaryColor}
+                    disabled={disabled}
+                    onChange={(e) => { setPrimaryColor(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Destaque (Ouro / Acento)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={accentColor}
+                    disabled={disabled}
+                    onChange={(e) => { setAccentColor(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={accentColor}
+                    disabled={disabled}
+                    onChange={(e) => { setAccentColor(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Cor do Texto</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={textColor}
+                    disabled={disabled}
+                    onChange={(e) => { setTextColor(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={textColor}
+                    disabled={disabled}
+                    onChange={(e) => { setTextColor(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Bordas e Linhas</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="color"
+                    value={borderColor}
+                    disabled={disabled}
+                    onChange={(e) => { setBorderColor(e.target.value); setTheme('custom'); }}
+                    style={{ width: '34px', height: '34px', borderRadius: '8px', border: '1px solid var(--admin-line)', cursor: 'pointer', padding: 0 }}
+                  />
+                  <input
+                    type="text"
+                    value={borderColor}
+                    disabled={disabled}
+                    onChange={(e) => { setBorderColor(e.target.value); setTheme('custom'); }}
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', borderRadius: '6px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)' }}
+                  />
                 </div>
               </div>
             </div>
+          </section>
 
-            <div style={{ display: 'grid', gap: '14px' }}>
+          {/* 3. TIPOGRAFIA EXPANDIDA */}
+          <section className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-head">
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-                  Fonte dos Títulos & Valores Numéricos
-                </label>
+                <p className="admin-kicker">TIPOGRAFIA (GOOGLE FONTS)</p>
+                <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+                  Fontes Editoriais e Modernas
+                </h3>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '6px' }}>Fonte dos Títulos</label>
                 <select
                   value={fontHeading}
                   disabled={disabled}
-                  onChange={(e) => setFontHeading(e.target.value)}
-                  style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
+                  onChange={(e) => { setFontHeading(e.target.value); setTheme('custom'); }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
                 >
                   {HEADING_FONTS.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -547,14 +807,12 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-                  Fonte dos Textos Gerais & Descrições
-                </label>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '6px' }}>Fonte dos Textos</label>
                 <select
                   value={fontBody}
                   disabled={disabled}
-                  onChange={(e) => setFontBody(e.target.value)}
-                  style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
+                  onChange={(e) => { setFontBody(e.target.value); setTheme('custom'); }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
                 >
                   {BODY_FONTS.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -566,367 +824,1131 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
             </div>
           </section>
 
-          {/* BANNER E FOTO DE PERFIL */}
-          <section className="admin-panel">
+          {/* 4. FOTOS: UPLOAD COM COMPRESSÃO AUTOMÁTICA WEBP */}
+          <section className="admin-panel" style={{ margin: 0 }}>
             <div className="admin-panel-head">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ImageIcon size={16} />
-                <div>
-                  <p className="admin-kicker">IMAGENS DO CABEÇALHO</p>
-                  <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-                    Banner de Capa & Foto do Estúdio
-                  </h3>
-                </div>
+              <div>
+                <p className="admin-kicker">MÍDIAS & FOTOS</p>
+                <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+                  Upload com Otimização WebP Automática
+                </h3>
               </div>
             </div>
 
             <div style={{ display: 'grid', gap: '14px' }}>
               {/* Banner de Capa */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-                  URL do Banner de Capa Superior
-                </label>
-                <input
-                  type="text"
-                  value={coverUrl}
-                  disabled={disabled}
-                  onChange={(e) => setCoverUrl(e.target.value)}
-                  placeholder="/lara-lashes-optimized.webp ou URL externa"
-                  style={{ width: '100%', height: '38px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '12px', fontFamily: 'monospace' }}
-                />
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label className="admin-label" style={{ fontSize: '11px', margin: 0 }}>Banner de Capa (Header)</label>
+                  <span style={{ fontSize: '10px', color: 'var(--admin-muted)' }}>Auto-comprime para WebP 1920px</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="file"
+                    ref={bannerInputRef}
+                    accept="image/*"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'banner')}
+                    style={{ display: 'none' }}
+                  />
+                  <input
+                    type="text"
+                    value={coverUrl}
+                    disabled={disabled}
+                    onChange={(e) => setCoverUrl(e.target.value)}
+                    placeholder="URL ou faça upload ao lado..."
+                    style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '11.5px' }}
+                  />
                   <button
                     type="button"
-                    onClick={() => setCoverUrl('/lara-lashes-optimized.webp')}
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={disabled || uploadingBanner}
                     className="admin-secondary"
-                    style={{ height: '24px', minHeight: '24px', padding: '0 8px', fontSize: '10px' }}
+                    style={{ padding: '0 12px', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
                   >
-                    Banner Cílios Lara (Padrão)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCoverUrl('/hero-bg.webp')}
-                    className="admin-secondary"
-                    style={{ height: '24px', minHeight: '24px', padding: '0 8px', fontSize: '10px' }}
-                  >
-                    Hero Studio Dark
+                    <Upload size={13} /> {uploadingBanner ? 'Comprimindo...' : 'Upload'}
                   </button>
                 </div>
               </div>
 
-              {/* Foto / Logotipo */}
+              {/* Avatar / Foto de Perfil */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-                  Foto de Perfil ou Emblema do Estúdio
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label className="admin-label" style={{ fontSize: '11px', margin: 0 }}>Foto de Perfil / Logo</label>
+                  <span style={{ fontSize: '10px', color: 'var(--admin-muted)' }}>Auto-comprime para WebP 400px</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    accept="image/*"
+                    onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'avatar')}
+                    style={{ display: 'none' }}
+                  />
+                  <input
+                    type="text"
+                    value={avatarUrl}
+                    disabled={disabled}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    placeholder="URL ou faça upload ao lado..."
+                    style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '11.5px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={disabled || uploadingAvatar}
+                    className="admin-secondary"
+                    style={{ padding: '0 12px', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
+                  >
+                    <Upload size={13} /> {uploadingAvatar ? 'Comprimindo...' : 'Upload'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 5. TEXTOS E CÓPIAS DA PÁGINA */}
+          <section className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-head">
+              <div>
+                <p className="admin-kicker">TEXTOS & IDENTIDADE</p>
+                <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+                  Títulos, Subtítulos e Garantia
+                </h3>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Nome Principal / Estúdio</label>
                 <input
                   type="text"
-                  value={avatarUrl}
+                  value={title}
                   disabled={disabled}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="/logo-emblem.png ou URL da foto da Lara"
-                  style={{ width: '100%', height: '38px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '12px', fontFamily: 'monospace' }}
+                  onChange={(e) => setTitle(e.target.value)}
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
                 />
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Subtítulo / Especialidade</label>
+                <input
+                  type="text"
+                  value={subtitle}
+                  disabled={disabled}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Localização</label>
+                  <input
+                    type="text"
+                    value={locationLabel}
+                    disabled={disabled}
+                    onChange={(e) => setLocationLabel(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Tag Promocional</label>
+                  <input
+                    type="text"
+                    value={promoTag}
+                    disabled={disabled}
+                    onChange={(e) => setPromoTag(e.target.value)}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-label" style={{ fontSize: '11px', marginBottom: '4px' }}>Texto de Garantia / Biossegurança</label>
+                <textarea
+                  rows={2}
+                  value={guaranteeText}
+                  disabled={disabled}
+                  onChange={(e) => setGuaranteeText(e.target.value)}
+                  style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--admin-line)', background: 'var(--admin-card)', color: 'var(--admin-ink)', fontSize: '12px', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* COLUNA DIREITA: SIMULADOR INTERATIVO 100% IDÊNTICO AO /AGENDAR */}
+        <div style={{ position: 'sticky', top: '20px' }}>
+          <section className="admin-panel" style={{ margin: 0, padding: '16px' }}>
+            {/* CABEÇALHO DO SIMULADOR COM CONTROLES DUAL-DEVICE */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Eye size={16} style={{ color: accentColor }} />
+                <div>
+                  <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0, color: 'var(--admin-ink)' }}>
+                    Simulador Interativo em Tempo Real
+                  </h3>
+                  <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>
+                    Experimente o agendamento completo exatamente como sua cliente vê
+                  </span>
+                </div>
+              </div>
+
+              {/* Botões de Troca de Dispositivo & Ações */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'inline-flex', padding: '3px', borderRadius: '8px', background: 'var(--admin-soft)', border: '1px solid var(--admin-line)' }}>
                   <button
                     type="button"
-                    onClick={() => setAvatarUrl('/logo-emblem.png')}
-                    className="admin-secondary"
-                    style={{ height: '24px', minHeight: '24px', padding: '0 8px', fontSize: '10px' }}
+                    onClick={() => setPreviewMode('mobile')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: previewMode === 'mobile' ? 'var(--admin-card)' : 'transparent',
+                      color: previewMode === 'mobile' ? 'var(--admin-ink)' : 'var(--admin-muted)',
+                      fontSize: '11.5px',
+                      fontWeight: previewMode === 'mobile' ? 600 : 500,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                    }}
                   >
-                    Emblema Oficial (Padrão)
+                    <Smartphone size={13} /> Mobile
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setAvatarUrl('/apple-icon.png')}
-                    className="admin-secondary"
-                    style={{ height: '24px', minHeight: '24px', padding: '0 8px', fontSize: '10px' }}
+                    onClick={() => setPreviewMode('desktop')}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: previewMode === 'desktop' ? 'var(--admin-card)' : 'transparent',
+                      color: previewMode === 'desktop' ? 'var(--admin-ink)' : 'var(--admin-muted)',
+                      fontSize: '11.5px',
+                      fontWeight: previewMode === 'desktop' ? 600 : 500,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                    }}
                   >
-                    Ícone Redondo
+                    <Monitor size={13} /> Desktop
                   </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={resetSimulation}
+                  className="admin-secondary"
+                  style={{ padding: '6px 10px', fontSize: '11.5px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                  title="Reiniciar fluxo da simulação"
+                >
+                  <RotateCcw size={12} /> Reiniciar
+                </button>
+              </div>
+            </div>
+
+            {/* CONTAINER DO FRAME (MOBILE OU DESKTOP) */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                width: '100%',
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: '16px',
+                padding: previewMode === 'mobile' ? '20px 10px' : '10px',
+                minHeight: '620px',
+                border: '1px solid var(--admin-line)',
+              }}
+            >
+              {/* MOCKUP DO DISPOSITIVO */}
+              <div
+                style={{
+                  width: previewMode === 'mobile' ? '390px' : '100%',
+                  maxWidth: previewMode === 'mobile' ? '390px' : '100%',
+                  height: '740px',
+                  borderRadius: previewMode === 'mobile' ? '36px' : '12px',
+                  border: previewMode === 'mobile' ? '10px solid #1a1a18' : '1px solid #333',
+                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  background: bgColor,
+                  position: 'relative',
+                  transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                {/* BARRA SUPERIOR DO DISPOSITIVO (NOTCH NO MOBILE OU BROWSER NO DESKTOP) */}
+                {previewMode === 'mobile' ? (
+                  <div
+                    style={{
+                      height: '28px',
+                      width: '100%',
+                      background: '#1a1a18',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      zIndex: 20,
+                    }}
+                  >
+                    {/* Dynamic Island / Câmera */}
+                    <div
+                      style={{
+                        width: '90px',
+                        height: '14px',
+                        background: '#000000',
+                        borderRadius: '10px',
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      height: '32px',
+                      width: '100%',
+                      background: '#181816',
+                      borderBottom: '1px solid #282824',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 12px',
+                      gap: '8px',
+                      zIndex: 20,
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ff5f56' }} />
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ffbd2e' }} />
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#27c93f' }} />
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        background: '#0e0e0d',
+                        borderRadius: '6px',
+                        height: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        color: '#888',
+                      }}
+                    >
+                      https://laravarisa.com.br/agendar
+                    </div>
+                  </div>
+                )}
+
+                {/* CONTEÚDO ROLÁVEL DA PÁGINA /AGENDAR */}
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    color: textColor,
+                    fontFamily: `var(--font-body, '${fontBody}'), sans-serif`,
+                  }}
+                >
+                  {/* 1. HEADER HERO (BANNER + AVATAR + DADOS DO ESTÚDIO) */}
+                  <div style={{ position: 'relative', width: '100%', flexShrink: 0 }}>
+                    {/* Imagem de Capa com Overlay */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: previewMode === 'mobile' ? '140px' : '200px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <img
+                        src={coverUrl}
+                        alt="Capa"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: `linear-gradient(to bottom, transparent 30%, ${bgColor} 100%)`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Avatar & Identidade */}
+                    <div style={{ padding: '0 16px', marginTop: '-42px', position: 'relative', zIndex: 5, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                        <div
+                          style={{
+                            width: '74px',
+                            height: '74px',
+                            borderRadius: '50%',
+                            border: `3px solid ${cardBg}`,
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                            overflow: 'hidden',
+                            background: cardBg,
+                            position: 'relative',
+                          }}
+                        >
+                          <img
+                            src={avatarUrl}
+                            alt="Avatar"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+
+                        {/* Status Aberto */}
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 9px',
+                            borderRadius: '999px',
+                            background: cardBg,
+                            border: `1px solid ${borderColor}`,
+                            fontSize: '10.5px',
+                            fontWeight: 600,
+                            color: '#10b981',
+                          }}
+                        >
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                          ABERTO AGORA
+                        </div>
+                      </div>
+
+                      {/* Nome e Especialidade */}
+                      <div>
+                        <h1
+                          style={{
+                            fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`,
+                            fontSize: '22px',
+                            fontWeight: 700,
+                            letterSpacing: '0.02em',
+                            margin: '2px 0 0 0',
+                            color: primaryColor,
+                          }}
+                        >
+                          {title}
+                        </h1>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: textColor, opacity: 0.85 }}>
+                          {subtitle}
+                        </p>
+                      </div>
+
+                      {/* Badges de Localização e Promoção */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: cardBg,
+                            border: `1px solid ${borderColor}`,
+                            fontSize: '11px',
+                            color: textColor,
+                          }}
+                        >
+                          <MapPin size={11} style={{ color: accentColor }} />
+                          {locationLabel}
+                        </span>
+
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: accentColor,
+                            color: '#ffffff',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {promoTag}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. BARRA DE NAVEGAÇÃO POR ABAS DO /AGENDAR */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderBottom: `1px solid ${borderColor}`,
+                      padding: '0 16px',
+                      marginTop: '16px',
+                      gap: '16px',
+                    }}
+                  >
+                    {[
+                      { id: 'agendar', label: 'Agendar' },
+                      { id: 'galeria', label: 'Galeria' },
+                      { id: 'avaliacoes', label: 'Avaliações' },
+                      { id: 'estudio', label: 'O Estúdio' },
+                    ].map((tab) => {
+                      const isActive = simTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSimTab(tab.id as any)}
+                          style={{
+                            padding: '8px 2px 10px 2px',
+                            border: 'none',
+                            borderBottom: `2px solid ${isActive ? primaryColor : 'transparent'}`,
+                            background: 'transparent',
+                            color: isActive ? primaryColor : textColor,
+                            opacity: isActive ? 1 : 0.65,
+                            fontWeight: isActive ? 700 : 500,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 3. CONTEÚDO DAS ABAS */}
+                  <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    
+                    {/* ABA: AGENDAR (FLUXO COMPLETO DE 4 PASSOS) */}
+                    {simTab === 'agendar' && (
+                      <>
+                        {/* PASSO 1: ESCOLHA DO SERVIÇO */}
+                        {simStep === 1 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {/* Card de Garantia */}
+                            <div
+                              style={{
+                                padding: '10px 12px',
+                                borderRadius: '12px',
+                                background: cardBg,
+                                border: `1px solid ${borderColor}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <ShieldCheck size={16} style={{ color: accentColor, flexShrink: 0 }} />
+                              <span style={{ fontSize: '11px', lineHeight: 1.35, color: textColor }}>
+                                {guaranteeText}
+                              </span>
+                            </div>
+
+                            {/* Categorias */}
+                            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                              {['all', 'alongamento', 'manutencao', 'natural'].map((cat) => {
+                                const isSelected = simSelectedCategory === cat;
+                                const labels: Record<string, string> = {
+                                  all: 'Todos',
+                                  alongamento: 'Alongamento',
+                                  manutencao: 'Manutenção',
+                                  natural: 'Natural',
+                                };
+                                return (
+                                  <button
+                                    key={cat}
+                                    type="button"
+                                    onClick={() => setSimSelectedCategory(cat)}
+                                    style={{
+                                      padding: '5px 12px',
+                                      borderRadius: '999px',
+                                      fontSize: '11.5px',
+                                      fontWeight: isSelected ? 600 : 500,
+                                      border: `1px solid ${isSelected ? primaryColor : borderColor}`,
+                                      background: isSelected ? primaryColor : cardBg,
+                                      color: isSelected ? '#ffffff' : textColor,
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {labels[cat]}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Lista de Serviços */}
+                            <div style={{ display: 'grid', gridTemplateColumns: previewMode === 'desktop' ? 'repeat(2, 1fr)' : '1fr', gap: '10px' }}>
+                              {filteredServices.slice(0, 6).map((service) => {
+                                const isSelected = simSelectedService?.id === service.id;
+                                return (
+                                  <div
+                                    key={service.id}
+                                    onClick={() => setSimSelectedService(service)}
+                                    style={{
+                                      padding: '12px',
+                                      borderRadius: '14px',
+                                      background: cardBg,
+                                      border: `2px solid ${isSelected ? accentColor : borderColor}`,
+                                      boxShadow: isSelected ? `0 4px 16px ${accentColor}25` : 'none',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '6px',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                      <div>
+                                        <h4
+                                          style={{
+                                            margin: 0,
+                                            fontSize: '13.5px',
+                                            fontWeight: 600,
+                                            color: primaryColor,
+                                          }}
+                                        >
+                                          {service.name}
+                                        </h4>
+                                        <span style={{ fontSize: '10.5px', color: accentColor, fontWeight: 600 }}>
+                                          {service.category}
+                                        </span>
+                                      </div>
+
+                                      <span
+                                        style={{
+                                          fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`,
+                                          fontSize: '15px',
+                                          fontWeight: 700,
+                                          color: primaryColor,
+                                        }}
+                                      >
+                                        {service.price}
+                                      </span>
+                                    </div>
+
+                                    <p style={{ margin: 0, fontSize: '11px', color: textColor, opacity: 0.8, lineHeight: 1.35 }}>
+                                      {service.description}
+                                    </p>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px', paddingTop: '6px', borderTop: `1px solid ${borderColor}50` }}>
+                                      <span style={{ fontSize: '10.5px', color: textColor, opacity: 0.7, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                        <Clock3 size={11} /> {service.duration}
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSimSelectedService(service);
+                                          setSimStep(2);
+                                        }}
+                                        style={{
+                                          padding: '5px 12px',
+                                          borderRadius: '8px',
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          border: 'none',
+                                          background: isSelected ? accentColor : primaryColor,
+                                          color: '#ffffff',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        {isSelected ? 'Selecionado' : 'Agendar'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Barra Flutuante de Seleção */}
+                            {simSelectedService && (
+                              <div
+                                style={{
+                                  position: 'sticky',
+                                  bottom: '10px',
+                                  padding: '10px 14px',
+                                  borderRadius: '12px',
+                                  background: primaryColor,
+                                  color: '#ffffff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                  marginTop: 'auto',
+                                }}
+                              >
+                                <div>
+                                  <span style={{ fontSize: '12px', fontWeight: 600, display: 'block' }}>
+                                    {simSelectedService.name}
+                                  </span>
+                                  <span style={{ fontSize: '11px', opacity: 0.85 }}>
+                                    {simSelectedService.price} • {simSelectedService.duration}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setSimStep(2)}
+                                  style={{
+                                    padding: '7px 14px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: accentColor,
+                                    color: '#ffffff',
+                                    fontWeight: 700,
+                                    fontSize: '11.5px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Continuar ➜
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* PASSO 2: ESCOLHA DE DATA E HORÁRIO */}
+                        {simStep === 2 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <button
+                                type="button"
+                                onClick={() => setSimStep(1)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: textColor,
+                                  fontSize: '12px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <ArrowLeft size={13} /> Voltar para Serviços
+                              </button>
+                              <span style={{ fontSize: '11.5px', fontWeight: 600, color: accentColor }}>Passo 2 de 3</span>
+                            </div>
+
+                            {/* Resumo do Serviço Escolhido */}
+                            <div style={{ padding: '10px 12px', borderRadius: '10px', background: cardBg, border: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: primaryColor, display: 'block' }}>
+                                  {simSelectedService?.name || 'Volume Brasileiro'}
+                                </span>
+                                <span style={{ fontSize: '11px', color: textColor, opacity: 0.8 }}>
+                                  Duração: {simSelectedService?.duration || '2h'}
+                                </span>
+                              </div>
+                              <span style={{ fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`, fontSize: '15px', fontWeight: 700, color: primaryColor }}>
+                                {simSelectedService?.price || 'R$ 150'}
+                              </span>
+                            </div>
+
+                            {/* Seleção de Dia */}
+                            <div>
+                              <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', display: 'block', color: primaryColor }}>
+                                1. Selecione a Data
+                              </label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                                {[
+                                  { day: 'Hoje', date: 'Quarta', available: false },
+                                  { day: 'Amanhã', date: 'Quinta', available: true },
+                                  { day: '11/Set', date: 'Sexta', available: true },
+                                  { day: '12/Set', date: 'Sábado', available: true },
+                                ].map((d) => {
+                                  const isSelected = simSelectedDate === d.day;
+                                  return (
+                                    <div
+                                      key={d.day}
+                                      onClick={() => d.available && setSimSelectedDate(d.day)}
+                                      style={{
+                                        padding: '8px 6px',
+                                        borderRadius: '10px',
+                                        textAlign: 'center',
+                                        background: isSelected ? primaryColor : cardBg,
+                                        border: `1px solid ${isSelected ? primaryColor : borderColor}`,
+                                        color: isSelected ? '#ffffff' : d.available ? textColor : `${textColor}50`,
+                                        cursor: d.available ? 'pointer' : 'not-allowed',
+                                      }}
+                                    >
+                                      <span style={{ fontSize: '11.5px', fontWeight: 700, display: 'block' }}>{d.day}</span>
+                                      <span style={{ fontSize: '9.5px', opacity: 0.8 }}>{d.date}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Seleção de Horários */}
+                            <div>
+                              <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', display: 'block', color: primaryColor }}>
+                                2. Horários Livres ({simSelectedDate})
+                              </label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                                {['09:00', '10:30', '13:30', '14:30', '16:00', '17:30'].map((slot) => {
+                                  const isSelected = simSelectedSlot === slot;
+                                  return (
+                                    <button
+                                      key={slot}
+                                      type="button"
+                                      onClick={() => setSimSelectedSlot(slot)}
+                                      style={{
+                                        padding: '8px',
+                                        borderRadius: '8px',
+                                        border: `1.5px solid ${isSelected ? accentColor : borderColor}`,
+                                        background: isSelected ? accentColor : cardBg,
+                                        color: isSelected ? '#ffffff' : textColor,
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {slot}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setSimStep(3)}
+                              style={{
+                                padding: '10px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: primaryColor,
+                                color: '#ffffff',
+                                fontSize: '12.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                marginTop: '8px',
+                              }}
+                            >
+                              Continuar para Seus Dados ➜
+                            </button>
+                          </div>
+                        )}
+
+                        {/* PASSO 3: FORMULÁRIO DO CLIENTE */}
+                        {simStep === 3 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <button
+                                type="button"
+                                onClick={() => setSimStep(2)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: textColor,
+                                  fontSize: '12px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <ArrowLeft size={13} /> Voltar para Horários
+                              </button>
+                              <span style={{ fontSize: '11.5px', fontWeight: 600, color: accentColor }}>Passo 3 de 3</span>
+                            </div>
+
+                            {/* Resumo */}
+                            <div style={{ padding: '10px 12px', borderRadius: '10px', background: cardBg, border: `1px solid ${borderColor}`, fontSize: '11.5px', color: textColor, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{simSelectedService?.name || 'Volume Brasileiro'}</span>
+                              <span style={{ fontWeight: 600 }}>{simSelectedDate} às {simSelectedSlot}</span>
+                            </div>
+
+                            {/* Campos */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, marginBottom: '3px', display: 'block', color: textColor }}>Seu Nome Completo *</label>
+                                <input
+                                  type="text"
+                                  value={simClientName}
+                                  onChange={(e) => setSimClientName(e.target.value)}
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${borderColor}`, background: cardBg, color: textColor, fontSize: '12px' }}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, marginBottom: '3px', display: 'block', color: textColor }}>WhatsApp com DDD *</label>
+                                <input
+                                  type="text"
+                                  value={simClientPhone}
+                                  onChange={(e) => setSimClientPhone(e.target.value)}
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${borderColor}`, background: cardBg, color: textColor, fontSize: '12px' }}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ fontSize: '11px', fontWeight: 600, marginBottom: '3px', display: 'block', color: textColor }}>Observações (Opcional)</label>
+                                <input
+                                  type="text"
+                                  value={simClientNotes}
+                                  onChange={(e) => setSimClientNotes(e.target.value)}
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${borderColor}`, background: cardBg, color: textColor, fontSize: '12px' }}
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('success');
+                                setSimStep(4);
+                              }}
+                              style={{
+                                padding: '11px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: accentColor,
+                                color: '#ffffff',
+                                fontSize: '13px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                marginTop: '4px',
+                                boxShadow: `0 4px 14px ${accentColor}40`,
+                              }}
+                            >
+                              Confirmar Agendamento ➜
+                            </button>
+                          </div>
+                        )}
+
+                        {/* PASSO 4: CONCLUSÃO & CONFIRMAÇÃO (SUCESSO) */}
+                        {simStep === 4 && (
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              textAlign: 'center',
+                              gap: '14px',
+                              padding: '16px 8px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '50%',
+                                background: '#10b981',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+                              }}
+                            >
+                              <CheckCircle2 size={32} />
+                            </div>
+
+                            <div>
+                              <h3
+                                style={{
+                                  fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`,
+                                  fontSize: '20px',
+                                  fontWeight: 700,
+                                  color: primaryColor,
+                                  margin: '0 0 4px 0',
+                                }}
+                              >
+                                Agendamento Confirmado!
+                              </h3>
+                              <p style={{ margin: 0, fontSize: '12px', color: textColor, opacity: 0.85 }}>
+                                Parabéns, {simClientName.split(' ')[0]}! Sua sessão foi reservada.
+                              </p>
+                              <span style={{ display: 'inline-block', marginTop: '4px', fontSize: '10.5px', color: accentColor, fontWeight: 600 }}>
+                                (Modo de Demonstração Interativa - Não gravado no banco)
+                              </span>
+                            </div>
+
+                            {/* Card de Resumo do Voucher */}
+                            <div
+                              style={{
+                                width: '100%',
+                                padding: '14px',
+                                borderRadius: '14px',
+                                background: cardBg,
+                                border: `1px solid ${borderColor}`,
+                                textAlign: 'left',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                fontSize: '11.5px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${borderColor}50`, paddingBottom: '6px' }}>
+                                <span style={{ color: textColor, opacity: 0.7 }}>Procedimento:</span>
+                                <span style={{ fontWeight: 600, color: primaryColor }}>{simSelectedService?.name || 'Volume Brasileiro'}</span>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${borderColor}50`, paddingBottom: '6px' }}>
+                                <span style={{ color: textColor, opacity: 0.7 }}>Data e Horário:</span>
+                                <span style={{ fontWeight: 600, color: primaryColor }}>{simSelectedDate} às {simSelectedSlot}</span>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${borderColor}50`, paddingBottom: '6px' }}>
+                                <span style={{ color: textColor, opacity: 0.7 }}>Valor Estimado:</span>
+                                <span style={{ fontWeight: 700, color: accentColor }}>{simSelectedService?.price || 'R$ 150'}</span>
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: textColor, opacity: 0.7 }}>Local:</span>
+                                <span style={{ fontWeight: 600, color: primaryColor }}>{locationLabel}</span>
+                              </div>
+                            </div>
+
+                            {/* Botões de Ação */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                              <button
+                                type="button"
+                                onClick={() => alert('Simulação: No site real, este botão abre o WhatsApp direto com Lara Varisa com o lembrete pronto!')}
+                                style={{
+                                  padding: '10px',
+                                  borderRadius: '10px',
+                                  border: 'none',
+                                  background: '#25d366',
+                                  color: '#ffffff',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <MessageCircle size={15} /> Notificar Lara no WhatsApp
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={resetSimulation}
+                                style={{
+                                  padding: '9px',
+                                  borderRadius: '10px',
+                                  border: `1px solid ${borderColor}`,
+                                  background: cardBg,
+                                  color: textColor,
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Fazer Nova Simulação ↺
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* ABA: GALERIA */}
+                    {simTab === 'galeria' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                        {fallbackGalleryPhotos.map((photo) => (
+                          <div
+                            key={photo.id}
+                            style={{
+                              position: 'relative',
+                              borderRadius: '10px',
+                              overflow: 'hidden',
+                              aspectRatio: '1',
+                              background: cardBg,
+                              border: `1px solid ${borderColor}`,
+                            }}
+                          >
+                            <img
+                              src={photo.src}
+                              alt={photo.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                insetInline: 0,
+                                padding: '6px 8px',
+                                background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                              }}
+                            >
+                              {photo.title}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ABA: AVALIAÇÕES */}
+                    {simTab === 'avaliacoes' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {SAMPLE_REVIEWS.map((r, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              padding: '12px',
+                              borderRadius: '12px',
+                              background: cardBg,
+                              border: `1px solid ${borderColor}`,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: primaryColor }}>{r.name}</span>
+                              <div style={{ display: 'flex', gap: '2px', color: '#f59e0b' }}>
+                                {[...Array(r.rating)].map((_, idx) => (
+                                  <Star key={idx} size={11} fill="#f59e0b" />
+                                ))}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10.5px', color: accentColor, fontWeight: 500 }}>{r.role}</span>
+                            <p style={{ margin: 0, fontSize: '11px', color: textColor, opacity: 0.85, lineHeight: 1.35 }}>
+                              "{r.text}"
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ABA: O ESTÚDIO */}
+                    {simTab === 'estudio' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '11.5px', color: textColor }}>
+                        <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
+                          <span style={{ fontWeight: 700, color: primaryColor, display: 'block', marginBottom: '4px' }}>Localização & Acesso</span>
+                          <p style={{ margin: 0, opacity: 0.85 }}>{locationLabel}</p>
+                          <span style={{ fontSize: '10.5px', color: accentColor, display: 'block', marginTop: '4px' }}>Estacionamento privativo e recepção climatizada</span>
+                        </div>
+
+                        <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
+                          <span style={{ fontWeight: 700, color: primaryColor, display: 'block', marginBottom: '4px' }}>Horário de Funcionamento</span>
+                          <p style={{ margin: 0, opacity: 0.85 }}>Segunda a Sábado: 08:30 às 19:30</p>
+                          <p style={{ margin: '2px 0 0 0', opacity: 0.85 }}>Domingos: Fechado</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </section>
         </div>
       </div>
-
-      {/* 3. TEXTOS & MENSAGENS PERSONALIZÁVEIS */}
-      <section className="admin-panel">
-        <div className="admin-panel-head">
-          <div>
-            <p className="admin-kicker">TEXTOS DA PÁGINA</p>
-            <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-              Títulos, Subtítulo e Mensagens Institucionais
-            </h3>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-              Nome Principal no Cabeçalho
-            </label>
-            <input
-              type="text"
-              value={title}
-              disabled={disabled}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Lara Varisa"
-              style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-              Subtítulo / Especialidade
-            </label>
-            <input
-              type="text"
-              value={subtitle}
-              disabled={disabled}
-              onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="Lash Designer ︱ Especialista no Olhar"
-              style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-              Texto de Localização no Cabeçalho
-            </label>
-            <input
-              type="text"
-              value={locationLabel}
-              disabled={disabled}
-              onChange={(e) => setLocationLabel(e.target.value)}
-              placeholder="Zona Norte, Porto Alegre - RS"
-              style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-              Texto da Oferta / Selo Promo
-            </label>
-            <input
-              type="text"
-              value={promoTag}
-              disabled={disabled}
-              onChange={(e) => setPromoTag(e.target.value)}
-              placeholder="1ª visita: R$ 80 qualquer procedimento"
-              style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
-            />
-          </div>
-
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', display: 'block', marginBottom: '6px' }}>
-              Garantia de Biossegurança e Conforto (Rodapé do Agendamento)
-            </label>
-            <input
-              type="text"
-              value={guaranteeText}
-              disabled={disabled}
-              onChange={(e) => setGuaranteeText(e.target.value)}
-              placeholder="Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa."
-              style={{ width: '100%', height: '40px', borderRadius: '10px', border: '1px solid var(--admin-line)', background: 'var(--admin-input-bg)', color: 'var(--admin-ink)', padding: '0 12px', fontSize: '13px' }}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* 4. PRÉ-VISUALIZAÇÃO EM TEMPO REAL */}
-      <section className="admin-panel">
-        <div className="admin-panel-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Eye size={16} />
-            <div>
-              <p className="admin-kicker">PRÉVIA EM TEMPO REAL</p>
-              <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-                Como a cliente verá a página /agendar
-              </h3>
-            </div>
-          </div>
-        </div>
-
-        {/* CONTAINER DA PRÉVIA COM CORES DINÂMICAS */}
-        <div
-          style={{
-            borderRadius: '20px',
-            overflow: 'hidden',
-            backgroundColor: bgColor,
-            border: `1px solid ${borderColor}`,
-            color: textColor,
-            fontFamily: `${fontBody}, sans-serif`,
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {/* Header Cover */}
-          <div style={{ position: 'relative', height: '100px', width: '100%', overflow: 'hidden', background: '#111' }}>
-            <img
-              src={coverUrl}
-              alt="Capa"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }}
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
-          </div>
-
-          {/* Profile Avatar & Info */}
-          <div style={{ padding: '0 16px 16px 16px', textAlign: 'center', marginTop: '-36px', position: 'relative' }}>
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: bgColor,
-                padding: '3px',
-                margin: '0 auto',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-              }}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  background: '#161614',
-                  border: `2px solid ${borderColor}`,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <img
-                  src={avatarUrl}
-                  alt={title}
-                  style={{ width: '40px', height: '40px', objectFit: 'contain' }}
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            </div>
-
-            <h4
-              style={{
-                fontSize: '20px',
-                fontWeight: 700,
-                fontFamily: `${fontHeading}, sans-serif`,
-                textTransform: 'uppercase',
-                margin: '8px 0 2px 0',
-                color: textColor,
-              }}
-            >
-              {title}
-            </h4>
-            <p style={{ fontSize: '11px', color: textColor, opacity: 0.75, margin: 0 }}>
-              {subtitle}
-            </p>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', marginTop: '4px', color: textColor, opacity: 0.65 }}>
-              <MapPin size={10} style={{ color: accentColor }} />
-              <span>{locationLabel}</span>
-              <span>·</span>
-              <span style={{ color: '#16a34a', fontWeight: 600 }}>Agenda aberta</span>
-            </div>
-
-            {/* Simulação de Card de Procedimento com Cores do Tema */}
-            <div
-              style={{
-                marginTop: '16px',
-                backgroundColor: cardBg,
-                borderRadius: '16px',
-                border: `1px solid ${borderColor}`,
-                padding: '14px',
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    color: accentColor,
-                    background: `${accentColor}18`,
-                    padding: '2px 8px',
-                    borderRadius: '999px',
-                    display: 'inline-block',
-                    marginBottom: '4px',
-                  }}
-                >
-                  {promoTag}
-                </span>
-                <h5 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 2px 0', color: textColor }}>
-                  Efeito Molhado (Wet Look)
-                </h5>
-                <span style={{ fontSize: '11px', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Clock3 size={11} /> 2 horas · Manutenção 18-21 dias
-                </span>
-              </div>
-
-              <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div>
-                  <span style={{ fontSize: '10px', textDecoration: 'line-through', opacity: 0.5, display: 'block' }}>
-                    R$ 160
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '18px',
-                      fontWeight: 700,
-                      fontFamily: `${fontHeading}, sans-serif`,
-                      color: textColor,
-                      display: 'block',
-                      lineHeight: 1,
-                    }}
-                  >
-                    R$ 80
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: primaryColor,
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ChevronRight size={16} />
-                </div>
-              </div>
-            </div>
-
-            {/* Garantia */}
-            <div
-              style={{
-                marginTop: '10px',
-                fontSize: '10px',
-                opacity: 0.7,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-              }}
-            >
-              <ShieldCheck size={12} style={{ color: accentColor }} />
-              <span>{guaranteeText}</span>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
