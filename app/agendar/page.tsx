@@ -229,11 +229,11 @@ export default function AgendarPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          service_id: selectedService.id,
-          starts_at: selectedSlot.dateTime,
-          client_name: clientData.name.trim(),
-          client_phone: clientData.phone.trim(),
-          client_email: clientData.email.trim() || undefined,
+          serviceId: selectedService.id,
+          startsAt: selectedSlot.dateTime,
+          clientName: clientData.name.trim(),
+          clientPhone: clientData.phone.trim(),
+          clientEmail: clientData.email.trim() || undefined,
           notes: clientData.notes.trim() || undefined,
         }),
       });
@@ -253,7 +253,7 @@ export default function AgendarPage() {
       const bookingData: BookingResult = {
         id: data.data?.id || data.data?.appointment_id || 'reserva',
         service_name: data.data?.service_name || selectedService.name,
-        service_price: data.data?.service_price || data.data?.price_label || selectedService.price,
+        service_price: 'R$ 80,00 (Promoção Especial)',
         duration_label: data.data?.duration_label || selectedService.duration,
         starts_at: data.data?.starts_at || selectedSlot.dateTime,
         ends_at: data.data?.ends_at || selectedSlot.dateTime,
@@ -533,6 +533,36 @@ export default function AgendarPage() {
                       </span>
                     </div>
 
+                    {/* BANNER PROMOÇÃO ESPECIAL */}
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#1c1b18] via-[#2a2924] to-[#1c1b18] p-3.5 sm:p-4 text-white shadow-sm border border-[#383733]">
+                      <div className="flex items-center justify-between gap-3 relative z-10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-[var(--color-ember)]/20 border border-[var(--color-ember)]/40 flex items-center justify-center shrink-0">
+                            <Sparkles size={18} className="text-[var(--color-ember)]" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] font-mono">
+                                PROMOÇÃO ESPECIAL
+                              </span>
+                              <span className="text-[9px] bg-[var(--color-ember)] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                                TEMPO LIMITADO
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm font-semibold text-white/95 mt-0.5 m-0">
+                              Todos os procedimentos de cílios por apenas <strong className="text-amber-400 font-bold">R$ 80,00</strong>!
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xl sm:text-2xl font-bold text-amber-400 font-[family-name:var(--font-display)] block leading-none">
+                            R$ 80
+                          </span>
+                          <span className="text-[10px] text-white/60 uppercase font-mono block mt-0.5">qualquer modelo</span>
+                        </div>
+                      </div>
+                    </div>
+
                     {categories.length > 1 && (
                       <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
                         <button
@@ -612,9 +642,12 @@ export default function AgendarPage() {
                               </div>
 
                               <div className="text-right shrink-0 flex items-center gap-2.5">
-                                <div>
-                                  <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none">
+                                <div className="text-right">
+                                  <span className="text-[11px] text-[#9c9c94] line-through block leading-none">
                                     {service.price}
+                                  </span>
+                                  <span className="text-base sm:text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                                    R$ 80
                                   </span>
                                 </div>
 
@@ -647,9 +680,14 @@ export default function AgendarPage() {
                           <ArrowLeft size={16} />
                         </button>
                         <div className="min-w-0">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] block font-mono">
-                            Procedimento Escolhido
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] block font-mono">
+                              Procedimento Escolhido
+                            </span>
+                            <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300/60 px-1.5 py-0.2 rounded font-bold uppercase">
+                              PROMOÇÃO
+                            </span>
+                          </div>
                           <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block">
                             {selectedService.name}
                           </strong>
@@ -657,9 +695,14 @@ export default function AgendarPage() {
                       </div>
 
                       <div className="text-right shrink-0 flex items-center gap-2">
-                        <span className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)]">
-                          {selectedService.price}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-[11px] text-[#9c9c94] line-through block leading-none">
+                            {selectedService.price}
+                          </span>
+                          <span className="text-sm sm:text-base font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                            R$ 80
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -706,9 +749,9 @@ export default function AgendarPage() {
 
                     {bookingStep === 3 && selectedSlot && (
                       <div className="space-y-4 animate-in fade-in duration-200">
-                        <div className="bg-[var(--color-limestone)] p-3 rounded-xl border border-[#d6d6cf] flex items-center justify-between text-xs">
+                        <div className="bg-white p-3.5 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
-                            <CalendarDays size={15} className="text-[var(--color-ember)]" />
+                            <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
                             <span className="font-semibold text-[var(--color-obsidian)] capitalize">
                               {new Date(selectedSlot.dateTime).toLocaleDateString('pt-BR', {
                                 weekday: 'long',
@@ -751,7 +794,7 @@ export default function AgendarPage() {
                             </>
                           ) : (
                             <>
-                              <span>CONFIRMAR AGENDAMENTO</span>
+                              <span>CONFIRMAR AGENDAMENTO · R$ 80</span>
                               <ArrowUpRight size={18} />
                             </>
                           )}
@@ -794,10 +837,13 @@ export default function AgendarPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-[#8c8c84] block font-mono">
-                            Valor
+                            Valor Promocional
                           </span>
                           <span className="text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)]">
-                            {successBooking.service_price}
+                            R$ 80,00
+                          </span>
+                          <span className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold block mt-0.5">
+                            Promoção Especial
                           </span>
                         </div>
                       </div>

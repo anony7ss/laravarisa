@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent } from 'react';
-import { User, Phone } from 'lucide-react';
+import { User, Phone, ShieldCheck } from 'lucide-react';
 
 export type ClientFormData = {
   name: string;
@@ -34,22 +34,23 @@ export function ClientForm({
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4 w-full max-w-full overflow-hidden">
-      <div className="border-b border-[#cfcfc9] pb-2.5 sm:pb-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 sm:gap-3 w-full">
-        <div className="min-w-0">
-          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-[var(--color-ember)] uppercase font-mono">
-            Passo 03
-          </span>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5 truncate">
-            Seus Dados
+    <div className="space-y-3 w-full max-w-full overflow-hidden">
+      <div className="flex items-center justify-between pb-0.5 px-1 w-full">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
+            Para quem é o atendimento?
           </h2>
+          <p className="text-xs text-[#707068]">
+            Informe seus dados para receber a confirmação no WhatsApp
+          </p>
         </div>
-        <span className="text-[11px] sm:text-xs text-[#7a7a72] shrink-0 font-medium">
-          100% Seguro & Sigiloso
+        <span className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-full font-medium flex items-center gap-1 shrink-0">
+          <ShieldCheck size={13} className="text-emerald-600" />
+          Seguro
         </span>
       </div>
 
-      <div className="bg-white p-4 sm:p-7 rounded-2xl sm:rounded-[28px] border border-[#e2e2df] shadow-sm space-y-3.5 sm:space-y-4 w-full max-w-full overflow-hidden">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3.5 sm:space-y-4 w-full max-w-full overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
           {/* Name */}
           <div className="w-full min-w-0">
