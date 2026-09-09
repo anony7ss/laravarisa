@@ -89,6 +89,18 @@ body:has(.admin-root:not(.dark)),
   max-width: 1280px;
   margin-inline: auto;
 }
+@media (min-width: 1280px) {
+  .wrap {
+    width: calc(100% - 80px);
+    max-width: 1440px;
+  }
+}
+@media (min-width: 1500px) {
+  .wrap {
+    width: calc(100% - 96px);
+    max-width: 1540px;
+  }
+}
 .header {
   height: 110px;
   display: flex;
@@ -167,13 +179,14 @@ body:has(.admin-root:not(.dark)),
 }
 .hero {
   display: grid;
-  grid-template-columns: 1.06fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 44px;
   padding-block: 25px 55px;
   align-items: center;
 }
 .hero-copy {
   padding-block: 20px;
+  min-width: 0;
 }
 .eyebrow {
   font-size: 12px;
@@ -207,16 +220,16 @@ h2,
   letter-spacing: -0.03em;
 }
 .hero-title {
-  font-size: clamp(50px, 6.2vw, 84px);
+  font-size: clamp(38px, 4vw, 58px);
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   line-height: 1.06;
   margin: 0 0 24px;
 }
 .hero-title > span {
   display: block;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   padding-top: 4px;
   margin-top: -4px;
   padding-bottom: 4px;
@@ -701,6 +714,7 @@ h2 {
 }
 @media (min-width: 1500px) {
   .hero {
+    grid-template-columns: 1.35fr 1fr;
     padding-top: 40px;
     padding-bottom: 65px;
   }
@@ -710,7 +724,7 @@ h2 {
     margin-left: auto;
   }
   .hero-title {
-    font-size: 104px;
+    font-size: 64px;
   }
 }
 @media (max-width: 1100px) {
@@ -727,7 +741,7 @@ h2 {
     gap: 22px;
   }
   .hero-title {
-    font-size: 7.4vw;
+    font-size: clamp(36px, 4.4vw, 48px);
   }
   .hero-art {
     height: 510px;
@@ -813,9 +827,9 @@ h2 {
     font-size: 11px;
   }
   .hero-title {
-    font-size: clamp(54px, 12.8vw, 92px);
-    line-height: 1.06;
-    margin-bottom: 23px;
+    font-size: clamp(32px, 8.5vw, 46px);
+    line-height: 1.1;
+    margin-bottom: 20px;
   }
   .hero-description {
     font-size: 16px;
@@ -997,9 +1011,6 @@ h2 {
 .secondary-link:hover {
   text-decoration: underline;
   text-underline-offset: 5px;
-}
-.hero-title {
-  font-size: clamp(48px, 6vw, 80px);
 }
 .hero-art {
   height: 510px;
@@ -1488,14 +1499,6 @@ h2 {
   margin-top: 7px;
   color: #595952;
 }
-.hero-title {
-  font-size: clamp(48px, 6vw, 80px);
-}
-@media (min-width: 1500px) {
-  .hero-title {
-    font-size: 82px;
-  }
-}
 @media (min-width: 761px) and (max-width: 1000px) {
   .header {
     gap: 12px;
@@ -1519,7 +1522,7 @@ h2 {
     padding-inline: 14px;
   }
   .hero-title {
-    font-size: 5.6vw;
+    font-size: clamp(34px, 4.2vw, 44px);
   }
 }
 @media (max-width: 760px) {
@@ -1541,7 +1544,7 @@ h2 {
     letter-spacing: 0.2em;
   }
   .hero-title {
-    font-size: clamp(34px, 8.8vw, 56px);
+    font-size: clamp(30px, 8vw, 42px);
   }
   .footer .brand-wordmark {
     font-size: 20px;
@@ -1549,10 +1552,10 @@ h2 {
 }
 @media (max-width: 350px) {
   .brand-wordmark {
-    font-size: 24px;
+    font-size: 18px;
   }
   .hero-title {
-    font-size: 38px;
+    font-size: 28px;
   }
 }
 
