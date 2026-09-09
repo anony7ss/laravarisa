@@ -39,6 +39,7 @@ export function DateTimePicker({
   onSelectSlot,
   hideHeader = false,
   plainContainer = false,
+  variant = 'classic',
 }: {
   durationMinutes?: number;
   selectedDateStr: string;
@@ -47,6 +48,7 @@ export function DateTimePicker({
   onSelectSlot: (slot: TimeSlot) => void;
   hideHeader?: boolean;
   plainContainer?: boolean;
+  variant?: 'classic' | 'modern';
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -247,6 +249,145 @@ export function DateTimePicker({
         </div>
     </div>
   );
+
+  if (variant === 'modern') {
+    const selectedDayItem = availableDays.find((d) => d.dateStr === selectedDateStr);
+    const dayIndex = selectedDayItem ? availableDays.indexOf(selectedDayItem) : 0;
+    const selectedDayLabel =
+      dayIndex === 0
+        ? 'Hoje'
+        : dayIndex === 1
+        ? 'Amanhã'
+        : selectedDayItem
+        ? `${selectedDayItem.dayNum}/${monthsPt[selectedDayItem.date.getMonth()].slice(0, 3)}`
+        : '';
+
+    return (
+      <div className="space-y-4">
+        {/* 1. Selecione a Data */}
+        <div>
+          <label
+            className="text-xs font-bold mb-2 block"
+            style={{ color: 'var(--booking-primary, #121211)' }}
+          >
+            1. Selecione a Data
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {availableDays.slice(0, 4).map((item, idx) => {
+              const isSelected = item.dateStr === selectedDateStr;
+              const disabled = item.isSunday;
+              const labelTop =
+                idx === 0
+                  ? 'Hoje'
+                  : idx === 1
+                  ? 'Amanhã'
+                  : `${item.dayNum}/${monthsPt[item.date.getMonth()].slice(0, 3)}`;
+              const labelBottom = [
+                'Domingo',
+                'Segunda',
+                'Terça',
+                'Quarta',
+                'Quinta',
+                'Sexta',
+                'Sábado',
+              ][item.date.getDay()];
+
+              return (
+                <button
+                  key={item.dateStr}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    onSelectDate(item.dateStr);
+                  }}
+                  style={{
+                    backgroundColor: isSelected
+                      ? 'var(--booking-primary, #121211)'
+                      : 'var(--booking-card-bg, #ffffff)',
+                    color: isSelected
+                      ? '#ffffff'
+                      : disabled
+                      ? 'rgba(0,0,0,0.3)'
+                      : 'var(--booking-text, #121211)',
+                    borderColor: isSelected
+                      ? 'var(--booking-primary, #121211)'
+                      : 'var(--booking-border, #cfcfc9)',
+                  }}
+                  className={`p-2 sm:p-2.5 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                    disabled
+                      ? 'opacity-30 cursor-not-allowed'
+                      : isSelected
+                      ? 'shadow-sm'
+                      : 'hover:border-black/30'
+                  }`}
+                >
+                  <span className="text-xs font-bold block">{labelTop}</span>
+                  <span className="text-[10px] opacity-75">{labelBottom}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Horários Livres */}
+        <div>
+          <label
+            className="text-xs font-bold mb-2 block"
+            style={{ color: 'var(--booking-primary, #121211)' }}
+          >
+            2. Horários Livres {selectedDayLabel ? `(${selectedDayLabel})` : ''}
+          </label>
+
+          {loadingSlots ? (
+            <div className="py-6 flex items-center justify-center gap-2 text-xs opacity-70">
+              <Loader2 size={15} className="animate-spin text-[var(--booking-primary)]" />
+              <span>Buscando horários livres...</span>
+            </div>
+          ) : slotError ? (
+            <div className="p-3.5 text-center rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-center gap-2">
+              <AlertCircle size={15} className="text-amber-600 shrink-0" />
+              <span>{slotError}</span>
+            </div>
+          ) : slots.length === 0 ? (
+            <p className="py-4 text-center text-xs opacity-70">
+              Nenhum horário disponível para esta data.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {slots.map((slot) => {
+                const isSlotSelected = selectedSlot?.dateTime === slot.dateTime;
+                return (
+                  <button
+                    key={slot.dateTime}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      onSelectSlot(slot);
+                    }}
+                    style={{
+                      backgroundColor: isSlotSelected
+                        ? 'var(--booking-accent, #cca352)'
+                        : 'var(--booking-card-bg, #ffffff)',
+                      color: isSlotSelected ? '#ffffff' : 'var(--booking-text, #121211)',
+                      borderColor: isSlotSelected
+                        ? 'var(--booking-accent, #cca352)'
+                        : 'var(--booking-border, #cfcfc9)',
+                    }}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer border-[1.5px] ${
+                      isSlotSelected ? 'shadow-xs' : 'hover:border-black/30'
+                    }`}
+                  >
+                    {slot.time}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (plainContainer) {
     return (

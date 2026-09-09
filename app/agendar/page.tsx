@@ -11,6 +11,7 @@ import {
   MapPin,
   Clock3,
   Check,
+  CheckCircle2,
   ArrowLeft,
   ArrowRight,
   Loader2,
@@ -105,6 +106,20 @@ function AgendarContent() {
   });
 
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+
+  const selectedDateDisplay = useMemo(() => {
+    if (!selectedDateStr) return '';
+    const [y, m, d] = selectedDateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(dateObj);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Amanhã';
+    return dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }, [selectedDateStr]);
 
   const [clientData, setClientData] = useState<ClientFormData>({
     name: '',
@@ -876,81 +891,129 @@ function AgendarContent() {
                         </div>
                       ) : (
                         <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:space-y-0 md:gap-3.5">
-                          {filteredServices.map((service) => (
-                            <div
-                              key={service.id}
-                              onClick={() => handleSelectService(service)}
-                              className="rounded-2xl p-4 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-2 group active:scale-[0.99]"
-                              style={{
-                                backgroundColor: customCardBg,
-                                border: `1px solid ${customBorder}`,
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <h3
-                                    className="text-sm sm:text-base font-bold truncate"
-                                    style={{
-                                      fontFamily: 'var(--booking-font-heading)',
-                                      color: customPrimary,
-                                    }}
-                                  >
-                                    {service.name}
-                                  </h3>
-                                  <span
-                                    className="text-xs font-semibold block mt-0.5"
-                                    style={{ color: customAccent }}
-                                  >
-                                    {service.category || 'Personalizado'}
-                                  </span>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <span
-                                    className="text-base sm:text-lg font-bold"
-                                    style={{
-                                      fontFamily: 'var(--booking-font-heading)',
-                                      color: customPrimary,
-                                    }}
-                                  >
-                                    {service.price}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {service.description && (
-                                <p
-                                  className="text-xs line-clamp-2 leading-relaxed"
-                                  style={{ color: customText, opacity: 0.75 }}
-                                >
-                                  {service.description}
-                                </p>
-                              )}
-
+                          {filteredServices.map((service) => {
+                            const isSelected = selectedService?.id === service.id;
+                            return (
                               <div
-                                className="flex items-center justify-between pt-2 border-t mt-1"
-                                style={{ borderColor: `${customBorder}60` }}
+                                key={service.id}
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  setSelectedService(service);
+                                }}
+                                className="rounded-2xl p-4 transition-all cursor-pointer flex flex-col gap-2 group active:scale-[0.99]"
+                                style={{
+                                  backgroundColor: customCardBg,
+                                  border: `2px solid ${isSelected ? customAccent : customBorder}`,
+                                  boxShadow: isSelected ? `0 4px 16px ${customAccent}35` : 'none',
+                                }}
                               >
-                                <div
-                                  className="flex items-center gap-1.5 text-xs font-medium"
-                                  style={{ color: customText, opacity: 0.65 }}
-                                >
-                                  <Clock3 size={13} className="shrink-0" />
-                                  <span>{service.duration}</span>
-                                  {service.maintenance && <span>· {service.maintenance}</span>}
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <h3
+                                      className="text-sm sm:text-base font-bold truncate"
+                                      style={{
+                                        fontFamily: 'var(--booking-font-heading)',
+                                        color: customPrimary,
+                                      }}
+                                    >
+                                      {service.name}
+                                    </h3>
+                                    <span
+                                      className="text-xs font-semibold block mt-0.5"
+                                      style={{ color: customAccent }}
+                                    >
+                                      {service.category || 'Personalizado'}
+                                    </span>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span
+                                      className="text-base sm:text-lg font-bold"
+                                      style={{
+                                        fontFamily: 'var(--booking-font-heading)',
+                                        color: customPrimary,
+                                      }}
+                                    >
+                                      {service.price}
+                                    </span>
+                                  </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  className="px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
-                                  style={{
-                                    backgroundColor: customPrimary,
-                                    color: '#ffffff',
-                                  }}
+
+                                {service.description && (
+                                  <p
+                                    className="text-xs line-clamp-2 leading-relaxed"
+                                    style={{ color: customText, opacity: 0.75 }}
+                                  >
+                                    {service.description}
+                                  </p>
+                                )}
+
+                                <div
+                                  className="flex items-center justify-between pt-2 border-t mt-1"
+                                  style={{ borderColor: `${customBorder}60` }}
                                 >
-                                  Agendar
-                                </button>
+                                  <div
+                                    className="flex items-center gap-1.5 text-xs font-medium"
+                                    style={{ color: customText, opacity: 0.65 }}
+                                  >
+                                    <Clock3 size={13} className="shrink-0" />
+                                    <span>{service.duration}</span>
+                                    {service.maintenance && <span>· {service.maintenance}</span>}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      triggerHaptic('light');
+                                      setSelectedService(service);
+                                      setBookingStep(2);
+                                      window.scrollTo({ top: 180, behavior: 'smooth' });
+                                    }}
+                                    className="px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer"
+                                    style={{
+                                      backgroundColor: isSelected ? customAccent : customPrimary,
+                                      color: '#ffffff',
+                                    }}
+                                  >
+                                    {isSelected ? 'Selecionado' : 'Agendar'}
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Barra Flutuante de Seleção no Rodapé (Exatamente como no preview) */}
+                      {selectedService && (
+                        <div
+                          className="sticky bottom-4 z-20 p-3 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-2xl mt-3"
+                          style={{
+                            backgroundColor: customPrimary,
+                            color: '#ffffff',
+                          }}
+                        >
+                          <div className="min-w-0 pr-3">
+                            <span className="text-xs sm:text-sm font-semibold block truncate">
+                              {selectedService.name}
+                            </span>
+                            <span className="text-[11px] opacity-85">
+                              {selectedService.price} • {selectedService.duration}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setBookingStep(2);
+                              window.scrollTo({ top: 180, behavior: 'smooth' });
+                            }}
+                            className="px-4 py-2 rounded-xl text-white font-bold text-xs shrink-0 flex items-center gap-1.5 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: customAccent }}
+                          >
+                            <span>Continuar</span>
+                            <ArrowRight size={13} />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -1109,9 +1172,234 @@ function AgendarContent() {
                 )}
 
                 {(bookingStep === 2 || bookingStep === 3) && selectedService && (
-                  <div>
-                    {/* MOBILE VIEW (< lg): FLUXO SEQUENCIAL 100% INTACTO */}
-                    <div className="lg:hidden space-y-4">
+                  isModernApp ? (
+                    <div className="max-w-xl mx-auto space-y-4 animate-in fade-in duration-200">
+                      {/* PASSO 2: ESCOLHA DE DATA E HORÁRIO */}
+                      {bookingStep === 2 && (
+                        <div className="space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(1);
+                              }}
+                              className="text-xs inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 cursor-pointer"
+                              style={{ color: customText }}
+                            >
+                              <ArrowLeft size={14} />
+                              <span>Voltar para Serviços</span>
+                            </button>
+                            <span className="text-xs font-bold" style={{ color: customAccent }}>
+                              Passo 2 de 3
+                            </span>
+                          </div>
+
+                          {/* Resumo do Procedimento Selecionado */}
+                          <div
+                            className="p-3 sm:p-3.5 rounded-xl flex items-center justify-between shadow-xs"
+                            style={{
+                              backgroundColor: customCardBg,
+                              border: `1px solid ${customBorder}`,
+                            }}
+                          >
+                            <div>
+                              <span
+                                className="text-xs sm:text-sm font-bold block"
+                                style={{
+                                  color: customPrimary,
+                                  fontFamily: 'var(--booking-font-heading)',
+                                }}
+                              >
+                                {selectedService.name}
+                              </span>
+                              <span className="text-[11px] block mt-0.5 opacity-80" style={{ color: customText }}>
+                                Duração: {selectedService.duration}
+                              </span>
+                            </div>
+                            <span
+                              className="text-base sm:text-lg font-bold"
+                              style={{
+                                fontFamily: 'var(--booking-font-heading)',
+                                color: customPrimary,
+                              }}
+                            >
+                              {selectedService.price}
+                            </span>
+                          </div>
+
+                          {/* Seletor Moderno de Data e Horário */}
+                          <DateTimePicker
+                            selectedDateStr={selectedDateStr}
+                            onSelectDate={setSelectedDateStr}
+                            selectedSlot={selectedSlot}
+                            onSelectSlot={(slot) => setSelectedSlot(slot)}
+                            durationMinutes={selectedService.durationMinutes || 120}
+                            variant="modern"
+                          />
+
+                          {selectedSlot && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(3);
+                                window.scrollTo({ top: 180, behavior: 'smooth' });
+                              }}
+                              className="w-full py-3.5 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer hover:opacity-95 transition-all mt-3 active:scale-[0.99]"
+                              style={{ backgroundColor: customPrimary }}
+                            >
+                              <span>Continuar para Seus Dados</span>
+                              <ArrowRight size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* PASSO 3: FORMULÁRIO DO CLIENTE */}
+                      {bookingStep === 3 && (
+                        <div className="space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(2);
+                              }}
+                              className="text-xs inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 cursor-pointer"
+                              style={{ color: customText }}
+                            >
+                              <ArrowLeft size={14} />
+                              <span>Voltar para Horários</span>
+                            </button>
+                            <span className="text-xs font-bold" style={{ color: customAccent }}>
+                              Passo 3 de 3
+                            </span>
+                          </div>
+
+                          {/* Resumo do Agendamento */}
+                          <div
+                            className="p-3 sm:p-3.5 rounded-xl flex items-center justify-between text-xs shadow-xs"
+                            style={{
+                              backgroundColor: customCardBg,
+                              border: `1px solid ${customBorder}`,
+                              color: customText,
+                            }}
+                          >
+                            <span className="font-bold" style={{ color: customPrimary }}>
+                              {selectedService.name}
+                            </span>
+                            <span className="font-semibold" style={{ color: customAccent }}>
+                              {selectedSlot ? `${selectedDateDisplay} às ${selectedSlot.time}` : ''}
+                            </span>
+                          </div>
+
+                          {/* Campos do Formulário */}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                                Seu Nome Completo *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Ex: Maria Eduarda Silva"
+                                value={clientData.name}
+                                onChange={(e) => setClientData({ ...clientData, name: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm transition-colors outline-none focus:ring-2"
+                                style={{
+                                  backgroundColor: customCardBg,
+                                  borderColor: customBorder,
+                                  color: customText,
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                                WhatsApp com DDD *
+                              </label>
+                              <input
+                                type="tel"
+                                required
+                                placeholder="(51) 99999-9999"
+                                value={clientData.phone}
+                                onChange={(e) => {
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length > 11) val = val.slice(0, 11);
+                                  if (val.length > 6) {
+                                    val = `(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`;
+                                  } else if (val.length > 2) {
+                                    val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
+                                  } else if (val.length > 0) {
+                                    val = `(${val}`;
+                                  }
+                                  setClientData({ ...clientData, phone: val });
+                                }}
+                                className="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm transition-colors outline-none focus:ring-2"
+                                style={{
+                                  backgroundColor: customCardBg,
+                                  borderColor: customBorder,
+                                  color: customText,
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                                Observações (Opcional)
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Alergias, preferências de curvatura..."
+                                value={clientData.notes}
+                                onChange={(e) => setClientData({ ...clientData, notes: e.target.value })}
+                                className="w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm transition-colors outline-none focus:ring-2"
+                                style={{
+                                  backgroundColor: customCardBg,
+                                  borderColor: customBorder,
+                                  color: customText,
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {submitError && (
+                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                              <AlertCircle size={15} className="shrink-0 text-rose-500" />
+                              <span>{submitError}</span>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            disabled={submitting || !clientData.name.trim() || clientData.phone.replace(/\D/g, '').length < 10}
+                            onClick={handleSubmitBooking}
+                            className="w-full py-3.5 px-5 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2 active:scale-[0.99]"
+                            style={{
+                              backgroundColor: customAccent,
+                              boxShadow: `0 4px 14px ${customAccent}40`,
+                            }}
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 size={16} className="animate-spin text-white" />
+                                <span>Confirmando Agendamento...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Confirmar Agendamento</span>
+                                <ArrowRight size={14} />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {/* MOBILE VIEW (< lg): FLUXO SEQUENCIAL 100% INTACTO */}
+                      <div className="lg:hidden space-y-4">
                       <div className="bg-white px-4 py-3 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <button
@@ -1424,10 +1712,134 @@ function AgendarContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                )
+              )}
 
                 {bookingStep === 4 && successBooking && (
-                  <div className="text-center space-y-4 lg:space-y-6 animate-in zoom-in-95 duration-200 py-2 max-w-xl lg:max-w-2xl mx-auto">
+                  isModernApp ? (
+                    <div className="text-center space-y-4 animate-in zoom-in-95 duration-200 py-4 max-w-md mx-auto">
+                      <div
+                        className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-white shadow-lg"
+                        style={{
+                          backgroundColor: '#10b981',
+                          boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+                        }}
+                      >
+                        <CheckCircle2 size={32} strokeWidth={2.5} />
+                      </div>
+
+                      <div>
+                        <h2
+                          className="text-xl sm:text-2xl font-bold tracking-tight"
+                          style={{
+                            fontFamily: 'var(--booking-font-heading)',
+                            color: customPrimary,
+                          }}
+                        >
+                          Agendamento Confirmado!
+                        </h2>
+                        <p className="text-xs sm:text-sm mt-1" style={{ color: customText, opacity: 0.85 }}>
+                          Parabéns, {(successBooking.client_name || clientData.name || '').trim().split(' ')[0]}! Sua sessão foi reservada com sucesso.
+                        </p>
+                      </div>
+
+                      {/* Card de Resumo do Voucher */}
+                      <div
+                        className="w-full p-4 rounded-2xl text-left flex flex-col gap-2.5 text-xs shadow-xs"
+                        style={{
+                          backgroundColor: customCardBg,
+                          border: `1px solid ${customBorder}`,
+                          color: customText,
+                        }}
+                      >
+                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
+                          <span className="opacity-75">Procedimento:</span>
+                          <span className="font-bold" style={{ color: customPrimary }}>
+                            {successBooking.service_name}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
+                          <span className="opacity-75">Data e Horário:</span>
+                          <span className="font-bold capitalize" style={{ color: customPrimary }}>
+                            {new Date(successBooking.starts_at).toLocaleDateString('pt-BR', {
+                              weekday: 'short',
+                              day: '2-digit',
+                              month: 'short',
+                            })} às {new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
+                          <span className="opacity-75">Valor:</span>
+                          <span className="font-bold" style={{ color: customAccent }}>
+                            {selectedService?.price || 'R$ 80,00'}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
+                          <span className="opacity-75">Local:</span>
+                          <span className="font-semibold" style={{ color: customPrimary }}>
+                            {locationText}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-0.5">
+                          <span className="opacity-75">Código de Reserva:</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold" style={{ color: customPrimary }}>
+                              #{((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`);
+                                setCopiedCode(true);
+                                setTimeout(() => setCopiedCode(false), 2000);
+                              }}
+                              className="p-1 rounded hover:bg-black/5 transition-colors cursor-pointer"
+                              title="Copiar código"
+                            >
+                              {copiedCode ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botões de Ação */}
+                      <div className="flex flex-col gap-2.5 pt-1">
+                        <a
+                          href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} no dia ${new Date(successBooking.starts_at).toLocaleDateString('pt-BR')} às ${new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} (Reserva #${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}).`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-opacity hover:opacity-90 cursor-pointer"
+                          style={{ backgroundColor: '#25d366' }}
+                        >
+                          <MessageCircle size={16} />
+                          <span>Notificar Lara no WhatsApp</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setBookingStep(1);
+                            setSelectedSlot(null);
+                            setSuccessBooking(null);
+                          }}
+                          className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs border transition-colors cursor-pointer hover:opacity-90"
+                          style={{
+                            backgroundColor: customCardBg,
+                            borderColor: customBorder,
+                            color: customText,
+                          }}
+                        >
+                          Fazer Novo Agendamento ↺
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-4 lg:space-y-6 animate-in zoom-in-95 duration-200 py-2 max-w-xl lg:max-w-2xl mx-auto">
                     <div className="space-y-2">
                       <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shadow-sm">
                         <Check size={26} strokeWidth={2.5} />
@@ -1587,7 +1999,8 @@ function AgendarContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                )
+              )}
               </>
             )}
           </div>
@@ -1595,7 +2008,41 @@ function AgendarContent() {
 
         {/* TAB 2: GALERIA */}
         {activeTab === 'galeria' && (
-          <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
+          isModernApp ? (
+            <div className="max-w-xl lg:max-w-4xl mx-auto space-y-4 animate-in fade-in duration-200">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
+                {(gallery.length > 0 ? gallery : [
+                  { id: '1', title: 'Volume Brasileiro 5D', src: '/gallery/volume-brasileiro.webp', alt: 'Volume Brasileiro' },
+                  { id: '2', title: 'Fox Eyes Marcante', src: '/gallery/fox-eyes.webp', alt: 'Fox Eyes' },
+                  { id: '3', title: 'Efeito Molhado Natural', src: '/gallery/efeito-molhado.webp', alt: 'Efeito Molhado' },
+                  { id: '4', title: 'Mega Volume Preto Intenso', src: '/gallery/mega-volume.webp', alt: 'Mega Volume' },
+                ]).map((photo, index) => (
+                  <div
+                    key={photo.id || index}
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setLightboxIndex(index);
+                    }}
+                    className="relative aspect-square rounded-xl overflow-hidden shadow-xs cursor-pointer border transition-transform active:scale-[0.98]"
+                    style={{
+                      backgroundColor: customCardBg,
+                      borderColor: customBorder,
+                    }}
+                  >
+                    <img
+                      src={photo.src}
+                      alt={photo.alt || photo.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 p-2 sm:p-2.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white text-[11px] sm:text-xs font-semibold line-clamp-1">
+                      {photo.title}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
             <div className="px-1">
               <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-[var(--color-obsidian)] tracking-tight">
                 Resultados Reais
@@ -1644,11 +2091,53 @@ function AgendarContent() {
               </button>
             </div>
           </div>
-        )}
+        )
+      )}
 
         {/* TAB 3: AVALIAÇÕES */}
         {activeTab === 'avaliacoes' && (
-          <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
+          isModernApp ? (
+            <div className="max-w-xl lg:max-w-2xl mx-auto space-y-2.5 animate-in fade-in duration-200">
+              {(testimonials.length > 0 ? testimonials : [
+                { id: '1', client_name: 'Mariana Souza', client_role: 'Cliente VIP · Volume Brasileiro', rating: 5, content: 'O isolamento dos fios é perfeito, não pesou nada nos meus olhos. Já virei cliente fiel!' },
+                { id: '2', client_name: 'Camila Becker', client_role: 'Atendimento no Estúdio · Fox Eyes', rating: 5, content: 'O estúdio é super acolhedor e limpo. A durabilidade da extensão passou de 3 semanas impecável.' },
+                { id: '3', client_name: 'Fernanda Lima', client_role: 'Cliente Semanal · Lash Lifting', rating: 5, content: 'Atendimento impecável da Lara, super atenciosa aos detalhes e ao formato do meu olho.' },
+              ]).map((t, idx) => (
+                <div
+                  key={t.id || idx}
+                  className="p-3.5 rounded-xl border flex flex-col gap-1.5 shadow-xs"
+                  style={{
+                    backgroundColor: customCardBg,
+                    borderColor: customBorder,
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <strong
+                      className="text-xs sm:text-sm font-bold truncate"
+                      style={{ color: customPrimary }}
+                    >
+                      {t.client_name}
+                    </strong>
+                    <div className="flex gap-0.5 text-amber-500 shrink-0">
+                      {[...Array(t.rating || 5)].map((_, i) => (
+                        <Star key={i} size={11} fill="currentColor" />
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-[10.5px] font-medium" style={{ color: customAccent }}>
+                    {t.client_role || 'Cliente'}
+                  </span>
+                  <p
+                    className="text-xs leading-relaxed m-0"
+                    style={{ color: customText, opacity: 0.85 }}
+                  >
+                    "{t.content}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
             <div className="bg-white p-5 lg:p-7 rounded-3xl border border-[#d6d6cf] shadow-sm text-center space-y-2 max-w-xl lg:max-w-2xl mx-auto">
               <span className="text-3xl sm:text-4xl lg:text-5xl font-[family-name:var(--font-display)] text-[var(--color-obsidian)] font-bold">
                 5.0
@@ -1713,11 +2202,61 @@ function AgendarContent() {
               )}
             </div>
           </div>
-        )}
+        )
+      )}
 
         {/* TAB 4: ESTÚDIO & LOCALIZAÇÃO */}
         {activeTab === 'estudio' && (
-          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 items-start animate-in fade-in duration-200">
+          isModernApp ? (
+            <div className="max-w-xl lg:max-w-2xl mx-auto space-y-3 text-xs animate-in fade-in duration-200" style={{ color: customText }}>
+              {/* Localização & Acesso */}
+              <div
+                className="p-3.5 sm:p-4 rounded-xl border shadow-xs space-y-1"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                }}
+              >
+                <span className="font-bold text-xs sm:text-sm block" style={{ color: customPrimary }}>
+                  Localização & Acesso
+                </span>
+                <p className="m-0 opacity-85 leading-relaxed">{locationText}</p>
+                <span className="text-[10.5px] font-medium block pt-1" style={{ color: customAccent }}>
+                  Estacionamento privativo e recepção climatizada
+                </span>
+              </div>
+
+              {/* Horário de Funcionamento */}
+              <div
+                className="p-3.5 sm:p-4 rounded-xl border shadow-xs space-y-1"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                }}
+              >
+                <span className="font-bold text-xs sm:text-sm block" style={{ color: customPrimary }}>
+                  Horário de Funcionamento
+                </span>
+                <p className="m-0 opacity-85">Segunda a Sábado: 08:30 às 19:30</p>
+                <p className="m-0 opacity-85">Domingos: Fechado</p>
+              </div>
+
+              {/* Botão de Contato WhatsApp */}
+              <div className="pt-2">
+                <a
+                  href={whatsappUrl('Olá, Lara! Tenho uma dúvida sobre o estúdio e agendamentos.')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: customPrimary }}
+                >
+                  <MessageCircle size={15} style={{ color: customAccent }} />
+                  <span>Dúvidas? Falar com a Lara no WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 items-start animate-in fade-in duration-200">
             {/* Coluna Esquerda: Horários e Canais de Contato */}
             <div className="lg:col-span-5 space-y-4">
               <div className="bg-white p-5 lg:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
@@ -1856,7 +2395,8 @@ function AgendarContent() {
               </div>
             </div>
           </div>
-        )}
+        )
+      )}
       </main>
 
       <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
