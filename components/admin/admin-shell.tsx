@@ -67,32 +67,41 @@ function playAppointmentChime() {
   }
 }
 
+type NavItem = readonly [string, string, any];
+
 const links = [
   ['/admin/dashboard', 'Visão geral', LayoutDashboard],
   ['/admin/dashboard/agenda', 'Agenda', CalendarDays],
-  ['/admin/dashboard/leads', 'Leads', MessageSquareText],
   ['/admin/dashboard/clientes', 'Clientes', ContactRound],
-  ['/admin/dashboard/financas', 'Finanças', DollarSign],
+  ['/admin/dashboard/leads', 'Leads', MessageSquareText],
   ['/admin/dashboard/servicos', 'Serviços', Scissors],
+  ['/admin/dashboard/financas', 'Finanças', DollarSign],
+  ['/admin/dashboard/whatsapp', 'WhatsApp Bot', Bot],
   ['/admin/dashboard/galeria', 'Galeria', Image],
   ['/admin/dashboard/depoimentos', 'Depoimentos', HeartHandshake],
-  ['/admin/dashboard/whatsapp', 'WhatsApp Bot', Bot],
   ['/admin/dashboard/configuracoes', 'Configurações', Settings],
   ['/admin/dashboard/conta', 'Conta & Equipe', UserCog],
 ] as const;
 
-const mobileLinks = links.slice(0, 4);
+const navGroups: { items: readonly NavItem[] }[] = [
+  { items: [links[0], links[1], links[2], links[3]] },
+  { items: [links[4], links[5], links[6]] },
+  { items: [links[7], links[8]] },
+  { items: [links[9], links[10]] },
+];
+
+const mobileLinks: readonly NavItem[] = [links[0], links[1], links[2], links[3]];
 
 const pageNames: Record<string, string> = {
   '/admin/dashboard': 'Visão geral',
   '/admin/dashboard/agenda': 'Agenda',
-  '/admin/dashboard/leads': 'Leads',
   '/admin/dashboard/clientes': 'Clientes',
-  '/admin/dashboard/financas': 'Finanças & Fluxo de Caixa',
+  '/admin/dashboard/leads': 'Leads',
   '/admin/dashboard/servicos': 'Serviços',
+  '/admin/dashboard/financas': 'Finanças & Fluxo de Caixa',
+  '/admin/dashboard/whatsapp': 'WhatsApp Bot',
   '/admin/dashboard/galeria': 'Galeria',
   '/admin/dashboard/depoimentos': 'Depoimentos',
-  '/admin/dashboard/whatsapp': 'WhatsApp Bot',
   '/admin/dashboard/configuracoes': 'Configurações',
   '/admin/dashboard/conta': 'Conta & Equipe',
 };
@@ -275,25 +284,32 @@ export function AdminShell({
 
             {/* Navigation links */}
             <div className="flex flex-col gap-1">
-              {links.map(([href, label, Icon]) => (
-                <SidebarLink
-                  key={href}
-                  link={{
-                    label,
-                    href,
-                    icon: <Icon size={18} className="flex-shrink-0" />,
-                    active: pathname === href,
-                    badge:
-                      href === '/admin/dashboard/agenda' && pendingCount > 0 ? (
-                        <span
-                          className="px-1.5 py-0.5 rounded-full bg-[#fc5000] text-white text-[10px] font-bold leading-none animate-pulse shadow-sm"
-                          title={`${pendingCount} aguardando`}
-                        >
-                          {pendingCount}
-                        </span>
-                      ) : undefined,
-                  }}
-                />
+              {navGroups.map((group, groupIdx) => (
+                <div key={groupIdx} className="flex flex-col gap-1">
+                  {groupIdx > 0 && (
+                    <div className="my-1.5 border-t border-black/[0.06] dark:border-white/[0.08]" />
+                  )}
+                  {group.items.map(([href, label, Icon]) => (
+                    <SidebarLink
+                      key={href}
+                      link={{
+                        label,
+                        href,
+                        icon: <Icon size={18} className="flex-shrink-0" />,
+                        active: pathname === href,
+                        badge:
+                          href === '/admin/dashboard/agenda' && pendingCount > 0 ? (
+                            <span
+                              className="px-1.5 py-0.5 rounded-full bg-[#fc5000] text-white text-[10px] font-bold leading-none animate-pulse shadow-sm"
+                              title={`${pendingCount} aguardando`}
+                            >
+                              {pendingCount}
+                            </span>
+                          ) : undefined,
+                      }}
+                    />
+                  ))}
+                </div>
               ))}
 
               <div className="my-2 border-t border-black/[0.08] dark:border-white/10" />

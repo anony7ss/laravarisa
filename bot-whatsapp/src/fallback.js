@@ -18,6 +18,7 @@ import {
 import { getState, setState, clearState } from './memory.js';
 import { verificarSegurancaEntrada } from './guardrails.js';
 import { notificarLaraAtendimentoHumano } from './notifications.js';
+import { obterConfiguracoesEmCache } from './cache.js';
 
 /**
  * Remove acentos e normaliza para caixa baixa para matching tolerante a variações
@@ -579,6 +580,39 @@ export async function processarFallback(texto = '', context = {}) {
       }
 
       return `Qual horário fica melhor pra você? 💕`;
+    }
+  }
+
+  // 1.1 Checa se o estúdio está com agendamentos pausados
+  let configuracoesEstudio = null;
+  try {
+    configuracoesEstudio = await obterConfiguracoesEmCache();
+  } catch (errCfg) {
+    console.warn('[fallback] Aviso ao obter configurações:', errCfg?.message || errCfg);
+  }
+  const agendamentoPausado = configuracoesEstudio && configuracoesEstudio.booking_enabled === false;
+  const mensagemPausado =
+    configuracoesEstudio?.booking_closed_message ||
+    'Oi! No momento os agendamentos online estão temporariamente pausados. Deixe seu recado aqui que a Lara te responderá para verificar encaixes assim que possível 💕';
+
+  // Se agendamentos estiverem pausados e a cliente tentar agendar ou avançar no agendamento
+  if (agendamentoPausado) {
+    const ehTentativaAgendamento =
+      norm.includes('agendar') ||
+      norm.includes('marcar') ||
+      norm.includes('reserva') ||
+      norm.includes('reservar') ||
+      norm.includes('horario') ||
+      norm.includes('horarios') ||
+      norm === '1' ||
+      norm === 'opcao 1';
+
+    if (
+      ehTentativaAgendamento ||
+      (estadoAtual && typeof estadoAtual.step === 'string' && estadoAtual.step.startsWith('AGUARDANDO'))
+    ) {
+      if (estadoAtual) clearState(jid);
+      return mensagemPausado;
     }
   }
 

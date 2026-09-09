@@ -327,21 +327,73 @@ export default function AgendarPage() {
 
       {/* Main Multi-Step Wizard */}
       <main
-        className={`flex-1 max-w-4xl mx-auto w-full max-w-full px-3 sm:px-6 py-3.5 sm:py-8 md:py-10 space-y-4 sm:space-y-6 overflow-x-hidden ${step < 3 ? 'pb-24 sm:pb-8' : ''}`}
+        className={`flex-1 max-w-4xl mx-auto w-full max-w-full px-3 sm:px-6 py-3.5 sm:py-8 md:py-10 space-y-4 sm:space-y-6 overflow-x-hidden ${step < 3 && siteSettings?.booking_enabled !== false ? 'pb-24 sm:pb-8' : ''}`}
       >
-        {siteSettings?.booking_enabled === false && (
-          <div className="bg-[#fff4e5] border border-[#ffcc99] text-[#8a4b08] p-4 rounded-2xl text-xs flex items-center gap-3">
-            <AlertCircle size={18} className="shrink-0" />
-            <p>
-              {siteSettings.booking_closed_message ||
-                'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'}
-            </p>
-          </div>
-        )}
+        {siteSettings?.booking_enabled === false && step !== 4 ? (
+          <div className="max-w-xl mx-auto my-4 sm:my-8 text-center p-6 sm:p-10 rounded-3xl bg-white border border-[#e2e2df] shadow-sm space-y-6 animate-in fade-in duration-200">
+            <div className="w-16 h-16 mx-auto rounded-full bg-[#fef3c7] text-[#d97706] flex items-center justify-center shadow-inner">
+              <Clock3 size={32} />
+            </div>
 
-        {/* Progress Bar (Visible on Steps 1, 2, 3) */}
-        {step < 4 && (
-          <div className="space-y-2.5 sm:space-y-3">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-[#fee2e2] text-[#dc2626] border border-[#fca5a5]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#dc2626]" />
+                Estúdio Fechado / Pausado
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
+                Agendamentos Pausados
+              </h2>
+              <p className="text-sm sm:text-base text-[#595952] leading-relaxed max-w-md mx-auto">
+                {siteSettings.booking_closed_message ||
+                  'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={whatsappUrl(
+                  'Olá, Lara! Vi no site que os agendamentos online estão temporariamente fechados. Gostaria de saber sobre encaixes ou lista de espera.',
+                  siteSettings?.whatsapp_phone
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-sm tracking-wide shadow-md transition-all active:scale-[0.98]"
+              >
+                <MessageCircle size={18} />
+                <span>Falar no WhatsApp para Encaixes</span>
+              </a>
+
+              <Link
+                href="/"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] font-semibold text-sm border border-[#cfcfc9] hover:bg-[#e4e4dd] transition-colors"
+              >
+                <span>Voltar ao início</span>
+              </Link>
+            </div>
+
+            <div className="pt-6 border-t border-[#f0f0ed]">
+              <p className="text-xs font-semibold text-[#8c8c84] mb-3 uppercase tracking-wider">
+                Procedimentos do estúdio (apenas consulta)
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left opacity-75 select-none">
+                {services.map((svc) => (
+                  <div
+                    key={svc.id}
+                    className="p-3 rounded-xl border border-[#e5e5e0] bg-[#fafaf8] flex items-center justify-between text-xs cursor-not-allowed"
+                    title="Agendamento online indisponível no momento"
+                  >
+                    <span className="font-medium text-[var(--color-obsidian)]">{svc.name}</span>
+                    <span className="font-bold text-[var(--color-ember)]">{svc.price}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Progress Bar (Visible on Steps 1, 2, 3) */}
+            {step < 4 && (
+              <div className="space-y-2.5 sm:space-y-3">
             {/* Step indicators */}
             <div className="flex items-center justify-between text-[11px] sm:text-xs">
               <button
@@ -592,8 +644,10 @@ export default function AgendarPage() {
             </div>
           </div>
         )}
+      </>
+    )}
 
-        {/* STEP 4: Tela de Confirmação Clean & Minimalista */}
+    {/* STEP 4: Tela de Confirmação Clean & Minimalista */}
         {step === 4 && successBooking && (
           <div className="max-w-md mx-auto text-center space-y-5 animate-in zoom-in-95 duration-200">
             {/* Header: Ícone sutil e mensagem direta */}
@@ -769,7 +823,7 @@ export default function AgendarPage() {
       {/* Footer */}
       <footer
         className={`border-t border-[#cfcfc9] pt-8 px-6 text-center text-xs text-[#595952] bg-[var(--color-pumice)] ${
-          step <= 2 ? 'pb-28 sm:pb-8' : 'pb-8'
+          step <= 2 && siteSettings?.booking_enabled !== false ? 'pb-28 sm:pb-8' : 'pb-8'
         }`}
       >
         <div className="max-w-4xl mx-auto space-y-1">

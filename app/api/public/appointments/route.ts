@@ -77,6 +77,21 @@ export async function POST(request: Request) {
     return jsonError('Sistema de agendamento em manutenção temporária.', 503);
   }
 
+  // 0. Verifica se o estúdio está recebendo agendamentos online
+  const { data: siteSettings } = await supabase
+    .from('site_settings')
+    .select('booking_enabled, booking_closed_message')
+    .eq('id', 'global')
+    .maybeSingle();
+
+  if (siteSettings && siteSettings.booking_enabled === false) {
+    return jsonError(
+      siteSettings.booking_closed_message ||
+        'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.',
+      403,
+    );
+  }
+
   // Calculate fingerprint for database-level rate limiting
   const fingerprint =
     leadFingerprint(request, clientPhone || clientEmail || 'guest') ||

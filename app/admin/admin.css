@@ -4604,6 +4604,174 @@ html.dark .admin-calendar-subview-toggle button.active {
   margin: 0;
 }
 
+/* CLEAN ACTIVE 2FA CARD */
+.admin-2fa-active-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: 0.85rem;
+  background: var(--admin-soft);
+  border: 1px solid var(--admin-line);
+}
+
+.admin-2fa-active-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.admin-2fa-active-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.65rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-2fa-active-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.admin-2fa-active-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-2fa-active-badge-row h3 {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--admin-ink);
+  margin: 0;
+}
+
+.admin-2fa-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.admin-2fa-dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.admin-2fa-active-info p {
+  font-size: 0.85rem;
+  color: var(--admin-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.admin-2fa-active-info strong {
+  color: var(--admin-ink);
+  font-weight: 600;
+}
+
+.admin-2fa-active-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--admin-line);
+  flex-wrap: wrap;
+}
+
+.admin-2fa-device-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+}
+
+.admin-btn-subtle-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--admin-muted);
+  background: var(--admin-card);
+  border: 1px solid var(--admin-line);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-btn-subtle-danger:hover:not(:disabled) {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.admin-btn-clean-danger-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 1rem;
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-btn-clean-danger-solid:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.admin-btn-clean-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--admin-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-btn-clean-ghost:hover {
+  color: var(--admin-ink);
+}
+
+.admin-2fa-confirm-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-2fa-confirm-inline span {
+  font-size: 0.82rem;
+  color: var(--admin-muted);
+}
+
 .admin-2fa-step-card {
   display: flex;
   flex-direction: column;

@@ -148,6 +148,18 @@ export async function consultarHorarios(data, duracaoMinutos = 120) {
  */
 export async function criarAgendamento(params = {}) {
   try {
+    // Bloqueio rigoroso se o estúdio estiver com agendamentos pausados
+    const globalSettings = await obterConfiguracoesEmCache();
+    if (globalSettings && globalSettings.booking_enabled === false) {
+      return {
+        ok: false,
+        fechado: true,
+        erro:
+          globalSettings.booking_closed_message ||
+          'No momento os novos agendamentos estão temporariamente pausados. Fale com a Lara diretamente para verificar possíveis encaixes!',
+      };
+    }
+
     const serviceId = params.p_service_id || params.service_id || params.serviceId;
     const startsAt = params.p_starts_at || params.starts_at || params.startsAt;
     const clientName = params.p_client_name || params.client_name || params.clientName;

@@ -168,6 +168,18 @@ export async function getSystemPrompt(pushName = 'Cliente', telefone = '') {
   const temNomeVisivel = Boolean(nomeReal);
 
   const servicos = await obterServicosEmCache();
+  const configuracoes = await obterConfiguracoesEmCache();
+  const avisoEstudioFechado =
+    configuracoes && configuracoes.booking_enabled === false
+      ? `\n🚨 ATENÇÃO MÁXIMA - AGENDAMENTOS BLOQUEADOS:
+O estúdio está com os agendamentos online e automáticos TEMPORARIAMENTE PAUSADOS/FECHADOS.
+Mensagem oficial da Lara: "${configuracoes.booking_closed_message || 'No momento os agendamentos online estão temporariamente pausados. Fale com a Lara para verificar encaixes!'}"
+REGRAS INQUEBRÁVEIS ENQUANTO ESTIVER FECHADO:
+1. NÃO agende nenhum horário e JAMAIS chame a ferramenta "criarAgendamento".
+2. Se a cliente perguntar sobre horários, marcar horário ou tentar agendar: explique com carinho que os agendamentos automáticos estão temporariamente pausados no momento: "${configuracoes.booking_closed_message || 'No momento os agendamentos estão temporariamente pausados.'}".
+3. Se a cliente quiser falar com a Lara para verificar possíveis encaixes ou lista de espera: chame a ferramenta "solicitarAtendimentoHumano(motivo)" e avise com simpatia que a Lara responderá assim que puder 💕\n`
+      : '';
+
   const listaServicosTexto =
     servicos && servicos.length > 0
       ? servicos
@@ -208,6 +220,7 @@ WhatsApp da cliente: ${telefone ? '+' + telefone : 'Já capturado automaticament
 📅 DATA DE HOJE: ${dataHoje} (${dataIso}).
 ⏰ HORA ATUAL: ${horaAtual} (horário de Porto Alegre).
 📅 AMANHÃ É: ${amanhaFormatada} (${amanhaIso}).
+${avisoEstudioFechado}
 
 === CATÁLOGO OFICIAL DE PROCEDIMENTOS (PREÇOS, DURAÇÃO E IDs) ===
 ${listaServicosTexto}

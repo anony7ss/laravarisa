@@ -50,6 +50,21 @@ interface Props {
   initialProfile: ProfileData;
 }
 
+function formatPhone(phone?: string | null): string {
+  if (!phone) return '';
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
 export function AccountManager({ initialProfile }: Props) {
   const [profile, setProfile] = useState<ProfileData>(initialProfile);
   const [activeTab, setActiveTab] = useState<'perfil' | 'seguranca' | '2fa' | 'equipe'>('perfil');
@@ -647,138 +662,171 @@ export function AccountManager({ initialProfile }: Props) {
             </div>
           )}
 
-          <div className="admin-2fa-info-box">
-            <div className="admin-2fa-info-icon">
-              <Smartphone size={24} />
-            </div>
-            <div>
-              <h3>Como funciona a verificação em 2 etapas?</h3>
-              <p>
-                Sempre que você for fazer login no painel, nosso robô do WhatsApp enviará um código único de 6 dígitos
-                para o número cadastrado no seu perfil ({profile.phone ? profile.phone : 'Nenhum telefone cadastrado'}).
-                Isso impede que terceiros acessem seus dados, mesmo que descubram sua senha.
-              </p>
-            </div>
-          </div>
-
-          {!profile.phone && (
-            <div className="admin-account-alert error">
-              <AlertCircle size={18} />
-              <span>
-                Você ainda não possui um número de WhatsApp cadastrado. Acesse a aba <strong>Meu Perfil</strong> e
-                informe seu telefone antes de ativar o 2FA.
-              </span>
-            </div>
-          )}
-
-          {profile.phone && !profile.two_factor_enabled && (
-            <div className="admin-2fa-setup-flow">
-              {twoFactorStep === 'idle' ? (
-                <div className="admin-2fa-step-card">
+          {profile.two_factor_enabled ? (
+            <div className="admin-2fa-active-card">
+              <div className="admin-2fa-active-top">
+                <div className="admin-2fa-active-icon">
+                  <ShieldCheck size={22} />
+                </div>
+                <div className="admin-2fa-active-info">
+                  <div className="admin-2fa-active-badge-row">
+                    <h3>Proteção por WhatsApp Ativa</h3>
+                    <span className="admin-2fa-status-pill">
+                      <span className="admin-2fa-dot-pulse" /> Protegido
+                    </span>
+                  </div>
                   <p>
-                    O código de confirmação será enviado para <strong>{profile.phone}</strong> através da nossa fila do
-                    bot do WhatsApp.
+                    A cada tentativa de login, nosso bot envia um código de 6 dígitos para o número{' '}
+                    <strong>{formatPhone(profile.phone)}</strong>.
                   </p>
+                </div>
+              </div>
+
+              <div className="admin-2fa-active-bottom">
+                <div className="admin-2fa-device-badge">
+                  <Smartphone size={14} />
+                  <span>Envio automático via bot WhatsApp</span>
+                </div>
+
+                {twoFactorStep === 'code_sent' ? (
+                  <div className="admin-2fa-confirm-inline">
+                    <span>Digite o código de 6 dígitos para desativar:</span>
+                    <div className="admin-otp-input-group">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        placeholder="000000"
+                        value={twoFactorCode}
+                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="admin-otp-input"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="admin-btn-clean-danger-solid"
+                        disabled={verifying2FA || twoFactorCode.length !== 6}
+                        onClick={() => handleConfirm2FA(false)}
+                      >
+                        {verifying2FA ? 'Confirmando…' : 'Desativar'}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-btn-clean-ghost"
+                        onClick={() => {
+                          setTwoFactorStep('idle');
+                          setTwoFactorCode('');
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    className="admin-btn-primary"
+                    className="admin-btn-subtle-danger"
+                    onClick={handleDisable2FA}
                     disabled={sending2FACode}
-                    onClick={handleSend2FACode}
                   >
-                    {sending2FACode ? 'Enviando código…' : 'Enviar Código de Verificação no WhatsApp'}
+                    {sending2FACode ? 'Enviando código…' : 'Desativar 2FA'}
                   </button>
-                </div>
-              ) : (
-                <div className="admin-2fa-step-card">
-                  <p>Digite o código de 6 dígitos recebido no seu WhatsApp:</p>
-                  <div className="admin-otp-input-group">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      placeholder="000000"
-                      value={twoFactorCode}
-                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="admin-otp-input"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      className="admin-btn-primary"
-                      disabled={verifying2FA || twoFactorCode.length !== 6}
-                      onClick={() => handleConfirm2FA(true)}
-                    >
-                      {verifying2FA ? 'Confirmando…' : 'Confirmar e Ativar 2FA'}
-                    </button>
-                  </div>
-                  <div className="admin-2fa-subactions">
-                    <button
-                      type="button"
-                      className="admin-btn-link"
-                      onClick={handleSend2FACode}
-                      disabled={sending2FACode}
-                    >
-                      <RefreshCw size={14} className={sending2FACode ? 'animate-spin' : ''} />
-                      {sending2FACode ? 'Reenviando…' : 'Reenviar código'}
-                    </button>
-                    <button
-                      type="button"
-                      className="admin-btn-link muted"
-                      onClick={() => {
-                        setTwoFactorStep('idle');
-                        setTwoFactorCode('');
-                      }}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          )}
+          ) : (
+            <>
+              <div className="admin-2fa-info-box">
+                <div className="admin-2fa-info-icon">
+                  <Smartphone size={20} />
+                </div>
+                <div>
+                  <h3>Como funciona a verificação em 2 etapas?</h3>
+                  <p>
+                    Ao fazer login no painel, o bot enviará um código único de 6 dígitos
+                    para o seu WhatsApp ({profile.phone ? formatPhone(profile.phone) : 'Nenhum telefone cadastrado'}),
+                    protegendo sua conta contra acessos indevidos.
+                  </p>
+                </div>
+              </div>
 
-          {profile.two_factor_enabled && (
-            <div className="admin-2fa-active-view">
-              <p className="admin-text-muted">
-                O 2FA está ativo e funcionando para o número <strong>{profile.phone}</strong>.
-              </p>
-              {twoFactorStep === 'code_sent' ? (
-                <div className="admin-2fa-step-card" style={{ marginTop: '1rem' }}>
-                  <p>Para confirmar a desativação, digite o código de 6 dígitos enviado ao seu WhatsApp:</p>
-                  <div className="admin-otp-input-group">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      placeholder="000000"
-                      value={twoFactorCode}
-                      onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="admin-otp-input"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      className="admin-btn-danger"
-                      disabled={verifying2FA || twoFactorCode.length !== 6}
-                      onClick={() => handleConfirm2FA(false)}
-                    >
-                      {verifying2FA ? 'Desativando…' : 'Confirmar Desativação'}
-                    </button>
-                  </div>
+              {!profile.phone && (
+                <div className="admin-account-alert error">
+                  <AlertCircle size={18} />
+                  <span>
+                    Você ainda não possui um número de WhatsApp cadastrado. Acesse a aba <strong>Meu Perfil</strong> e
+                    informe seu telefone antes de ativar o 2FA.
+                  </span>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="admin-btn-danger-outline"
-                  onClick={handleDisable2FA}
-                  disabled={sending2FACode}
-                >
-                  {sending2FACode ? 'Enviando código…' : 'Desativar Autenticação em 2 Etapas'}
-                </button>
               )}
-            </div>
+
+              {profile.phone && (
+                <div className="admin-2fa-setup-flow">
+                  {twoFactorStep === 'idle' ? (
+                    <div className="admin-2fa-step-card">
+                      <p>
+                        O código de confirmação será enviado para <strong>{formatPhone(profile.phone)}</strong> via WhatsApp.
+                      </p>
+                      <button
+                        type="button"
+                        className="admin-btn-primary"
+                        disabled={sending2FACode}
+                        onClick={handleSend2FACode}
+                      >
+                        {sending2FACode ? 'Enviando código…' : 'Enviar Código de Verificação no WhatsApp'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="admin-2fa-step-card">
+                      <p>Digite o código de 6 dígitos recebido no seu WhatsApp:</p>
+                      <div className="admin-otp-input-group">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          placeholder="000000"
+                          value={twoFactorCode}
+                          onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          className="admin-otp-input"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="admin-btn-primary"
+                          disabled={verifying2FA || twoFactorCode.length !== 6}
+                          onClick={() => handleConfirm2FA(true)}
+                        >
+                          {verifying2FA ? 'Confirmando…' : 'Confirmar e Ativar 2FA'}
+                        </button>
+                      </div>
+                      <div className="admin-2fa-subactions">
+                        <button
+                          type="button"
+                          className="admin-btn-link"
+                          onClick={handleSend2FACode}
+                          disabled={sending2FACode}
+                        >
+                          <RefreshCw size={14} className={sending2FACode ? 'animate-spin' : ''} />
+                          {sending2FACode ? 'Reenviando…' : 'Reenviar código'}
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-btn-link muted"
+                          onClick={() => {
+                            setTwoFactorStep('idle');
+                            setTwoFactorCode('');
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
