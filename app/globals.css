@@ -3953,14 +3953,17 @@ h2 {
 }
 
 .promo-banner {
+  position: relative;
   background-color: #070607;
   color: #f7f6f2;
-  text-align: center;
-  padding: 10px 16px;
+  padding: 10px 44px;
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.03em;
-  min-height: 41px;
+  letter-spacing: 0.02em;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 
@@ -3970,6 +3973,20 @@ h2 {
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.promo-banner-text-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.promo-text {
+  color: #f7f6f2;
 }
 
 .promo-link {
@@ -3977,9 +3994,57 @@ h2 {
   text-decoration: underline;
   text-underline-offset: 3px;
   font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.15s ease;
 }
+
 .promo-link:hover {
   color: #ff6e2d;
+}
+
+.promo-close-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #a3a39e;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.promo-close-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 640px) {
+  .promo-banner {
+    padding: 8px 36px 8px 14px;
+    font-size: 12px;
+    min-height: auto;
+  }
+
+  .promo-banner-inner {
+    gap: 4px 10px;
+  }
+
+  .promo-banner-text-wrap {
+    gap: 6px;
+  }
+
+  .promo-close-btn {
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 4px;
+  }
 }
 
 /* Testimonials Carousel */
@@ -4079,15 +4144,17 @@ h2 {
   font-weight: 400;
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 2px;
   font-family: inherit;
-  transition: color 0.15s ease;
+  transition: all 0.15s ease;
   line-height: inherit;
 }
 
 .promo-conditions-trigger:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffffff;
+  text-decoration-color: rgba(255, 255, 255, 0.7);
 }
 
 .promo-modal-backdrop {

@@ -23,9 +23,11 @@ import {
   Bot,
   SendHorizontal,
   DollarSign,
+  UserCog,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar';
 import { NotificationCenter } from '@/components/admin/notification-center';
 
@@ -76,6 +78,7 @@ const links = [
   ['/admin/dashboard/depoimentos', 'Depoimentos', HeartHandshake],
   ['/admin/dashboard/whatsapp', 'WhatsApp Bot', Bot],
   ['/admin/dashboard/configuracoes', 'Configurações', Settings],
+  ['/admin/dashboard/conta', 'Conta & Equipe', UserCog],
 ] as const;
 
 const mobileLinks = links.slice(0, 4);
@@ -91,6 +94,7 @@ const pageNames: Record<string, string> = {
   '/admin/dashboard/depoimentos': 'Depoimentos',
   '/admin/dashboard/whatsapp': 'WhatsApp Bot',
   '/admin/dashboard/configuracoes': 'Configurações',
+  '/admin/dashboard/conta': 'Conta & Equipe',
 };
 
 let lastAppointmentsFetchTime = 0;
@@ -100,10 +104,12 @@ export function AdminShell({
   children,
   name,
   role,
+  avatarUrl,
 }: {
   children: React.ReactNode;
   name: string;
   role: string;
+  avatarUrl?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -232,9 +238,13 @@ export function AdminShell({
               <Link
                 href="/admin/dashboard"
                 className="flex items-center gap-3 group overflow-hidden h-full"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    setOpen(false);
+                  }
+                }}
               >
-                <div className="h-9 w-9 rounded-xl bg-[#fc5000]/10 dark:bg-white/[0.06] border border-[#fc5000]/25 dark:border-white/10 flex items-center justify-center p-1 shadow-sm flex-shrink-0">
+                <div className="h-9 w-9 flex items-center justify-center flex-shrink-0">
                   <NextImage
                     src="/logo-emblem.png"
                     alt="Lara Varisa"
@@ -245,6 +255,7 @@ export function AdminShell({
                   />
                 </div>
                 <motion.div
+                  initial={{ opacity: 0, display: 'none' }}
                   animate={{
                     opacity: open ? 1 : 0,
                     display: open ? 'flex' : 'none',
@@ -281,7 +292,6 @@ export function AdminShell({
                           {pendingCount}
                         </span>
                       ) : undefined,
-                    onClick: () => setOpen(false),
                   }}
                 />
               ))}
@@ -295,7 +305,6 @@ export function AdminShell({
                   target: '_blank',
                   icon: <ExternalLink size={17} className="flex-shrink-0" />,
                   badge: <ArrowUpRight size={14} className="text-neutral-400" />,
-                  onClick: () => setOpen(false),
                 }}
               />
             </div>
@@ -303,11 +312,24 @@ export function AdminShell({
 
           {/* User Profile & Actions Footer */}
           <div className="pt-3 border-t border-black/[0.08] dark:border-white/10 flex flex-col gap-2 flex-shrink-0">
-            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] h-12 overflow-hidden">
-              <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
-                {(name || 'A').trim().slice(0, 1).toUpperCase()}
-              </div>
+            <Link
+              href="/admin/dashboard/conta"
+              className="flex items-center gap-2.5 px-1.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] hover:border-[#fc5000]/40 hover:bg-black/[0.05] dark:hover:bg-white/[0.07] transition-all h-11 overflow-hidden flex-shrink-0 group cursor-pointer"
+              title="Gerenciar Conta & Equipe"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={name}
+                  className="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-sm border border-black/10 dark:border-white/10"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  {(name || 'A').trim().slice(0, 1).toUpperCase()}
+                </div>
+              )}
               <motion.div
+                initial={{ opacity: 0, display: 'none' }}
                 animate={{
                   opacity: open ? 1 : 0,
                   display: open ? 'flex' : 'none',
@@ -315,20 +337,20 @@ export function AdminShell({
                 transition={{ duration: 0.15 }}
                 className="flex flex-col min-w-0 flex-1 overflow-hidden whitespace-nowrap"
               >
-                <strong className="text-neutral-900 dark:text-white text-xs font-medium truncate block leading-tight">
+                <strong className="text-neutral-900 dark:text-white text-xs font-medium truncate block leading-tight group-hover:text-[#fc5000] transition-colors">
                   {name || 'Conta administrativa'}
                 </strong>
                 <small className="text-neutral-500 dark:text-neutral-400 text-[10px] truncate block">
                   {roleLabel}
                 </small>
               </motion.div>
-            </div>
+            </Link>
 
-            <div className="flex items-center justify-between h-9 px-1 overflow-hidden">
+            <div className="flex items-center justify-between h-9 px-1 overflow-hidden flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setNotificationsOpen(true)}
-                className="relative p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
+                className="relative w-9 h-9 flex items-center justify-center rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 title={
                   notificationsCount > 0
                     ? `${notificationsCount} novidade(s) na central`
@@ -338,19 +360,20 @@ export function AdminShell({
               >
                 <Bell size={16} />
                 {notificationsCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#fc5000]" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#fc5000]" />
                 )}
               </button>
 
               <motion.button
                 type="button"
                 onClick={() => setDarkMode(!darkMode)}
+                initial={{ opacity: 0, display: 'none' }}
                 animate={{
                   opacity: open ? 1 : 0,
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 aria-label="Alternar tema"
                 title="Alternar tema"
               >
@@ -360,13 +383,14 @@ export function AdminShell({
               <motion.button
                 type="button"
                 onClick={logout}
+                initial={{ opacity: 0, display: 'none' }}
                 animate={{
                   opacity: open ? 1 : 0,
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-500 hover:text-red-500 hover:bg-red-500/10 dark:text-neutral-400 dark:hover:text-red-400 transition-colors flex-shrink-0 ml-auto"
-                aria-label="Sair do painel"
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-red-600 hover:text-red-700 hover:bg-red-500/10 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-500/15 transition-colors flex-shrink-0"
+                aria-label="Sair da conta"
                 title="Sair"
               >
                 <LogOut size={16} />
@@ -378,7 +402,7 @@ export function AdminShell({
       <div className="admin-main">
         <header className="admin-mobile-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="h-7 w-7 rounded-lg bg-[#fc5000]/10 dark:bg-white/10 border border-[#fc5000]/25 dark:border-white/10 flex items-center justify-center p-0.5 shadow-sm flex-shrink-0">
+            <div className="h-7 w-7 flex items-center justify-center flex-shrink-0">
               <NextImage
                 src="/logo-emblem.png"
                 alt="Lara Varisa"

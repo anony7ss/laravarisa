@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { usePublicSettings } from '@/lib/public-content';
-import { X, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { X, CheckCircle2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export function PromoBanner() {
@@ -21,59 +21,39 @@ export function PromoBanner() {
     settings.promo_conditions?.trim() ||
     'Válido exclusivamente para novas clientes no primeiro atendimento em qualquer procedimento de extensão de cílios. Não cumulativo com outros descontos ou pacotes. Desconto de 20% aplicado diretamente no valor final do procedimento mediante agendamento prévio no mês vigente.';
 
-  const isExternal = settings.promo_link_url?.startsWith('http');
-
   return (
     <>
-      <aside className="promo-banner" aria-label="Aviso promocional">
-        <div className="promo-banner-container">
-          <div className="promo-banner-content">
-            <div className="promo-banner-text-group">
-              <span className="promo-sparkle" aria-hidden="true">
-                <Sparkles size={13} className="text-[#fc5000]" />
-              </span>
-              <span className="promo-text">{settings.promo_text}</span>
-              <button
-                type="button"
-                className="promo-conditions-trigger"
-                onClick={() => setShowModal(true)}
-                aria-label="Ver condições da promoção"
-              >
-                (ver condições)
-              </button>
-            </div>
-
-            {settings.promo_link_url && settings.promo_link_text && (
-              isExternal ? (
-                <a
-                  href={settings.promo_link_url}
-                  className="promo-cta-btn"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span>{settings.promo_link_text}</span>
-                  <ArrowRight size={12} />
-                </a>
-              ) : (
-                <Link href={settings.promo_link_url} className="promo-cta-btn">
-                  <span>{settings.promo_link_text}</span>
-                  <ArrowRight size={12} />
-                </Link>
-              )
-            )}
+      <div className="promo-banner">
+        <div className="promo-banner-inner">
+          <div className="promo-banner-text-wrap">
+            <span className="promo-text">{settings.promo_text}</span>
+            <button
+              type="button"
+              className="promo-conditions-trigger"
+              onClick={() => setShowModal(true)}
+              aria-label="Ver condições da promoção"
+            >
+              (ver condições)
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            className="promo-close-btn"
-            aria-label="Fechar aviso promocional"
-            title="Fechar"
-          >
-            <X size={14} />
-          </button>
+          {settings.promo_link_url && settings.promo_link_text && (
+            <a href={settings.promo_link_url} className="promo-link">
+              {settings.promo_link_text}
+            </a>
+          )}
         </div>
-      </aside>
+
+        <button
+          type="button"
+          onClick={() => setDismissed(true)}
+          className="promo-close-btn"
+          aria-label="Fechar aviso"
+          title="Fechar"
+        >
+          <X size={14} />
+        </button>
+      </div>
 
       {showModal && (
         <div

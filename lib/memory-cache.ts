@@ -1,4 +1,4 @@
-﻿interface CacheEntry<T> {
+interface CacheEntry<T> {
   value: T;
   expiresAt: number;
 }
@@ -24,6 +24,10 @@ class MemoryCache {
   }
 
   delete(key: string): void {
+    this.cache.delete(key);
+  }
+
+  del(key: string): void {
     this.cache.delete(key);
   }
 

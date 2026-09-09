@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
@@ -84,7 +85,7 @@ export default function AgendarPage() {
   } | null>(null);
 
   useEffect(() => {
-    fetch('/api/public/content')
+    fetch('/api/public/content', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data && data.settings) setSiteSettings(data.settings);

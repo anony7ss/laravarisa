@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   // 2. Verifica se o usuário tem permissão de equipe/admin em public.profiles
   const { data: profile } = await authClient
     .from('profiles')
-    .select('role')
+    .select('role, full_name, phone, two_factor_enabled')
     .eq('id', data.user.id)
     .maybeSingle();
 
@@ -74,8 +74,9 @@ export async function POST(request: Request) {
     return jsonError('Usuário sem acesso ao painel.', 403);
   }
 
-  // 3. Limpa quaisquer cookies legados ou conflitantes de outros projetos no localhost
   const cookieStore = await cookies();
+
+  // Limpa quaisquer cookies legados ou conflitantes de outros projetos no localhost
   for (const c of cookieStore.getAll()) {
     if (c.name.startsWith('sb-') && c.name.endsWith('-auth-token')) {
       cookieStore.delete(c.name);
@@ -84,6 +85,66 @@ export async function POST(request: Request) {
 
   const remember = parsed.data.remember_me !== false;
   const maxAge = remember ? 30 * 24 * 60 * 60 : undefined;
+
+  // 3. Se o 2FA via WhatsApp estiver ativado, gera OTP e envia pelo bot
+  if (profile.two_factor_enabled && profile.phone) {
+    let cleanPhone = profile.phone.replace(/\D/g, '');
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+      cleanPhone = `55${cleanPhone}`;
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const tempToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await authClient
+      .from('profiles')
+      .update({
+        two_factor_code: otpCode,
+        two_factor_expires_at: expiresAt,
+        two_factor_temp_token: tempToken,
+      })
+      .eq('id', data.user.id);
+
+    await authClient.from('whatsapp_outbox').insert({
+      phone: cleanPhone,
+      client_name: profile.full_name || 'Admin Astra',
+      message: `*Astra Admin - Código de Segurança*\n\nSeu código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos. Se você não tentou fazer login, altere sua senha.`,
+      message_type: '2fa_code',
+      status: 'pending',
+    });
+
+    const maskedPhone =
+      cleanPhone.length >= 8
+        ? `${cleanPhone.slice(0, 4)}****${cleanPhone.slice(-2)}`
+        : '****';
+
+    const pendingPayload = JSON.stringify({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      user_id: data.user.id,
+      temp_token: tempToken,
+      remember,
+    });
+
+    cookieStore.set('lv_2fa_pending', Buffer.from(pendingPayload).toString('base64'), {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+
+    return Response.json(
+      {
+        ok: true,
+        requires2FA: true,
+        tempToken,
+        phoneMasked: maskedPhone,
+      },
+      { headers: NO_STORE_HEADERS },
+    );
+  }
 
   // 4. Salva a nova sessão nos cookies do navegador
   const serverSupabase = await createServerSupabase({ remember });

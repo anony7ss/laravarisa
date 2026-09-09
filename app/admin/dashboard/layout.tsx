@@ -11,6 +11,7 @@ export default async function DashboardLayout({
     <AdminShell
       name={profile.full_name || user.email || ''}
       role={profile.role}
+      avatarUrl={profile.avatar_url}
     >
       {children}
     </AdminShell>

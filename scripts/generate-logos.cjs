@@ -153,20 +153,39 @@ async function main() {
   }
 
   console.log(`Mandala bounds: [${mMinX}, ${mMinY}] to [${mMaxX}, ${mMaxY}] (${mMaxX - mMinX}x${mMaxY - mMinY})`);
-  const mCenterX = Math.round((mMinX + mMaxX) / 2);
-  const mCenterY = Math.round((mMinY + mMaxY) / 2);
-  const mSize = Math.max(mMaxX - mMinX, mMaxY - mMinY);
-  // Quadrado de 600x600 centrado na mandala
-  const emblemDim = Math.min(600, Math.max(580, mSize + 40));
-  const emblemLeft = Math.max(0, Math.round(mCenterX - emblemDim / 2));
-  const emblemTop = Math.max(0, Math.round(mCenterY - emblemDim / 2));
+  const mandalaW = mMaxX - mMinX + 1;
+  const mandalaH = mMaxY - mMinY + 1;
 
-  await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
-    .extract({ left: emblemLeft, top: emblemTop, width: emblemDim, height: emblemDim })
+  // Extrair o recorte exato da mandala
+  const mandalaBuffer = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } })
+    .extract({ left: mMinX, top: mMinY, width: mandalaW, height: mandalaH })
+    .png()
+    .toBuffer();
+
+  // Criar tela quadrada com margem elegante (~14% de respiro em volta, nunca encostando nas bordas)
+  const canvasSize = Math.round(Math.max(mandalaW, mandalaH) * 1.28); // ~718px
+  const leftPos = Math.round((canvasSize - mandalaW) / 2);
+  const topPos = Math.round((canvasSize - mandalaH) / 2);
+
+  await sharp({
+    create: {
+      width: canvasSize,
+      height: canvasSize,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      {
+        input: mandalaBuffer,
+        left: leftPos,
+        top: topPos,
+      },
+    ])
     .png({ compressionLevel: 9 })
     .toFile(emblemPath);
 
-  console.log('Criado:', emblemPath, `(${emblemDim}x${emblemDim})`);
+  console.log('Criado:', emblemPath, `(${canvasSize}x${canvasSize}) com mandala centralizada (${mandalaW}x${mandalaH})`);
 
   // 3. Gerar favicon em alta definição e versões otimizadas
   await sharp(emblemPath)

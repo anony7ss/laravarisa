@@ -93,11 +93,14 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#f5f4ee] text-neutral-900 border-r border-black/[0.08] dark:bg-[#141412] dark:text-[#f7f6f2] dark:border-white/10 backdrop-blur-2xl w-[280px] flex-shrink-0 select-none overflow-hidden z-30 transition-colors duration-200',
+        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#f5f4ee] text-neutral-900 border-r border-black/[0.08] dark:bg-[#141412] dark:text-[#f7f6f2] dark:border-white/10 backdrop-blur-2xl w-[68px] flex-shrink-0 select-none overflow-hidden z-30 transition-colors duration-200',
         className,
       )}
+      initial={{
+        width: '68px',
+      }}
       animate={{
-        width: animate ? (open ? '280px' : '68px') : '280px',
+        width: animate ? (open ? '280px' : '68px') : '68px',
       }}
       transition={{
         duration: 0.22,
@@ -169,7 +172,9 @@ export const SidebarLink = ({
       target={link.target}
       onClick={() => {
         if (link.onClick) link.onClick();
-        setOpen(false);
+        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+          setOpen(false);
+        }
       }}
       className={cn(
         'flex items-center gap-3 px-2.5 h-10 rounded-xl text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.05] dark:text-neutral-400 dark:hover:text-white dark:hover:bg-white/[0.08] transition-colors duration-150 group/sidebar relative overflow-hidden',
@@ -191,6 +196,10 @@ export const SidebarLink = ({
       </div>
 
       <motion.span
+        initial={{
+          display: 'none',
+          opacity: 0,
+        }}
         animate={{
           display: animate ? (open ? 'inline-block' : 'none') : 'inline-block',
           opacity: animate ? (open ? 1 : 0) : 1,
@@ -203,6 +212,10 @@ export const SidebarLink = ({
 
       {link.badge && (
         <motion.div
+          initial={{
+            display: 'none',
+            opacity: 0,
+          }}
           animate={{
             display: animate ? (open ? 'flex' : 'none') : 'flex',
             opacity: animate ? (open ? 1 : 0) : 1,
