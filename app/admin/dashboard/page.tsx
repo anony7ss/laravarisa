@@ -120,13 +120,14 @@ export default async function DashboardPage() {
             <ArrowUpRight size={17} />
           </Link>
         ))}
-        <div className="admin-stat-card accent">
+        <Link href="/admin/dashboard/agenda" className="admin-stat-card">
           <span>
             <Clock size={19} />
           </span>
           <strong>Hoje</strong>
           <p>Organize seus próximos atendimentos.</p>
-        </div>
+          <ArrowUpRight size={17} />
+        </Link>
       </section>
       <RevenueChart data={chartData} />
       <section className="admin-panel" style={{ marginBottom: '24px', borderColor: 'var(--admin-orange)' }}>
