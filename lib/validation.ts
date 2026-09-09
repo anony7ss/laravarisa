@@ -171,6 +171,23 @@ export const settingsSchema = z.object({
   // Audio & Voice responses
   whatsapp_audio_mode: z.enum(['direct_request', 'mirror', 'always', 'disabled']).default('direct_request'),
   whatsapp_audio_voice: z.string().trim().max(100).default('pt-BR-FranciscaNeural'),
+  // Personalização da Página de Agendamento (/agendar)
+  booking_theme: z.string().trim().max(50).default('classic-noir'),
+  booking_bg_color: z.string().trim().max(30).default('#e7e7e2'),
+  booking_card_bg: z.string().trim().max(30).default('#ffffff'),
+  booking_primary_color: z.string().trim().max(30).default('#121211'),
+  booking_accent_color: z.string().trim().max(30).default('#cca352'),
+  booking_text_color: z.string().trim().max(30).default('#121211'),
+  booking_border_color: z.string().trim().max(30).default('#cfcfc9'),
+  booking_font_heading: z.string().trim().max(50).default('Anton'),
+  booking_font_body: z.string().trim().max(50).default('DM Sans'),
+  booking_cover_url: z.string().trim().max(1000).default('/lara-lashes-optimized.webp'),
+  booking_avatar_url: z.string().trim().max(1000).default('/logo-emblem.png'),
+  booking_title: z.string().trim().max(100).default('Lara Varisa'),
+  booking_subtitle: z.string().trim().max(150).default('Lash Designer ︱ Especialista no Olhar'),
+  booking_location_label: z.string().trim().max(150).default('Zona Norte, Porto Alegre - RS'),
+  booking_promo_tag: z.string().trim().max(150).default('1ª visita: R$ 80 qualquer procedimento'),
+  booking_guarantee_text: z.string().trim().max(500).default('Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa.'),
 });
 
 

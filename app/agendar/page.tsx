@@ -23,6 +23,7 @@ import {
   ExternalLink,
   ChevronRight,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 
 function InstagramIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
@@ -135,6 +136,23 @@ function AgendarContent() {
     studio_directions_url?: string;
     studio_map_url?: string;
     google_review_url?: string;
+    // Personalização Visual e de Conteúdo do Agendamento
+    booking_theme?: string;
+    booking_bg_color?: string;
+    booking_card_bg?: string;
+    booking_primary_color?: string;
+    booking_accent_color?: string;
+    booking_text_color?: string;
+    booking_border_color?: string;
+    booking_font_heading?: string;
+    booking_font_body?: string;
+    booking_cover_url?: string;
+    booking_avatar_url?: string;
+    booking_title?: string;
+    booking_subtitle?: string;
+    booking_location_label?: string;
+    booking_promo_tag?: string;
+    booking_guarantee_text?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -347,8 +365,86 @@ function AgendarContent() {
     URL.revokeObjectURL(url);
   }
 
+  // Constantes de personalização configuráveis pelo admin
+  const customBg = siteSettings?.booking_bg_color || '#e7e7e2';
+  const customCardBg = siteSettings?.booking_card_bg || '#ffffff';
+  const customPrimary = siteSettings?.booking_primary_color || '#121211';
+  const customAccent = siteSettings?.booking_accent_color || '#cca352';
+  const customText = siteSettings?.booking_text_color || '#121211';
+  const customBorder = siteSettings?.booking_border_color || '#cfcfc9';
+
+  const fontHeading = siteSettings?.booking_font_heading || 'Anton';
+  const fontBody = siteSettings?.booking_font_body || 'DM Sans';
+
+  const coverUrl = siteSettings?.booking_cover_url || '/lara-lashes-optimized.webp';
+  const avatarUrl = siteSettings?.booking_avatar_url || '/logo-emblem.png';
+  const studioTitle = siteSettings?.booking_title || 'Lara Varisa';
+  const studioSubtitle = siteSettings?.booking_subtitle || 'Lash Designer ︱ Especialista no Olhar';
+  const locationText = siteSettings?.booking_location_label || 'Zona Norte, Porto Alegre - RS';
+  const promoTag = siteSettings?.booking_promo_tag || '1ª visita: R$ 80 qualquer procedimento';
+  const guaranteeText = siteSettings?.booking_guarantee_text || 'Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa.';
+
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-[var(--color-pumice)] text-[var(--color-obsidian)] selection:bg-[var(--color-obsidian)] selection:text-white overflow-x-hidden">
+    <div
+      className="booking-custom-root min-h-screen flex flex-col justify-between overflow-x-hidden"
+      style={{
+        backgroundColor: customBg,
+        color: customText,
+        fontFamily: `var(--booking-font-body)`,
+      }}
+    >
+      {/* GOOGLE FONTS DINÂMICAS */}
+      <link
+        rel="stylesheet"
+        href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontHeading)}:wght@400..800&family=${encodeURIComponent(fontBody)}:wght@400..700&display=swap`}
+      />
+
+      {/* CSS CUSTOM PROPERTIES DINÂMICAS */}
+      <style>{`
+        .booking-custom-root {
+          --color-pumice: ${customBg};
+          --color-obsidian: ${customPrimary};
+          --color-ember: ${customAccent};
+          --booking-bg: ${customBg};
+          --booking-card-bg: ${customCardBg};
+          --booking-primary: ${customPrimary};
+          --booking-accent: ${customAccent};
+          --booking-text: ${customText};
+          --booking-border: ${customBorder};
+          --booking-font-heading: '${fontHeading}', var(--font-anton), serif, sans-serif;
+          --booking-font-body: '${fontBody}', var(--font-dm-sans), sans-serif;
+        }
+        .booking-custom-root h1,
+        .booking-custom-root h2,
+        .booking-custom-root .font-\\[family-name\\:var\\(--font-display\\)\\] {
+          font-family: var(--booking-font-heading) !important;
+        }
+        .booking-custom-root .bg-white {
+          background-color: var(--booking-card-bg) !important;
+          border-color: var(--booking-border) !important;
+          color: var(--booking-text) !important;
+        }
+        .booking-custom-root .bg-\\[var\\(--color-pumice\\)\\] {
+          background-color: var(--booking-bg) !important;
+        }
+        .booking-custom-root .border-\\[\\#cfcfc9\\],
+        .booking-custom-root .border-\\[\\#d6d6cf\\],
+        .booking-custom-root .border-\\[\\#e2e2df\\],
+        .booking-custom-root .border-\\[\\#e8e8e4\\],
+        .booking-custom-root .border-\\[\\#f0f0ed\\] {
+          border-color: var(--booking-border) !important;
+        }
+        .booking-custom-root .bg-\\[var\\(--color-obsidian\\)\\] {
+          background-color: var(--booking-primary) !important;
+        }
+        .booking-custom-root .text-\\[var\\(--color-obsidian\\)\\] {
+          color: var(--booking-text) !important;
+        }
+        .booking-custom-root .text-\\[var\\(--color-ember\\)\\] {
+          color: var(--booking-accent) !important;
+        }
+      `}</style>
+
       {lightboxIndex !== null && (
         <FullscreenLightbox
           photos={gallery}
@@ -363,13 +459,13 @@ function AgendarContent() {
         onClose={() => setShowMyAppointments(false)}
       />
 
-      {/* HEADER BOUTIQUE */}
-      <header className="w-full bg-[var(--color-pumice)] border-b border-[#cfcfc9]">
+      {/* HEADER BOUTIQUE COM BANNER & FOTO DINÂMICOS */}
+      <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
         <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
           <img
-            src="/lara-lashes-optimized.webp"
-            alt="Lara Varisa Lash Studio"
-            className="w-full h-full object-cover opacity-20 filter contrast-125"
+            src={coverUrl}
+            alt={studioTitle}
+            className="w-full h-full object-cover opacity-25 filter contrast-125"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
@@ -386,9 +482,9 @@ function AgendarContent() {
               <button
                 type="button"
                 onClick={() => setShowMyAppointments(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--color-obsidian)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--booking-text)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
               >
-                <CalendarDays size={13} className="text-[var(--color-ember)]" />
+                <CalendarDays size={13} className="text-[var(--booking-accent)]" />
                 <span>Meus Horários</span>
               </button>
             </div>
@@ -396,11 +492,20 @@ function AgendarContent() {
         </div>
 
         <div className="max-w-xl lg:max-w-3xl mx-auto px-4 -mt-10 sm:-mt-12 lg:-mt-14 pb-3 text-center relative z-10 flex flex-col items-center">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 rounded-full p-1 bg-[var(--color-pumice)] shadow-md">
-            <div className="w-full h-full rounded-full bg-[#161614] border-2 border-[#cfcfc9] flex items-center justify-center overflow-hidden">
+          <div
+            className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 rounded-full p-1 shadow-md"
+            style={{ backgroundColor: customBg }}
+          >
+            <div
+              className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+              style={{
+                backgroundColor: customCardBg,
+                border: `2px solid ${customBorder}`,
+              }}
+            >
               <img
-                src="/logo-emblem.png"
-                alt="Lara Varisa"
+                src={avatarUrl}
+                alt={studioTitle}
                 width={80}
                 height={80}
                 className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
@@ -409,16 +514,28 @@ function AgendarContent() {
           </div>
 
           <div className="mt-2 space-y-0.5">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] m-0">
-              Lara Varisa
+            <h1
+              className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-tight m-0"
+              style={{
+                color: customText,
+                fontFamily: `var(--booking-font-heading)`,
+              }}
+            >
+              {studioTitle}
             </h1>
-            <p className="text-xs sm:text-sm lg:text-base font-medium text-[#6e6e66] m-0">
-              Lash Designer ︱ Especialista no Olhar
+            <p
+              className="text-xs sm:text-sm lg:text-base font-medium m-0"
+              style={{ color: customText, opacity: 0.75 }}
+            >
+              {studioSubtitle}
             </p>
-            <div className="flex items-center justify-center gap-2 pt-1 text-[11px] sm:text-xs text-[#7a7a72]">
+            <div
+              className="flex items-center justify-center gap-2 pt-1 text-[11px] sm:text-xs"
+              style={{ color: customText, opacity: 0.65 }}
+            >
               <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-[var(--color-ember)] shrink-0" />
-                Zona Norte, Porto Alegre - RS
+                <MapPin size={12} className="shrink-0" style={{ color: customAccent }} />
+                {locationText}
               </span>
               <span>·</span>
               {siteSettings?.booking_enabled !== false ? (
@@ -561,13 +678,16 @@ function AgendarContent() {
                     <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3.5 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3 lg:gap-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ember)] bg-[#fcedea] px-2 py-0.5 rounded-full inline-block">
-                            Primeira Sessão no Estúdio
+                          <span
+                            className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                            style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
+                          >
+                            {promoTag}
                           </span>
                           <span className="hidden sm:inline-block text-[11px] text-[#8c8c84]">· Condição Exclusiva</span>
                         </div>
                         <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1">
-                          Qualquer extensão por apenas <strong className="font-bold text-[var(--color-ember)]">R$ 80,00</strong> na 1ª vez
+                          Qualquer extensão por apenas <strong className="font-bold" style={{ color: customAccent }}>R$ 80,00</strong> na 1ª vez
                         </p>
                         <p className="hidden lg:block text-xs text-[#707068] mt-0.5 m-0">
                           Agendamento online com confirmação instantânea no WhatsApp.
@@ -683,6 +803,15 @@ function AgendarContent() {
                         })}
                       </div>
                     )}
+
+                    {/* GARANTIA & BIOSSEGURANÇA CUSTOMIZÁVEL */}
+                    <div
+                      className="pt-2 text-center text-xs opacity-75 flex items-center justify-center gap-1.5"
+                      style={{ color: customText }}
+                    >
+                      <ShieldCheck size={14} style={{ color: customAccent }} />
+                      <span>{guaranteeText}</span>
+                    </div>
                   </div>
                 )}
 

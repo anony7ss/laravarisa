@@ -12,8 +12,10 @@ import {
   Sliders,
   Bell,
   Store,
+  Palette,
 } from 'lucide-react';
 import { adminRequest } from './api';
+import { BookingCustomizer } from './booking-customizer';
 
 const DAYS_OF_WEEK = [
   { day: 0, label: 'Dom', full: 'Domingo' },
@@ -48,7 +50,7 @@ export function SettingsManager({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing' | 'estudio'
+    'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing' | 'estudio' | 'visual'
   >('horarios');
 
   function toggleDay(d: number) {
@@ -147,6 +149,24 @@ export function SettingsManager({
       studio_hours: String(form.get('studio_hours') || 'Segunda a sábado · com agendamento'),
       studio_map_url: String(form.get('studio_map_url') || 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'),
       studio_directions_url: String(form.get('studio_directions_url') || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'),
+
+      // Personalização Visual do Agendamento (/agendar)
+      booking_theme: String(form.get('booking_theme') || 'classic-noir'),
+      booking_bg_color: String(form.get('booking_bg_color') || '#e7e7e2'),
+      booking_card_bg: String(form.get('booking_card_bg') || '#ffffff'),
+      booking_primary_color: String(form.get('booking_primary_color') || '#121211'),
+      booking_accent_color: String(form.get('booking_accent_color') || '#cca352'),
+      booking_text_color: String(form.get('booking_text_color') || '#121211'),
+      booking_border_color: String(form.get('booking_border_color') || '#cfcfc9'),
+      booking_font_heading: String(form.get('booking_font_heading') || 'Anton'),
+      booking_font_body: String(form.get('booking_font_body') || 'DM Sans'),
+      booking_cover_url: String(form.get('booking_cover_url') || '/lara-lashes-optimized.webp'),
+      booking_avatar_url: String(form.get('booking_avatar_url') || '/logo-emblem.png'),
+      booking_title: String(form.get('booking_title') || 'Lara Varisa'),
+      booking_subtitle: String(form.get('booking_subtitle') || 'Lash Designer ︱ Especialista no Olhar'),
+      booking_location_label: String(form.get('booking_location_label') || 'Zona Norte, Porto Alegre - RS'),
+      booking_promo_tag: String(form.get('booking_promo_tag') || '1ª visita: R$ 80 qualquer procedimento'),
+      booking_guarantee_text: String(form.get('booking_guarantee_text') || 'Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa.'),
     };
 
     try {
@@ -182,6 +202,7 @@ export function SettingsManager({
         }}
       >
         {[
+          { id: 'visual' as const, label: 'Visual do Agendamento (/agendar)', icon: Palette },
           { id: 'horarios' as const, label: 'Horários & Estúdio', icon: CalendarDays },
           { id: 'regras' as const, label: 'Regras da Agenda', icon: Sliders },
           { id: 'mensagens' as const, label: 'Mensagens & WhatsApp', icon: MessageCircle },
@@ -215,6 +236,11 @@ export function SettingsManager({
             </button>
           );
         })}
+      </div>
+
+      {/* ABA: PERSONALIZAÇÃO VISUAL DO AGENDAMENTO (/agendar) */}
+      <div style={{ display: activeTab === 'visual' ? 'grid' : 'none', gap: '24px' }}>
+        <BookingCustomizer settings={settings} disabled={role !== 'admin'} />
       </div>
 
       {/* ABA 1: DIAS E HORÁRIOS & ESTADO DO ESTÚDIO */}
