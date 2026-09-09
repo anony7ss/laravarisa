@@ -81,16 +81,16 @@ export function MyAppointmentsSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-end bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md h-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] border-l border-[#d6d6cf] p-6 md:p-8 overflow-y-auto flex flex-col justify-between shadow-2xl">
         <div>
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-[#d6d6cf]">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-ember)] font-mono">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ember)]">
                 Área da Cliente
               </span>
-              <h3 className="text-2xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] mt-0.5">
+              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-obsidian)] mt-0.5">
                 Meus Agendamentos
               </h3>
             </div>
@@ -106,7 +106,7 @@ export function MyAppointmentsSheet({
 
           {/* Search by WhatsApp */}
           <form onSubmit={handleSearch} className="my-6 space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
+            <label className="block text-xs font-medium text-[#595952]">
               Digite seu WhatsApp para localizar seus horários:
             </label>
             <div className="flex gap-2">
@@ -124,8 +124,7 @@ export function MyAppointmentsSheet({
               <button
                 type="submit"
                 disabled={loading}
-                style={{ backgroundColor: '#fc5000', color: '#ffffff' }}
-                className="px-5 py-2.5 rounded-full text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm hover:opacity-95 transition-opacity"
+                className="px-5 py-2.5 rounded-full text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm hover:opacity-90 active:scale-95 transition-all bg-[var(--color-obsidian)]"
               >
                 {loading ? <Loader2 size={13} className="animate-spin text-white" /> : <Search size={13} className="text-white" />}
                 <span className="text-white">Buscar</span>
@@ -173,7 +172,7 @@ export function MyAppointmentsSheet({
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+                      <span className="text-sm font-bold text-[var(--color-obsidian)]">
                         {item.service_name}
                       </span>
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${statusInfo.style}`}>

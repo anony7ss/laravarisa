@@ -220,10 +220,8 @@ function AgendarContent() {
         if (!mounted) return;
         if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
           setServices(data.data);
-          setSelectedService((prev) => prev || data.data[0]);
         } else {
           setServices(defaultFallbackServices as ServiceItem[]);
-          setSelectedService((prev) => prev || (defaultFallbackServices[0] as ServiceItem));
         }
       })
       .catch(() => {
@@ -436,9 +434,8 @@ function AgendarContent() {
           --booking-font-body: '${fontBody}', var(--font-dm-sans), sans-serif;
         }
         .booking-custom-root h1,
-        .booking-custom-root h2,
         .booking-custom-root .font-\\[family-name\\:var\\(--font-display\\)\\] {
-          font-family: var(--booking-font-heading) !important;
+          font-family: var(--booking-font-heading);
         }
         .booking-custom-root .bg-white {
           background-color: var(--booking-card-bg) !important;
@@ -974,8 +971,8 @@ function AgendarContent() {
                       )}
 
                       {/* Barra Flutuante Fixa no Rodapé (Acompanha o usuário lá em cima ou descendo) */}
-                      {selectedService && (
-                        <div className="fixed bottom-4 left-0 right-0 z-50 pointer-events-none px-3 sm:px-4">
+                      {selectedService && !showMyAppointments && activeTab === 'agendar' && bookingStep === 1 && (
+                        <div className="fixed bottom-4 left-0 right-0 z-40 pointer-events-none px-3 sm:px-4">
                           <div
                             className="max-w-md sm:max-w-xl mx-auto p-3 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-2xl pointer-events-auto border transition-all animate-in slide-in-from-bottom-3 duration-200"
                             style={{
@@ -1801,17 +1798,6 @@ function AgendarContent() {
 
                       {/* Botões de Ação */}
                       <div className="flex flex-col gap-2.5 pt-1">
-                        <a
-                          href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} no dia ${new Date(successBooking.starts_at).toLocaleDateString('pt-BR')} às ${new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} (Reserva #${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}).`)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-3.5 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all hover:opacity-95 active:scale-[0.99] cursor-pointer"
-                          style={{ backgroundColor: customPrimary }}
-                        >
-                          <MessageCircle size={16} style={{ color: customAccent }} />
-                          <span>Notificar Lara no WhatsApp</span>
-                        </a>
-
                         <button
                           type="button"
                           onClick={() => {

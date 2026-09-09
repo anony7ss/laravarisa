@@ -1809,24 +1809,25 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                           >
                             <div
                               style={{
-                                width: '56px',
-                                height: '56px',
+                                width: '52px',
+                                height: '52px',
                                 borderRadius: '50%',
-                                background: '#10b981',
-                                color: '#ffffff',
+                                background: primaryColor,
+                                color: accentColor,
+                                border: `2px solid ${borderColor}`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+                                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
                               }}
                             >
-                              <CheckCircle2 size={32} />
+                              <Check size={26} strokeWidth={2.5} />
                             </div>
 
                             <div>
                               <h3
                                 style={{
-                                  fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`,
+                                  fontFamily: `var(--font-body, '${fontBody}'), sans-serif`,
                                   fontSize: '20px',
                                   fontWeight: 700,
                                   color: primaryColor,
@@ -1881,26 +1882,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
 
                             {/* Botões de Ação */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                              <button
-                                type="button"
-                                onClick={() => alert('Simulação: No site real, este botão abre o WhatsApp direto com Lara Varisa com o lembrete pronto!')}
-                                style={{
-                                  padding: '10px',
-                                  borderRadius: '10px',
-                                  border: 'none',
-                                  background: '#25d366',
-                                  color: '#ffffff',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '6px',
-                                }}
-                              >
-                                <MessageCircle size={15} /> Notificar Lara no WhatsApp
-                              </button>
 
                               <button
                                 type="button"
