@@ -39,6 +39,7 @@ let isRealtimeHealthy = false;
 let adaptivePollTimer = null;
 const PROGRESSIVE_DELAYS = [3000, 5000, 10000, 30000];
 let progressiveDelayIndex = 0;
+let isCheckingPending = false;
 
 /**
  * Varre o banco em busca de agendamentos pendentes de notificação (origem web).

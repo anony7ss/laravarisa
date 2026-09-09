@@ -1,5 +1,9 @@
 html.dark,
-html.dark body {
+html.dark body,
+html:has(.admin-root),
+body.dark,
+body:has(.admin-root),
+body:has(.admin-root.dark) {
   background: #11110f !important;
   color: #f7f7f2 !important;
 }
@@ -60,35 +64,96 @@ html.dark .admin-root,
   letter-spacing: 0.13em;
 }
 .admin-primary {
-  min-height: 44px;
+  min-height: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 8px;
   border: 0;
-  border-radius: 999px;
-  background: var(--admin-orange);
-  color: #11110f;
-  padding: 0 20px;
+  border-radius: 10px;
+  background: #fc5000;
+  color: #ffffff;
+  padding: 0 16px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(252, 80, 0, 0.25);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-primary:hover:not(:disabled) {
+  background: #e04700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(252, 80, 0, 0.35);
+  transform: translateY(-0.5px);
+}
+.admin-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .admin-primary:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  box-shadow: none;
+  transform: none;
 }
 .admin-secondary {
-  min-height: 40px;
+  min-height: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
-  background: transparent;
+  border-radius: 10px;
+  background: var(--admin-card);
+  color: var(--admin-ink);
   padding: 0 16px;
   cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+.admin-secondary:hover:not(:disabled) {
+  background: var(--admin-soft);
+  border-color: rgba(252, 80, 0, 0.3);
+}
+
+/* ==========================================================================
+   CLEAN FLOATING ACTION BAR (STICKY FOOTER)
+   ========================================================================== */
+.admin-sticky-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(24, 24, 21, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  margin-top: 24px;
+  transition: all 0.2s ease;
+}
+
+html:not(.dark) .admin-sticky-bar,
+.admin-root:not(.dark) .admin-sticky-bar {
+  background: rgba(251, 250, 246, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.admin-sticky-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--admin-muted);
 }
 .admin-danger {
   color: #a72b1c;

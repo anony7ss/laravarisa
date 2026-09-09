@@ -330,63 +330,47 @@ export default function AgendarPage() {
         className={`flex-1 max-w-4xl mx-auto w-full max-w-full px-3 sm:px-6 py-3.5 sm:py-8 md:py-10 space-y-4 sm:space-y-6 overflow-x-hidden ${step < 3 && siteSettings?.booking_enabled !== false ? 'pb-24 sm:pb-8' : ''}`}
       >
         {siteSettings?.booking_enabled === false && step !== 4 ? (
-          <div className="max-w-xl mx-auto my-4 sm:my-8 text-center p-6 sm:p-10 rounded-3xl bg-white border border-[#e2e2df] shadow-sm space-y-6 animate-in fade-in duration-200">
-            <div className="w-16 h-16 mx-auto rounded-full bg-[#fef3c7] text-[#d97706] flex items-center justify-center shadow-inner">
-              <Clock3 size={32} />
+          <div className="max-w-md mx-auto my-10 sm:my-16 text-center p-7 sm:p-9 rounded-3xl bg-white border border-[#d6d6cf] shadow-sm space-y-5 animate-in fade-in duration-200">
+            <div className="w-12 h-12 mx-auto rounded-full bg-[#f4f4f0] text-[#4a4a45] border border-[#e2e2dc] flex items-center justify-center">
+              <Clock3 size={20} strokeWidth={1.5} />
             </div>
 
             <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase bg-[#fee2e2] text-[#dc2626] border border-[#fca5a5]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#dc2626]" />
-                Estúdio Fechado / Pausado
-              </span>
-              <h2 className="text-xl sm:text-2xl font-bold font-[family-name:var(--font-display)] uppercase text-[var(--color-obsidian)]">
-                Agendamentos Pausados
-              </h2>
-              <p className="text-sm sm:text-base text-[#595952] leading-relaxed max-w-md mx-auto">
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] font-medium text-[#8c8c82] m-0">
+                Aviso do estúdio
+              </p>
+              <p
+                className="font-bold tracking-tight text-[var(--color-obsidian)] m-0"
+                style={{ fontSize: '1.35rem', lineHeight: '1.25' }}
+              >
+                Agendamentos pausados
+              </p>
+              <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-xs sm:max-w-sm mx-auto m-0 pt-1">
                 {siteSettings.booking_closed_message ||
                   'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.'}
               </p>
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
               <a
                 href={whatsappUrl(
-                  'Olá, Lara! Vi no site que os agendamentos online estão temporariamente fechados. Gostaria de saber sobre encaixes ou lista de espera.',
+                  'Olá, Lara! Vi no site que os agendamentos online estão pausados. Gostaria de verificar sobre possíveis encaixes.',
                   siteSettings?.whatsapp_phone
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-sm tracking-wide shadow-md transition-all active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[var(--color-obsidian)] hover:bg-[#201f20] text-white text-xs font-semibold tracking-wide transition-all shadow-sm cursor-pointer"
               >
-                <MessageCircle size={18} />
-                <span>Falar no WhatsApp para Encaixes</span>
+                <MessageCircle size={14} />
+                <span>Falar no WhatsApp</span>
               </a>
 
               <Link
                 href="/"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] font-semibold text-sm border border-[#cfcfc9] hover:bg-[#e4e4dd] transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs font-medium text-[#595952] hover:text-[var(--color-obsidian)] hover:bg-[#f0efea] transition-colors"
               >
-                <span>Voltar ao início</span>
+                Voltar ao início
               </Link>
-            </div>
-
-            <div className="pt-6 border-t border-[#f0f0ed]">
-              <p className="text-xs font-semibold text-[#8c8c84] mb-3 uppercase tracking-wider">
-                Procedimentos do estúdio (apenas consulta)
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left opacity-75 select-none">
-                {services.map((svc) => (
-                  <div
-                    key={svc.id}
-                    className="p-3 rounded-xl border border-[#e5e5e0] bg-[#fafaf8] flex items-center justify-between text-xs cursor-not-allowed"
-                    title="Agendamento online indisponível no momento"
-                  >
-                    <span className="font-medium text-[var(--color-obsidian)]">{svc.name}</span>
-                    <span className="font-bold text-[var(--color-ember)]">{svc.price}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         ) : (

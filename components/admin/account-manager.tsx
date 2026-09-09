@@ -95,6 +95,10 @@ export function AccountManager({ initialProfile }: Props) {
   const [verifying2FA, setVerifying2FA] = useState(false);
   const [twoFactorMessage, setTwoFactorMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
+  // Modais de confirmação
+  const [showDisable2FAModal, setShowDisable2FAModal] = useState(false);
+  const [showRemoveAvatarModal, setShowRemoveAvatarModal] = useState(false);
+
   // Equipe (Admin only)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
@@ -176,15 +180,18 @@ export function AccountManager({ initialProfile }: Props) {
     }
   }
 
-  async function handleRemoveAvatar() {
-    if (!confirm('Deseja realmente remover sua foto de perfil?')) return;
+  function handleRemoveAvatar() {
+    setShowRemoveAvatarModal(true);
+  }
+
+  async function executeRemoveAvatar() {
     setUploadingAvatar(true);
     setProfileMessage(null);
     try {
       const res = await fetch('/api/admin/account/avatar', { method: 'DELETE' });
       if (!res.ok) throw new Error('Erro ao remover foto.');
       setProfile((prev) => ({ ...prev, avatar_url: null }));
-      setProfileMessage({ text: 'Foto removida.', type: 'success' });
+      setProfileMessage({ text: 'Foto removida com sucesso.', type: 'success' });
     } catch (err) {
       setProfileMessage({
         text: err instanceof Error ? err.message : 'Erro ao remover foto.',
@@ -314,10 +321,8 @@ export function AccountManager({ initialProfile }: Props) {
     }
   }
 
-  async function handleDisable2FA() {
-    if (!confirm('Deseja desativar o 2FA via WhatsApp? Para sua segurança, enviaremos um código de confirmação.'))
-      return;
-    await handleSend2FACode();
+  function handleDisable2FA() {
+    setShowDisable2FAModal(true);
   }
 
   // Handle Create User
@@ -1090,6 +1095,157 @@ export function AccountManager({ initialProfile }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRMAR DESATIVAÇÃO DO 2FA */}
+      {showDisable2FAModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-container" style={{ maxWidth: '440px' }}>
+            <div className="admin-modal-header" style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'rgba(220, 38, 38, 0.1)',
+                    color: '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ShieldAlert size={20} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                  Desativar 2FA via WhatsApp?
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                onClick={() => setShowDisable2FAModal(false)}
+                disabled={sending2FACode}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--admin-muted)', lineHeight: 1.55 }}>
+                Para sua segurança e garantir que é você mesmo realizando esta alteração, enviaremos um código de confirmação de 6 dígitos via WhatsApp para:
+              </p>
+
+              {profile.phone && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '0.65rem 0.9rem',
+                    borderRadius: '0.65rem',
+                    background: 'var(--admin-soft)',
+                    border: '1px solid var(--admin-line)',
+                    fontSize: '0.86rem',
+                    fontWeight: 600,
+                    color: 'var(--admin-ink)',
+                  }}
+                >
+                  <Smartphone size={16} style={{ color: '#fc5000' }} />
+                  <span>{formatPhone(profile.phone)}</span>
+                </div>
+              )}
+
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--admin-muted)', lineHeight: 1.45 }}>
+                Ao desativar, o login no painel não solicitará mais aprovação pelo WhatsApp, exigindo apenas e-mail e senha.
+              </p>
+            </div>
+
+            <div className="admin-modal-footer" style={{ marginTop: '1.25rem', paddingTop: '1rem' }}>
+              <button
+                type="button"
+                className="admin-btn-ghost"
+                onClick={() => setShowDisable2FAModal(false)}
+                disabled={sending2FACode}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-btn-danger"
+                disabled={sending2FACode}
+                onClick={async () => {
+                  setShowDisable2FAModal(false);
+                  await handleSend2FACode();
+                }}
+              >
+                {sending2FACode ? 'Enviando código…' : 'Enviar Código e Continuar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRMAR REMOVER FOTO */}
+      {showRemoveAvatarModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal-container" style={{ maxWidth: '400px' }}>
+            <div className="admin-modal-header" style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'rgba(220, 38, 38, 0.1)',
+                    color: '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Trash2 size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                  Remover Foto de Perfil
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                onClick={() => setShowRemoveAvatarModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
+              Deseja realmente remover sua foto de perfil? A imagem atual será excluída.
+            </p>
+
+            <div className="admin-modal-footer" style={{ marginTop: '1.25rem', paddingTop: '1rem' }}>
+              <button
+                type="button"
+                className="admin-btn-ghost"
+                onClick={() => setShowRemoveAvatarModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-btn-danger"
+                onClick={async () => {
+                  setShowRemoveAvatarModal(false);
+                  await executeRemoveAvatar();
+                }}
+              >
+                Remover Foto
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1054,34 +1054,19 @@ export function SettingsManager({
       </section>
     </div>
 
-    {/* BARRA DE SALVAMENTO */}
-      <div
-        style={{
-          position: 'sticky',
-          bottom: '16px',
-          zIndex: 10,
-          background: 'var(--admin-card)',
-          padding: '14px 20px',
-          borderRadius: '16px',
-          border: '1px solid var(--admin-line)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
-        <div>
+    {/* BARRA DE SALVAMENTO CLEAN */}
+      <div className="admin-sticky-bar">
+        <div className="admin-sticky-bar-info">
           {error && (
             <p
               style={{
-                color: '#ff4d4d',
+                color: '#ef4444',
                 fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 margin: 0,
+                fontWeight: 500,
               }}
             >
               <AlertCircle size={15} /> {error}
@@ -1090,29 +1075,27 @@ export function SettingsManager({
           {success && (
             <p
               style={{
-                color: '#44bb55',
+                color: '#10b981',
                 fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 margin: 0,
-                fontWeight: 600,
+                fontWeight: 500,
               }}
             >
-              <CheckCircle2 size={16} /> Configurações salvas e aplicadas em tempo
-              real!
+              <CheckCircle2 size={16} /> Configurações salvas e aplicadas em tempo real!
             </p>
           )}
           {!error && !success && (
             <p
               style={{
                 color: 'var(--admin-muted)',
-                fontSize: '11px',
+                fontSize: '12px',
                 margin: 0,
               }}
             >
-              Todas as alterações têm efeito imediato no agendamento online da
-              cliente.
+              Todas as alterações têm efeito imediato no agendamento online da cliente.
             </p>
           )}
         </div>
@@ -1122,15 +1105,9 @@ export function SettingsManager({
             className="admin-primary"
             type="submit"
             disabled={saving}
-            style={{
-              minWidth: '180px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
           >
-            <Save size={16} />
-            {saving ? 'Salvando...' : 'Salvar Configurações'}
+            <Save size={15} />
+            {saving ? 'Salvando…' : 'Salvar Configurações'}
           </button>
         )}
       </div>

@@ -34,6 +34,19 @@ body {
   max-width: 100vw;
   width: 100%;
 }
+html.dark,
+html.dark body,
+html:has(.admin-root),
+body.dark,
+body:has(.admin-root),
+body:has(.admin-root.dark) {
+  background: #11110f !important;
+  color: #f7f7f2 !important;
+}
+html:not(.dark) body:has(.admin-root:not(.dark)) {
+  background: #efefeb !important;
+  color: #11110f !important;
+}
 @layer base {
   button,
   a {

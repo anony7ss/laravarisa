@@ -114,15 +114,17 @@ export function AdminShell({
   name,
   role,
   avatarUrl,
+  initialDarkMode = true,
 }: {
   children: React.ReactNode;
   name: string;
   role: string;
   avatarUrl?: string | null;
+  initialDarkMode?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(initialDarkMode);
   const [pendingCount, setPendingCount] = useState(cachedScheduledCount);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsCount, setNotificationsCount] = useState(0);
@@ -187,38 +189,46 @@ export function AdminShell({
   useEffect(() => {
     try {
       const saved = localStorage.getItem('admin-theme');
-      const hasDarkClass =
-        document.querySelector('.admin-root')?.classList.contains('dark') ||
-        document.documentElement.classList.contains('dark');
-      if (saved === 'dark' || (saved === null && hasDarkClass)) {
-        setDarkMode(true);
-        document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
-      } else if (saved === 'light') {
+      if (saved === 'light' && darkMode) {
+        setDarkMode(false);
+        const root = document.querySelector('.admin-root');
+        root?.classList.remove('dark');
+        document.documentElement.classList.remove('dark');
+        if (document.body) document.body.classList.remove('dark');
         document.cookie = 'admin-theme=light; path=/; max-age=31536000; SameSite=Lax';
+      } else if (saved === 'dark' && !darkMode) {
+        setDarkMode(true);
+        const root = document.querySelector('.admin-root');
+        root?.classList.add('dark');
+        document.documentElement.classList.add('dark');
+        if (document.body) document.body.classList.add('dark');
+        document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
       }
     } catch {}
   }, []);
 
-  useEffect(() => {
+  function toggleTheme() {
+    const nextDark = !darkMode;
+    setDarkMode(nextDark);
     const root = document.querySelector('.admin-root');
-    if (root) {
-      if (darkMode) {
-        root.classList.add('dark');
-        document.documentElement.classList.add('dark');
-        try {
-          localStorage.setItem('admin-theme', 'dark');
-          document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
-        } catch {}
-      } else {
-        root.classList.remove('dark');
-        document.documentElement.classList.remove('dark');
-        try {
-          localStorage.setItem('admin-theme', 'light');
-          document.cookie = 'admin-theme=light; path=/; max-age=31536000; SameSite=Lax';
-        } catch {}
-      }
+    if (nextDark) {
+      root?.classList.add('dark');
+      document.documentElement.classList.add('dark');
+      if (document.body) document.body.classList.add('dark');
+      try {
+        localStorage.setItem('admin-theme', 'dark');
+        document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
+      } catch {}
+    } else {
+      root?.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
+      if (document.body) document.body.classList.remove('dark');
+      try {
+        localStorage.setItem('admin-theme', 'light');
+        document.cookie = 'admin-theme=light; path=/; max-age=31536000; SameSite=Lax';
+      } catch {}
     }
-  }, [darkMode]);
+  }
   const roleLabel =
     role === 'admin'
       ? 'Administrador'
@@ -382,7 +392,7 @@ export function AdminShell({
 
               <motion.button
                 type="button"
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={toggleTheme}
                 initial={{ opacity: 0, display: 'none' }}
                 animate={{
                   opacity: open ? 1 : 0,

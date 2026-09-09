@@ -52,17 +52,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { cookies } from 'next/headers';
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('admin-theme')?.value;
+  const isDark = themeCookie === 'dark';
+
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={`${anton.variable} ${dmSans.variable}`}>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${anton.variable} ${dmSans.variable}${isDark ? ' dark' : ''}`}
+      style={isDark ? { backgroundColor: '#11110f', color: '#f7f7f2', colorScheme: 'dark' } : undefined}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];if(s==='dark'||c==='dark'||(!s&&!c&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';}}}catch(e){}})();`,
+            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(p.indexOf('/admin')!==-1&&s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}catch(e){}})();`,
           }}
         />
         <link
@@ -74,7 +85,11 @@ export default function RootLayout({
           fetchPriority="high"
         />
       </head>
-      <body suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={isDark ? 'dark' : ''}
+        style={isDark ? { backgroundColor: '#11110f', color: '#f7f7f2' } : undefined}
+      >
         <script
           dangerouslySetInnerHTML={{
             __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}catch(e){}`,
