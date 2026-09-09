@@ -26,13 +26,13 @@ export default function PrivacyPolicyPage() {
   const lastUpdated = '07 de setembro de 2026';
 
   return (
-    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-start">
+    <div className="legal-page min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between w-full">
       {/* Top Header */}
       <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 h-14 relative flex items-center justify-between">
+        <div className="wrap h-14 relative flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
           >
             <ArrowLeft size={14} />
             <span>Voltar</span>
@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage() {
 
           <Link
             href="/agendar"
-            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-obsidian)] hover:opacity-70 transition-opacity"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-obsidian)] hover:text-[var(--color-ember)] transition-colors"
           >
             <span>Agendar</span>
             <ArrowUpRight size={13} />
@@ -58,7 +58,7 @@ export default function PrivacyPolicyPage() {
       </header>
 
       {/* Main Content */}
-      <main id="conteudo" className="max-w-3xl mx-auto w-full px-4 py-8 sm:py-12 space-y-8">
+      <main id="conteudo" className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 space-y-8 flex-1">
         {/* Navigation Switcher: Privacidade <-> Termos */}
         <div className="flex items-center justify-center">
           <div className="inline-flex p-1 rounded-full bg-[#deded7] border border-[#cfcfc7] shadow-2xs">
@@ -81,7 +81,7 @@ export default function PrivacyPolicyPage() {
             <ShieldCheck size={14} className="text-emerald-600" />
             <span>LGPD · LEI Nº 13.709/2018</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-obsidian)]">
+          <h1 className="legal-hero-title text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-obsidian)]">
             Política de <em className="italic text-[var(--color-ember)]">Privacidade.</em>
           </h1>
           <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-xl mx-auto">
@@ -97,19 +97,17 @@ export default function PrivacyPolicyPage() {
         {/* Legal Content Cards */}
         <div className="space-y-6">
           {/* Section 01 */}
-          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
-                01
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+          <section className="bg-white p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="legal-card-badge">01</span>
+              <h2 className="legal-card-title text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
                 Controlador dos Dados e Identificação
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
               O estúdio <strong>Lara Varisa · Lash Designer</strong>, com sede e atendimento presencial na Zona Norte de Porto Alegre/RS, atua como <em>Controlador</em> dos dados pessoais coletados por meio deste site e de seus canais oficiais de comunicação.
             </p>
-            <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] text-xs text-[#595952] space-y-1.5">
+            <div className="p-4 rounded-xl sm:rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] text-xs text-[#595952] space-y-1.5">
               <p><strong>Encarregado pelo Tratamento de Dados (DPO):</strong> Lara Varisa</p>
               <p><strong>E-mail de Contato:</strong> {studio.email}</p>
               <p><strong>WhatsApp Oficial:</strong> {studio.whatsappFormatted}</p>
@@ -118,12 +116,10 @@ export default function PrivacyPolicyPage() {
           </section>
 
           {/* Section 02 */}
-          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-4">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
-                02
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+          <section className="bg-white p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="legal-card-badge">02</span>
+              <h2 className="legal-card-title text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
                 Quais Dados Coletamos e Para Quais Finalidades
               </h2>
             </div>
@@ -132,7 +128,7 @@ export default function PrivacyPolicyPage() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+              <div className="p-4 rounded-xl sm:rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
                   <UserCheck size={16} />
                 </div>
@@ -141,7 +137,7 @@ export default function PrivacyPolicyPage() {
                 <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Reservar o horário na agenda, enviar confirmações, fornecer o endereço do estúdio e viabilizar suporte em reagendamentos.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+              <div className="p-4 rounded-xl sm:rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
                   <Eye size={16} />
                 </div>
@@ -150,7 +146,7 @@ export default function PrivacyPolicyPage() {
                 <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Avaliar contraindicações médicas e garantir total biossegurança na aplicação das extensões.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+              <div className="p-4 rounded-xl sm:rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
                   <Mail size={16} />
                 </div>
@@ -159,24 +155,22 @@ export default function PrivacyPolicyPage() {
                 <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Responder prontamente a dúvidas sobre estilos, valores e recomendações estéticas.</p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+              <div className="p-4 rounded-xl sm:rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
                   <Lock size={16} />
                 </div>
                 <h3 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">Segurança Técnica</h3>
-                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Endereço IP (hash criptográfico temporário) e registros de integridade.</p>
+                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Endereço IP (hash temporário) e registros de integridade.</p>
                 <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Proteger a plataforma contra acessos maliciosos, ataques de força bruta e spam automatizado.</p>
               </div>
             </div>
           </section>
 
           {/* Section 03 */}
-          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
-                03
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+          <section className="bg-white p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="legal-card-badge">03</span>
+              <h2 className="legal-card-title text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
                 Bases Legais do Tratamento (Art. 7º e 11 da LGPD)
               </h2>
             </div>
@@ -188,12 +182,10 @@ export default function PrivacyPolicyPage() {
           </section>
 
           {/* Section 04 */}
-          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
-                04
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+          <section className="bg-white p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="legal-card-badge">04</span>
+              <h2 className="legal-card-title text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
                 Compartilhamento e Sigilo dos Dados
               </h2>
             </div>
@@ -217,12 +209,10 @@ export default function PrivacyPolicyPage() {
           </section>
 
           {/* Section 05 */}
-          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
-                05
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+          <section className="bg-white p-5 sm:p-7 rounded-2xl sm:rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="legal-card-badge">05</span>
+              <h2 className="legal-card-title text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
                 Seus Direitos como Titular de Dados
               </h2>
             </div>
