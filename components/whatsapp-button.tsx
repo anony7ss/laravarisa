@@ -6,8 +6,8 @@ import { whatsappUrl } from '@/lib/studio';
 
 export function WhatsAppButton() {
   const pathname = usePathname();
-  // Don't show in admin area or booking portal (which has its own action bar)
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agendar')) return null;
+  // Don't show in admin area, booking portal, or anamnese form
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/agendar') || pathname?.startsWith('/anamnese')) return null;
 
   return (
     <a

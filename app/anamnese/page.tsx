@@ -142,7 +142,7 @@ function AnamneseForm() {
     <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-start pb-12">
       {/* Top Header */}
       <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-lg mx-auto px-4 h-14 relative flex items-center justify-between">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
@@ -151,12 +151,14 @@ function AnamneseForm() {
             <span>Voltar ao início</span>
           </Link>
 
-          <Link
-            href="/"
-            className="font-serif text-lg tracking-tight text-[var(--color-obsidian)] hover:opacity-80 transition-opacity"
-          >
-            Lara Varisa
-          </Link>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+            <Link
+              href="/"
+              className="font-serif text-lg tracking-tight text-[var(--color-obsidian)] hover:opacity-80 transition-opacity"
+            >
+              Lara Varisa
+            </Link>
+          </div>
 
           <Link
             href="/agendar"
@@ -352,6 +354,18 @@ function AnamneseForm() {
           </form>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84] mt-auto">
+        <div className="max-w-lg mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>© {new Date().getFullYear()} Lara Varisa Studio</span>
+          <div className="flex items-center gap-3 text-[11px]">
+            <Link href="/termos" className="hover:text-[var(--color-obsidian)] transition-colors">Termos</Link>
+            <span>·</span>
+            <Link href="/privacidade" className="hover:text-[var(--color-obsidian)] transition-colors">Privacidade</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
