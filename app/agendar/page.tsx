@@ -365,7 +365,7 @@ function AgendarContent() {
 
       {/* HEADER BOUTIQUE */}
       <header className="w-full bg-[var(--color-pumice)] border-b border-[#cfcfc9]">
-        <div className="relative h-28 sm:h-36 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
+        <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
           <img
             src="/lara-lashes-optimized.webp"
             alt="Lara Varisa Lash Studio"
@@ -373,47 +373,49 @@ function AgendarContent() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-          <div className="absolute top-3 left-3 right-3 sm:left-6 sm:right-6 flex items-center justify-between z-10">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
-            >
-              <ArrowLeft size={13} />
-              <span>Início</span>
-            </Link>
+          <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
+            <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
+              >
+                <ArrowLeft size={13} />
+                <span>Início</span>
+              </Link>
 
-            <button
-              type="button"
-              onClick={() => setShowMyAppointments(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--color-obsidian)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            >
-              <CalendarDays size={13} className="text-[var(--color-ember)]" />
-              <span>Meus Horários</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowMyAppointments(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--color-obsidian)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                <CalendarDays size={13} className="text-[var(--color-ember)]" />
+                <span>Meus Horários</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="max-w-xl mx-auto px-4 -mt-10 sm:-mt-12 pb-3 text-center relative z-10 flex flex-col items-center">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-[var(--color-pumice)] shadow-md">
+        <div className="max-w-xl lg:max-w-3xl mx-auto px-4 -mt-10 sm:-mt-12 lg:-mt-14 pb-3 text-center relative z-10 flex flex-col items-center">
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 rounded-full p-1 bg-[var(--color-pumice)] shadow-md">
             <div className="w-full h-full rounded-full bg-[#161614] border-2 border-[#cfcfc9] flex items-center justify-center overflow-hidden">
               <img
                 src="/logo-emblem.png"
                 alt="Lara Varisa"
                 width={80}
                 height={80}
-                className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
+                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
               />
             </div>
           </div>
 
           <div className="mt-2 space-y-0.5">
-            <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] m-0">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)] m-0">
               Lara Varisa
             </h1>
-            <p className="text-xs sm:text-sm font-medium text-[#6e6e66] m-0">
+            <p className="text-xs sm:text-sm lg:text-base font-medium text-[#6e6e66] m-0">
               Lash Designer ︱ Especialista no Olhar
             </p>
-            <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-[#7a7a72]">
+            <div className="flex items-center justify-center gap-2 pt-1 text-[11px] sm:text-xs text-[#7a7a72]">
               <span className="flex items-center gap-1">
                 <MapPin size={12} className="text-[var(--color-ember)] shrink-0" />
                 Zona Norte, Porto Alegre - RS
@@ -436,7 +438,7 @@ function AgendarContent() {
 
         {/* 4 ABAS DE NAVEGAÇÃO */}
         <div className="sticky top-0 z-30 bg-[var(--color-pumice)]/95 backdrop-blur-md border-t border-[#cfcfc9] px-4 sm:px-6 py-2.5">
-          <div className="max-w-xl mx-auto flex items-center justify-center gap-1.5 sm:gap-2">
+          <div className="max-w-xl lg:max-w-2xl mx-auto flex items-center justify-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => {
@@ -503,7 +505,7 @@ function AgendarContent() {
           </div>
         </div>
       </header>
-﻿      <main className="flex-1 max-w-xl mx-auto w-full px-3.5 sm:px-4 py-4 sm:py-6 space-y-4">
+      <main className="flex-1 w-full max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3.5 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 lg:space-y-6">
         {activeTab === 'agendar' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             {siteSettings?.booking_alert && (
@@ -540,47 +542,54 @@ function AgendarContent() {
             ) : (
               <>
                 {bookingStep === 1 && (
-                  <div className="space-y-3">
+                  <div className="space-y-3 lg:space-y-4">
                     <div className="flex items-center justify-between pb-1 px-1">
                       <div>
-                        <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
+                        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-[var(--color-obsidian)] tracking-tight">
                           Procedimentos
                         </h2>
-                        <p className="text-xs text-[#707068]">
+                        <p className="text-xs sm:text-sm text-[#707068]">
                           Toque no serviço para escolher data e horário
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-[#8c8c84] bg-white px-2.5 py-1 rounded-full border border-[#d6d6cf]">
+                      <span className="text-xs font-medium text-[#8c8c84] bg-white px-2.5 py-1 rounded-full border border-[#d6d6cf] shadow-sm">
                         {filteredServices.length} opções
                       </span>
                     </div>
 
                     {/* BANNER 1ª VEZ · MINIMALISTA */}
-                    <div className="bg-white rounded-2xl border border-[#d6d6cf] p-3.5 sm:p-4 shadow-sm flex items-center justify-between gap-3">
+                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3.5 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3 lg:gap-4">
                       <div className="min-w-0">
-                        <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-[#8c8c84] block">
-                          Primeira Sessão no Estúdio
-                        </span>
-                        <p className="text-xs sm:text-sm font-semibold text-[var(--color-obsidian)] m-0 mt-0.5">
-                          Qualquer extensão por apenas <strong className="font-bold">R$ 80,00</strong> na 1ª vez
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ember)] bg-[#fcedea] px-2 py-0.5 rounded-full inline-block">
+                            Primeira Sessão no Estúdio
+                          </span>
+                          <span className="hidden sm:inline-block text-[11px] text-[#8c8c84]">· Condição Exclusiva</span>
+                        </div>
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1">
+                          Qualquer extensão por apenas <strong className="font-bold text-[var(--color-ember)]">R$ 80,00</strong> na 1ª vez
+                        </p>
+                        <p className="hidden lg:block text-xs text-[#707068] mt-0.5 m-0">
+                          Agendamento online com confirmação instantânea no WhatsApp.
                         </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xl sm:text-2xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none">
+                      <div className="text-right shrink-0 bg-[#f7f6f2] px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-[#e2e2df]">
+                        <span className="text-[10px] text-[#8c8c84] uppercase tracking-wider block font-medium">Por apenas</span>
+                        <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                           R$ 80
                         </span>
                       </div>
                     </div>
 
                     {categories.length > 1 && (
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none">
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none lg:overflow-visible lg:flex-wrap lg:pb-0">
                         <button
                           type="button"
                           onClick={() => setSelectedCategory('all')}
-                          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                          className={`px-3 py-1 lg:px-3.5 lg:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                             selectedCategory === 'all'
-                              ? 'bg-[var(--color-obsidian)] text-white font-semibold'
-                              : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)]'
+                              ? 'bg-[var(--color-obsidian)] text-white font-semibold shadow-sm'
+                              : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#f7f6f2]'
                           }`}
                         >
                           Todos
@@ -590,10 +599,10 @@ function AgendarContent() {
                             key={cat}
                             type="button"
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                            className={`px-3 py-1 lg:px-3.5 lg:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                               selectedCategory === cat
-                                ? 'bg-[var(--color-obsidian)] text-white font-semibold'
-                                : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)]'
+                                ? 'bg-[var(--color-obsidian)] text-white font-semibold shadow-sm'
+                                : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#f7f6f2]'
                             }`}
                           >
                             {cat}
@@ -608,7 +617,7 @@ function AgendarContent() {
                         <span>Carregando procedimentos...</span>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-2 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
                         {filteredServices.map((service) => {
                           const isPopular = service.category === 'Marcante';
 
@@ -616,11 +625,11 @@ function AgendarContent() {
                             <div
                               key={service.id}
                               onClick={() => handleSelectService(service)}
-                              className="group relative bg-white hover:bg-[#fafaf8] p-4 sm:p-4.5 rounded-2xl border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/60 shadow-sm transition-all cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99]"
+                              className="group relative bg-white hover:bg-[#fafaf8] p-4 sm:p-4.5 lg:p-5 rounded-2xl lg:rounded-3xl border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/60 shadow-sm hover:shadow-md transition-all cursor-pointer flex lg:flex-col items-center lg:items-stretch justify-between gap-3 lg:gap-4 active:scale-[0.99] lg:hover:-translate-y-0.5"
                             >
-                              <div className="space-y-1 min-w-0 flex-1">
+                              <div className="space-y-1 lg:space-y-2 min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h3 className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] group-hover:text-[var(--color-ember)] transition-colors truncate">
+                                  <h3 className="text-sm sm:text-base lg:text-lg font-bold text-[var(--color-obsidian)] group-hover:text-[var(--color-ember)] transition-colors truncate">
                                     {service.name}
                                   </h3>
                                   {isPopular && (
@@ -631,12 +640,12 @@ function AgendarContent() {
                                 </div>
 
                                 {service.description && (
-                                  <p className="text-xs text-[#707068] line-clamp-1">
+                                  <p className="text-xs lg:text-sm text-[#707068] line-clamp-1 lg:line-clamp-2 leading-relaxed">
                                     {service.description}
                                   </p>
                                 )}
 
-                                <div className="flex items-center gap-2 text-[11px] text-[#8c8c84] font-medium pt-0.5">
+                                <div className="flex items-center gap-2 text-[11px] lg:text-xs text-[#8c8c84] font-medium pt-0.5">
                                   <span className="flex items-center gap-1">
                                     <Clock3 size={12} className="shrink-0 text-[#a0a098]" />
                                     {service.duration}
@@ -650,18 +659,23 @@ function AgendarContent() {
                                 </div>
                               </div>
 
-                              <div className="text-right shrink-0 flex items-center gap-2.5">
-                                <div className="text-right">
+                              <div className="text-right shrink-0 flex lg:w-full items-center justify-between gap-2.5 lg:border-t lg:border-[#f0f0ed] lg:pt-3">
+                                <div className="text-right lg:text-left">
                                   <span className="text-[11px] text-[#a0a098] line-through block leading-none">
                                     {service.price}
                                   </span>
-                                  <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                                  <span className="text-base sm:text-lg lg:text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                                     R$ 80
                                   </span>
                                 </div>
 
-                                <div className="w-8 h-8 rounded-full bg-[var(--color-limestone)] group-hover:bg-[var(--color-obsidian)] text-[var(--color-obsidian)] group-hover:text-white flex items-center justify-center transition-colors">
-                                  <ChevronRight size={16} />
+                                <div className="flex items-center gap-2">
+                                  <span className="hidden lg:inline-block text-xs font-semibold text-[#707068] group-hover:text-[var(--color-obsidian)] transition-colors">
+                                    Agendar
+                                  </span>
+                                  <div className="w-8 h-8 rounded-full bg-[var(--color-limestone)] group-hover:bg-[var(--color-obsidian)] text-[var(--color-obsidian)] group-hover:text-white flex items-center justify-center transition-colors shadow-sm">
+                                    <ChevronRight size={16} />
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -673,55 +687,198 @@ function AgendarContent() {
                 )}
 
                 {(bookingStep === 2 || bookingStep === 3) && selectedService && (
-                  <div className="space-y-4">
-                    <div className="bg-white px-4 py-3 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            if (bookingStep === 3) setBookingStep(2);
-                            else setBookingStep(1);
-                          }}
-                          className="p-1.5 -ml-1 rounded-full hover:bg-[var(--color-limestone)] text-[#707068] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer shrink-0"
-                          title="Voltar"
-                        >
-                          <ArrowLeft size={16} />
-                        </button>
-                        <div className="min-w-0">
-                          <span className="text-[11px] text-[#8c8c84] block leading-none">
-                            Procedimento
-                          </span>
-                          <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block mt-0.5">
-                            {selectedService.name}
-                          </strong>
+                  <div>
+                    {/* MOBILE VIEW (< lg): FLUXO SEQUENCIAL 100% INTACTO */}
+                    <div className="lg:hidden space-y-4">
+                      <div className="bg-white px-4 py-3 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              if (bookingStep === 3) setBookingStep(2);
+                              else setBookingStep(1);
+                            }}
+                            className="p-1.5 -ml-1 rounded-full hover:bg-[var(--color-limestone)] text-[#707068] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer shrink-0"
+                            title="Voltar"
+                          >
+                            <ArrowLeft size={16} />
+                          </button>
+                          <div className="min-w-0">
+                            <span className="text-[11px] text-[#8c8c84] block leading-none">
+                              Procedimento
+                            </span>
+                            <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block mt-0.5">
+                              {selectedService.name}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <span className="text-[11px] text-[#a0a098] line-through block leading-none">
+                              {selectedService.price}
+                            </span>
+                            <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                              R$ 80
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setBookingStep(1);
+                            }}
+                            className="text-xs font-medium text-[#707068] hover:text-[var(--color-obsidian)] px-2.5 py-1 rounded-full bg-[#f4f4f0] hover:bg-[#eaeaec] transition-colors cursor-pointer"
+                          >
+                            Trocar
+                          </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          <span className="text-[11px] text-[#a0a098] line-through block leading-none">
-                            {selectedService.price}
-                          </span>
-                          <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
-                            R$ 80
-                          </span>
+                      {bookingStep === 2 && (
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                          <DateTimePicker
+                            selectedDateStr={selectedDateStr}
+                            onSelectDate={setSelectedDateStr}
+                            selectedSlot={selectedSlot}
+                            onSelectSlot={(slot) => {
+                              setSelectedSlot(slot);
+                            }}
+                            durationMinutes={selectedService.durationMinutes || 120}
+                          />
+
+                          {selectedSlot && (
+                            <div className="pt-2 sticky bottom-4 z-20">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  triggerHaptic('light');
+                                  setBookingStep(3);
+                                  window.scrollTo({ top: 200, behavior: 'smooth' });
+                                }}
+                                className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] cursor-pointer"
+                              >
+                                <span>Avançar · {selectedSlot.time}</span>
+                                <ArrowRight size={16} />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setBookingStep(1);
-                          }}
-                          className="text-xs font-medium text-[#707068] hover:text-[var(--color-obsidian)] px-2.5 py-1 rounded-full bg-[#f4f4f0] hover:bg-[#eaeaec] transition-colors cursor-pointer"
-                        >
-                          Trocar
-                        </button>
-                      </div>
+                      )}
+
+                      {bookingStep === 3 && selectedSlot && (
+                        <div className="space-y-4 animate-in fade-in duration-200">
+                          <div className="bg-white p-3.5 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
+                              <span className="font-semibold text-[var(--color-obsidian)] capitalize">
+                                {new Date(selectedSlot.dateTime).toLocaleDateString('pt-BR', {
+                                  weekday: 'long',
+                                  day: '2-digit',
+                                  month: 'short',
+                                })} às {selectedSlot.time}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setBookingStep(2)}
+                              className="text-[11px] font-semibold text-[#8c8c84] hover:text-[var(--color-obsidian)] underline cursor-pointer"
+                            >
+                              Alterar
+                            </button>
+                          </div>
+
+                          <ClientForm
+                            formData={clientData}
+                            onChange={setClientData}
+                          />
+
+                          {submitError && (
+                            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                              <AlertCircle size={16} className="shrink-0 text-rose-500" />
+                              <span>{submitError}</span>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            disabled={submitting}
+                            onClick={handleSubmitBooking}
+                            className="w-full py-3.5 sm:py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                          >
+                            {submitting ? (
+                              <>
+                                <Loader2 size={17} className="animate-spin text-white" />
+                                <span>Confirmando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Confirmar Agendamento · R$ 80</span>
+                                <ArrowUpRight size={17} />
+                              </>
+                            )}
+                          </button>
+
+                          <p className="text-center text-[11px] text-[#8c8c84] m-0">
+                            R$ 80 exclusivo na 1ª sessão · Pagamento no local
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {bookingStep === 2 && (
-                      <div className="space-y-4 animate-in fade-in duration-200">
+                    {/* DESKTOP VIEW (lg+): LAYOUT SPLIT PROFISSIONAL EM 2 COLUNAS */}
+                    <div className="hidden lg:grid lg:grid-cols-12 lg:gap-8 items-start">
+                      {/* COLUNA ESQUERDA: Procedimento e Seletor de Data & Horário */}
+                      <div className="lg:col-span-7 space-y-5">
+                        <div className="bg-white px-5 py-4 rounded-3xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(1);
+                              }}
+                              className="p-2 -ml-1 rounded-full hover:bg-[var(--color-limestone)] text-[#707068] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer shrink-0"
+                              title="Trocar procedimento"
+                            >
+                              <ArrowLeft size={18} />
+                            </button>
+                            <div className="min-w-0">
+                              <span className="text-[11px] uppercase tracking-wider text-[#8c8c84] font-semibold block leading-none">
+                                Procedimento Selecionado
+                              </span>
+                              <strong className="text-lg font-bold text-[var(--color-obsidian)] truncate block mt-1">
+                                {selectedService.name}
+                              </strong>
+                              <span className="text-xs text-[#707068] block mt-0.5">
+                                Duração aprox. {selectedService.duration} {selectedService.maintenance ? `· ${selectedService.maintenance}` : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3.5 shrink-0">
+                            <div className="text-right">
+                              <span className="text-xs text-[#a0a098] line-through block leading-none">
+                                {selectedService.price}
+                              </span>
+                              <span className="text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-1">
+                                R$ 80
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(1);
+                              }}
+                              className="text-xs font-semibold text-[#707068] hover:text-[var(--color-obsidian)] px-3.5 py-1.5 rounded-full bg-[#f4f4f0] hover:bg-[#eaeaec] transition-colors cursor-pointer"
+                            >
+                              Trocar
+                            </button>
+                          </div>
+                        </div>
+
                         <DateTimePicker
                           selectedDateStr={selectedDateStr}
                           onSelectDate={setSelectedDateStr}
@@ -731,94 +888,122 @@ function AgendarContent() {
                           }}
                           durationMinutes={selectedService.durationMinutes || 120}
                         />
-
-                        {selectedSlot && (
-                          <div className="pt-2 sticky bottom-4 z-20">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                triggerHaptic('light');
-                                setBookingStep(3);
-                                window.scrollTo({ top: 200, behavior: 'smooth' });
-                              }}
-                              className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] cursor-pointer"
-                            >
-                              <span>Avançar · {selectedSlot.time}</span>
-                              <ArrowRight size={16} />
-                            </button>
-                          </div>
-                        )}
                       </div>
-                    )}
 
-                    {bookingStep === 3 && selectedSlot && (
-                      <div className="space-y-4 animate-in fade-in duration-200">
-                        <div className="bg-white p-3.5 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
-                            <span className="font-semibold text-[var(--color-obsidian)] capitalize">
-                              {new Date(selectedSlot.dateTime).toLocaleDateString('pt-BR', {
-                                weekday: 'long',
-                                day: '2-digit',
-                                month: 'short',
-                              })} às {selectedSlot.time}
-                            </span>
+                      {/* COLUNA DIREITA: Resumo Fixo e Formulário do Cliente */}
+                      <div className="lg:col-span-5 sticky top-20 space-y-4">
+                        <div className="bg-white p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-5">
+                          <div className="border-b border-[#f0f0ed] pb-3.5">
+                            <h3 className="text-base font-bold text-[var(--color-obsidian)]">
+                              Resumo do Agendamento
+                            </h3>
+                            <p className="text-xs text-[#707068] mt-0.5">
+                              Revise os detalhes e confirme sua reserva
+                            </p>
                           </div>
+
+                          {/* Status de Data e Horário */}
+                          <div className="space-y-2">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[#8c8c84] block">
+                              Data & Horário
+                            </span>
+                            {selectedSlot ? (
+                              <div className="p-3.5 bg-[#f7f6f2] border border-[#e2e2df] rounded-2xl flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2.5">
+                                  <CalendarDays size={16} className="text-[var(--color-ember)] shrink-0" />
+                                  <span className="font-bold text-[var(--color-obsidian)] capitalize">
+                                    {new Date(selectedSlot.dateTime).toLocaleDateString('pt-BR', {
+                                      weekday: 'short',
+                                      day: '2-digit',
+                                      month: 'short',
+                                    })} às {selectedSlot.time}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                                  Horário Escolhido
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800">
+                                <Clock3 size={16} className="shrink-0 text-amber-600" />
+                                <span>Selecione uma data e horário ao lado para continuar.</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Destaque de Valor Promocional */}
+                          <div className="p-4 rounded-2xl bg-[var(--color-limestone)] border border-[#e2e2df] flex items-center justify-between">
+                            <div>
+                              <span className="text-[11px] text-[#8c8c84] uppercase tracking-wider block font-semibold">
+                                Total do Procedimento
+                              </span>
+                              <span className="text-xs text-emerald-700 font-medium block mt-0.5">
+                                1ª Sessão no Estúdio (Promoção Especial)
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-[#a0a098] line-through block leading-none">
+                                {selectedService.price}
+                              </span>
+                              <span className="text-2xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-1">
+                                R$ 80,00
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Formulário do Cliente */}
+                          <div className="border-t border-[#f0f0ed] pt-2">
+                            <ClientForm
+                              formData={clientData}
+                              onChange={setClientData}
+                            />
+                          </div>
+
+                          {submitError && (
+                            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                              <AlertCircle size={16} className="shrink-0 text-rose-500" />
+                              <span>{submitError}</span>
+                            </div>
+                          )}
+
+                          {/* Botão de Confirmação */}
                           <button
                             type="button"
-                            onClick={() => setBookingStep(2)}
-                            className="text-[11px] font-semibold text-[#8c8c84] hover:text-[var(--color-obsidian)] underline cursor-pointer"
+                            disabled={submitting || !selectedSlot}
+                            onClick={handleSubmitBooking}
+                            className="w-full py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >
-                            Alterar
+                            {submitting ? (
+                              <>
+                                <Loader2 size={18} className="animate-spin text-white" />
+                                <span>Confirmando...</span>
+                              </>
+                            ) : !selectedSlot ? (
+                              <span>Escolha um horário ao lado</span>
+                            ) : (
+                              <>
+                                <span>Confirmar Agendamento · R$ 80</span>
+                                <ArrowUpRight size={18} />
+                              </>
+                            )}
                           </button>
+
+                          <p className="text-center text-[11px] text-[#8c8c84] m-0">
+                            R$ 80 exclusivo na 1ª sessão · Pagamento no local
+                          </p>
                         </div>
-
-                        <ClientForm
-                          formData={clientData}
-                          onChange={setClientData}
-                        />
-
-                        {submitError && (
-                          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
-                            <AlertCircle size={16} className="shrink-0 text-rose-500" />
-                            <span>{submitError}</span>
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          disabled={submitting}
-                          onClick={handleSubmitBooking}
-                          className="w-full py-3.5 sm:py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-                        >
-                          {submitting ? (
-                            <>
-                              <Loader2 size={17} className="animate-spin text-white" />
-                              <span>Confirmando...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Confirmar Agendamento · R$ 80</span>
-                              <ArrowUpRight size={17} />
-                            </>
-                          )}
-                        </button>
-
-                        <p className="text-center text-[11px] text-[#8c8c84] m-0">
-                          R$ 80 exclusivo na 1ª sessão · Pagamento no local
-                        </p>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
                 {bookingStep === 4 && successBooking && (
-                  <div className="text-center space-y-4 animate-in zoom-in-95 duration-200 py-2">
+                  <div className="text-center space-y-4 lg:space-y-6 animate-in zoom-in-95 duration-200 py-2 max-w-xl lg:max-w-2xl mx-auto">
                     <div className="space-y-2">
                       <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shadow-sm">
                         <Check size={26} strokeWidth={2.5} />
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+                      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
                         Horário Confirmado, {(successBooking.client_name || clientData.name || '').trim().split(' ')[0]}!
                       </h2>
                       <p className="text-xs sm:text-sm text-[#595952]">
@@ -826,13 +1011,13 @@ function AgendarContent() {
                       </p>
                     </div>
 
-                    <div className="bg-white p-5 sm:p-6 rounded-[28px] border border-[#e2e2df] shadow-sm text-left space-y-4">
+                    <div className="bg-white p-5 sm:p-6 lg:p-7 rounded-[28px] border border-[#e2e2df] shadow-sm text-left space-y-4">
                       <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-[#f0f0ed]">
                         <div>
                           <span className="text-[10px] uppercase font-bold tracking-wider text-[#8c8c84] block font-mono">
                             Procedimento
                           </span>
-                          <strong className="text-base font-bold text-[var(--color-obsidian)] block mt-0.5">
+                          <strong className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] block mt-0.5">
                             {successBooking.service_name}
                           </strong>
                           <span className="text-xs text-[#7a7a72]">
@@ -843,7 +1028,7 @@ function AgendarContent() {
                           <span className="text-[10px] uppercase font-bold tracking-wider text-[#8c8c84] block font-mono">
                             Valor (1ª Aplicação)
                           </span>
-                          <span className="text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)]">
+                          <span className="text-lg sm:text-xl font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)]">
                             R$ 80,00
                           </span>
                           <span className="text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-semibold block mt-0.5">
@@ -852,7 +1037,7 @@ function AgendarContent() {
                         </div>
                       </div>
 
-                      <div className="space-y-2 text-xs">
+                      <div className="space-y-2 text-xs sm:text-sm">
                         <div className="flex items-center gap-2.5 text-[var(--color-obsidian)]">
                           <CalendarDays size={16} className="text-[var(--color-ember)] shrink-0" />
                           <span className="font-semibold capitalize">
@@ -978,19 +1163,20 @@ function AgendarContent() {
             )}
           </div>
         )}
-﻿        {/* TAB 2: GALERIA */}
+
+        {/* TAB 2: GALERIA */}
         {activeTab === 'galeria' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
             <div className="px-1">
-              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
+              <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-[var(--color-obsidian)] tracking-tight">
                 Resultados Reais
               </h2>
-              <p className="text-xs text-[#707068]">
+              <p className="text-xs sm:text-sm text-[#707068]">
                 Toque em qualquer foto para ver os fios e curvaturas em alta resolução
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 lg:gap-4">
               {gallery.map((photo, index) => (
                 <div
                   key={photo.id || index}
@@ -998,7 +1184,7 @@ function AgendarContent() {
                     triggerHaptic('light');
                     setLightboxIndex(index);
                   }}
-                  className="group relative aspect-square rounded-2xl overflow-hidden bg-[#161614] border border-[#d6d6cf] shadow-sm cursor-pointer"
+                  className="group relative aspect-square rounded-2xl lg:rounded-3xl overflow-hidden bg-[#161614] border border-[#d6d6cf] shadow-sm hover:shadow-md cursor-pointer transition-all"
                 >
                   <img
                     src={photo.src}
@@ -1006,9 +1192,9 @@ function AgendarContent() {
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 text-white">
-                    <span className="text-[11px] font-bold line-clamp-1">{photo.title}</span>
-                    <span className="text-[9px] text-white/80 line-clamp-1">{photo.subtitle}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 sm:p-3 text-white">
+                    <span className="text-[11px] sm:text-xs font-bold line-clamp-1">{photo.title}</span>
+                    <span className="text-[9px] sm:text-[10px] text-white/80 line-clamp-1">{photo.subtitle}</span>
                   </div>
                 </div>
               ))}
@@ -1022,7 +1208,7 @@ function AgendarContent() {
                   setActiveTab('agendar');
                   setBookingStep(1);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[var(--color-obsidian)] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-3 lg:px-6 lg:py-3.5 rounded-full bg-[var(--color-obsidian)] text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 transition-colors shadow-sm cursor-pointer"
               >
                 <CalendarDays size={14} className="text-[var(--color-ember)]" />
                 <span>Gostou? Agendar Procedimento Agora</span>
@@ -1033,9 +1219,9 @@ function AgendarContent() {
 
         {/* TAB 3: AVALIAÇÕES */}
         {activeTab === 'avaliacoes' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm text-center space-y-2">
-              <span className="text-3xl sm:text-4xl font-[family-name:var(--font-display)] text-[var(--color-obsidian)] font-bold">
+          <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
+            <div className="bg-white p-5 lg:p-7 rounded-3xl border border-[#d6d6cf] shadow-sm text-center space-y-2 max-w-xl lg:max-w-2xl mx-auto">
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-[family-name:var(--font-display)] text-[var(--color-obsidian)] font-bold">
                 5.0
               </span>
               <div className="flex items-center justify-center gap-1 text-amber-500">
@@ -1043,7 +1229,7 @@ function AgendarContent() {
                   <Star key={i} size={18} fill="currentColor" />
                 ))}
               </div>
-              <p className="text-xs text-[#707068] font-medium">
+              <p className="text-xs sm:text-sm text-[#707068] font-medium">
                 100% de satisfação e recomendação das nossas clientes
               </p>
 
@@ -1062,35 +1248,37 @@ function AgendarContent() {
               )}
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
               {testimonials.length > 0 ? (
                 testimonials.map((t) => (
                   <div
                     key={t.id}
-                    className="bg-white p-4 sm:p-5 rounded-2xl border border-[#d6d6cf] shadow-sm space-y-2"
+                    className="bg-white p-4 sm:p-5 rounded-2xl lg:rounded-3xl border border-[#d6d6cf] shadow-sm space-y-2 flex flex-col justify-between"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <strong className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)] block">
-                          {t.client_name}
-                        </strong>
-                        <span className="text-[10px] text-[#8c8c84]">
-                          {t.client_role || 'Cliente'}
-                        </span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <strong className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)] block">
+                            {t.client_name}
+                          </strong>
+                          <span className="text-[10px] sm:text-xs text-[#8c8c84]">
+                            {t.client_role || 'Cliente'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
+                          {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                            <Star key={i} size={13} fill="currentColor" />
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
-                        {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                          <Star key={i} size={13} fill="currentColor" />
-                        ))}
-                      </div>
+                      <p className="text-xs sm:text-sm text-[#595952] leading-relaxed italic">
+                        "{t.content}"
+                      </p>
                     </div>
-                    <p className="text-xs sm:text-sm text-[#595952] leading-relaxed italic">
-                      "{t.content}"
-                    </p>
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center text-xs text-[#8c8c84]">
+                <div className="py-8 text-center text-xs text-[#8c8c84] col-span-full">
                   Carregando avaliações dos atendimentos...
                 </div>
               )}
@@ -1100,136 +1288,142 @@ function AgendarContent() {
 
         {/* TAB 4: ESTÚDIO & LOCALIZAÇÃO */}
         {activeTab === 'estudio' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
-              <div className="flex items-center gap-2 border-b border-[#f0f0ed] pb-3">
-                <Clock3 size={18} className="text-[var(--color-ember)]" />
-                <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)]">
-                  Horários de Funcionamento
-                </h3>
-              </div>
-
-              <div className="text-xs space-y-2 text-[#595952]">
-                <div className="flex items-center justify-between">
-                  <span>Segunda a Sexta</span>
-                  <span className="font-semibold text-[var(--color-obsidian)]">
-                    {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Sábado</span>
-                  <span className="font-semibold text-[var(--color-obsidian)]">
-                    {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-[#a0a098]">
-                  <span>Domingo</span>
-                  <span>Fechado</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
-              <div className="flex items-center gap-2 border-b border-[#f0f0ed] pb-3">
-                <MapPin size={18} className="text-[var(--color-ember)]" />
-                <div>
+          <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 items-start animate-in fade-in duration-200">
+            {/* Coluna Esquerda: Horários e Canais de Contato */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="bg-white p-5 lg:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
+                <div className="flex items-center gap-2 border-b border-[#f0f0ed] pb-3">
+                  <Clock3 size={18} className="text-[var(--color-ember)]" />
                   <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)]">
-                    Localização do Estúdio
+                    Horários de Funcionamento
                   </h3>
-                  <p className="text-[11px] text-[#707068]">
-                    Zona Norte · Porto Alegre, RS
-                  </p>
                 </div>
-              </div>
 
-              <p className="text-xs text-[#595952] leading-relaxed">
-                {siteSettings?.studio_city || 'Zona Norte de Porto Alegre, RS.'} O endereço exato com ponto de referência é enviado automaticamente na confirmação do agendamento por segurança e exclusividade.
-              </p>
-
-              <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-[#d6d6cf] bg-[#f0f0ec] shadow-inner">
-                <iframe
-                  src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
-                  width="100%"
-                  height="100%"
-                  style={{
-                    border: 0,
-                    filter: 'grayscale(75%) contrast(1.08) brightness(0.97)',
-                  }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Localização do Estúdio"
-                />
-
-                {/* MARCADOR DE LUXO DO ESTÚDIO */}
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="flex flex-col items-center -mt-4">
-                    <div className="relative flex items-center justify-center">
-                      <div className="absolute w-10 h-10 rounded-full bg-[var(--color-ember)]/30 animate-ping" />
-                      <div className="w-9 h-9 rounded-full bg-[var(--color-obsidian)] text-white shadow-xl border-2 border-white flex items-center justify-center relative z-10">
-                        <MapPin size={17} className="text-[var(--color-ember)]" />
-                      </div>
-                    </div>
-                    <div className="mt-1.5 px-3 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#d6d6cf] shadow-md text-center">
-                      <span className="text-[11px] font-bold text-[var(--color-obsidian)] block leading-none">
-                        Lara Varisa Studio
-                      </span>
-                      <span className="text-[9px] text-[#707068] block mt-0.5">
-                        Zona Norte · Porto Alegre
-                      </span>
-                    </div>
+                <div className="text-xs sm:text-sm space-y-2 text-[#595952]">
+                  <div className="flex items-center justify-between">
+                    <span>Segunda a Sexta</span>
+                    <span className="font-semibold text-[var(--color-obsidian)]">
+                      {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Sábado</span>
+                    <span className="font-semibold text-[var(--color-obsidian)]">
+                      {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#a0a098]">
+                    <span>Domingo</span>
+                    <span>Fechado</span>
                   </div>
                 </div>
+              </div>
 
-                {/* BOTÃO FLUTUANTE MAPS */}
-                <div className="absolute bottom-2.5 right-2.5 z-10">
+              <div className="bg-white p-5 lg:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
+                <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)] border-b border-[#f0f0ed] pb-3">
+                  Canais de Atendimento
+                </h3>
+
+                <div className="space-y-2">
                   <a
-                    href={siteSettings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
+                    href={whatsappUrl('Olá, Lara! Estive no seu site e gostaria de tirar uma dúvida.')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-[var(--color-obsidian)] border border-[#d6d6cf] shadow-sm text-xs font-semibold backdrop-blur-sm transition-all hover:shadow-md cursor-pointer"
+                    className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
                   >
-                    <span>Abrir Google Maps</span>
-                    <ExternalLink size={12} className="text-[#8c8c84]" />
+                    <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
+                      <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
+                        <MessageCircle size={15} />
+                      </div>
+                      <span>WhatsApp Direto com a Lara</span>
+                    </div>
+                    <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
+                  </a>
+
+                  <a
+                    href={siteSettings?.studio_instagram_url || 'https://www.instagram.com/laravarisa.lashes/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
+                  >
+                    <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
+                      <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
+                        <InstagramIcon size={15} />
+                      </div>
+                      <span>Instagram ({siteSettings?.studio_instagram || '@laravarisa.lashes'})</span>
+                    </div>
+                    <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
-              <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)] border-b border-[#f0f0ed] pb-3">
-                Canais de Atendimento
-              </h3>
-
-              <div className="space-y-2">
-                <a
-                  href={whatsappUrl('Olá, Lara! Estive no seu site e gostaria de tirar uma dúvida.')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
-                    <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
-                      <MessageCircle size={15} />
-                    </div>
-                    <span>WhatsApp Direto com a Lara</span>
+            {/* Coluna Direita: Mapa e Endereço */}
+            <div className="lg:col-span-7">
+              <div className="bg-white p-5 lg:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
+                <div className="flex items-center gap-2 border-b border-[#f0f0ed] pb-3">
+                  <MapPin size={18} className="text-[var(--color-ember)]" />
+                  <div>
+                    <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)]">
+                      Localização do Estúdio
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-[#707068]">
+                      Zona Norte · Porto Alegre, RS
+                    </p>
                   </div>
-                  <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
-                </a>
+                </div>
 
-                <a
-                  href={siteSettings?.studio_instagram_url || 'https://www.instagram.com/laravarisa.lashes/'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
-                    <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
-                      <InstagramIcon size={15} />
+                <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+                  {siteSettings?.studio_city || 'Zona Norte de Porto Alegre, RS.'} O endereço exato com ponto de referência é enviado automaticamente na confirmação do agendamento por segurança e exclusividade.
+                </p>
+
+                <div className="relative w-full h-56 sm:h-64 lg:h-80 rounded-2xl overflow-hidden border border-[#d6d6cf] bg-[#f0f0ec] shadow-inner">
+                  <iframe
+                    src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
+                    width="100%"
+                    height="100%"
+                    style={{
+                      border: 0,
+                      filter: 'grayscale(75%) contrast(1.08) brightness(0.97)',
+                    }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Localização do Estúdio"
+                  />
+
+                  {/* MARCADOR DE LUXO DO ESTÚDIO */}
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="flex flex-col items-center -mt-4">
+                      <div className="relative flex items-center justify-center">
+                        <div className="absolute w-10 h-10 rounded-full bg-[var(--color-ember)]/30 animate-ping" />
+                        <div className="w-9 h-9 rounded-full bg-[var(--color-obsidian)] text-white shadow-xl border-2 border-white flex items-center justify-center relative z-10">
+                          <MapPin size={17} className="text-[var(--color-ember)]" />
+                        </div>
+                      </div>
+                      <div className="mt-1.5 px-3 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#d6d6cf] shadow-md text-center">
+                        <span className="text-[11px] font-bold text-[var(--color-obsidian)] block leading-none">
+                          Lara Varisa Studio
+                        </span>
+                        <span className="text-[9px] text-[#707068] block mt-0.5">
+                          Zona Norte · Porto Alegre
+                        </span>
+                      </div>
                     </div>
-                    <span>Instagram ({siteSettings?.studio_instagram || '@laravarisa.lashes'})</span>
                   </div>
-                  <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
-                </a>
+
+                  {/* BOTÃO FLUTUANTE MAPS */}
+                  <div className="absolute bottom-2.5 right-2.5 z-10">
+                    <a
+                      href={siteSettings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-[var(--color-obsidian)] border border-[#d6d6cf] shadow-sm text-xs font-semibold backdrop-blur-sm transition-all hover:shadow-md cursor-pointer"
+                    >
+                      <span>Abrir Google Maps</span>
+                      <ExternalLink size={12} className="text-[#8c8c84]" />
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1237,7 +1431,7 @@ function AgendarContent() {
       </main>
 
       <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
-        <div className="max-w-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>© {new Date().getFullYear()} Lara Varisa Studio</span>
           <div className="flex items-center gap-3 text-[11px]">
             <Link href="/termos" className="hover:text-[var(--color-obsidian)] transition-colors">Termos</Link>

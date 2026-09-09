@@ -19,7 +19,7 @@ export function PromoBanner() {
 
   const conditionsText =
     settings.promo_conditions?.trim() ||
-    'Válido exclusivamente para novas clientes no primeiro atendimento em qualquer procedimento de extensão de cílios. Não cumulativo com outros descontos ou pacotes. Desconto de 20% aplicado diretamente no valor final do procedimento mediante agendamento prévio no mês vigente.';
+    'Válido exclusivamente para novas clientes no primeiro atendimento em qualquer procedimento de extensão de cílios por apenas R$ 80,00. Não cumulativo com outras promoções. Agendamento mediante disponibilidade no mês vigente.';
 
   return (
     <>
@@ -38,9 +38,9 @@ export function PromoBanner() {
           </div>
 
           {settings.promo_link_url && settings.promo_link_text && (
-            <a href={settings.promo_link_url} className="promo-link">
+            <Link href={settings.promo_link_url} className="promo-link">
               {settings.promo_link_text}
-            </a>
+            </Link>
           )}
         </div>
 
@@ -93,11 +93,11 @@ export function PromoBanner() {
                 </li>
                 <li>
                   <CheckCircle2 size={16} />
-                  <span><strong>Aplicação direta:</strong> Desconto de 20% aplicado no valor final do procedimento.</span>
+                  <span><strong>Valor promocional:</strong> Qualquer procedimento de extensão por apenas R$ 80,00.</span>
                 </li>
                 <li>
                   <CheckCircle2 size={16} />
-                  <span><strong>Não cumulativo:</strong> Válido para 1 procedimento por CPF/WhatsApp.</span>
+                  <span><strong>Não cumulativo:</strong> Válido para 1 procedimento por cliente/WhatsApp.</span>
                 </li>
               </ul>
             </div>

@@ -82,9 +82,10 @@ export function usePublicGallery() {
 export const defaultSettings: SiteSettings = {
   id: 'global',
   promo_active: true,
-  promo_text: 'Ganhe 20% off na sua primeira visita!!',
-  promo_link_url: '/servicos',
+  promo_text: 'Exclusivo 1ª vez: qualquer extensão de cílios por apenas R$ 80,00 no seu primeiro atendimento!',
+  promo_link_url: '/agendar',
   promo_link_text: 'Agendar com desconto',
+  promo_conditions: 'Promoção válida por tempo limitado para todos os procedimentos de extensão de cílios e lash lifting no Studio Lara Varisa. Agende diretamente pelo site ou WhatsApp.',
 };
 
 export const defaultTestimonials: Testimonial[] = [

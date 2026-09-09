@@ -22,12 +22,14 @@ import {
   Volume2,
   MessageSquare,
   Terminal as TerminalIcon,
+  Link2,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import { DisparosManager, type ClientWithActivity, type OutboxItem } from './disparos-manager';
 import { WhatsAppChatSimulator } from './whatsapp-chat-simulator';
 import { WhatsAppTerminal } from './whatsapp-terminal';
+import { WhatsAppLinkGenerator } from './whatsapp-link-generator';
 
 export interface WhatsAppSession {
   id: string;
@@ -63,11 +65,12 @@ export function WhatsAppManager({
   initialRecent?: OutboxItem[];
 }) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'chat' | 'terminal' | 'connection' | 'disparos'>(() => {
+  const [activeTab, setActiveTab] = useState<'chat' | 'terminal' | 'connection' | 'disparos' | 'links'>(() => {
     const tab = searchParams?.get('tab');
     if (tab === 'disparos') return 'disparos';
     if (tab === 'terminal') return 'terminal';
     if (tab === 'connection') return 'connection';
+    if (tab === 'links' || tab === 'link') return 'links';
     return 'chat';
   });
   const [session, setSession] = useState<WhatsAppSession>(initialSession);
@@ -686,6 +689,18 @@ export function WhatsAppManager({
           <SendHorizontal size={16} />
           <span>Campanhas</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('links')}
+          className={`${activeTab === 'links' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
+          style={{
+            fontWeight: activeTab === 'links' ? 600 : 500,
+          }}
+        >
+          <Link2 size={16} />
+          <span>Gerador de Link</span>
+        </button>
       </div>
 
       {activeTab === 'chat' && (
@@ -702,6 +717,12 @@ export function WhatsAppManager({
           initialStats={initialStats}
           initialRecent={initialRecent}
           role={role}
+        />
+      )}
+
+      {activeTab === 'links' && (
+        <WhatsAppLinkGenerator
+          defaultPhone={session.phone_connected || session.lara_phone || '51989601662'}
         />
       )}
 

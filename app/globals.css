@@ -76,6 +76,13 @@ body:has(.admin-root:not(.dark)),
   background: var(--color-sulfur);
   color: #070607;
 }
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 .wrap {
   width: calc(100% - 96px);
   max-width: 1280px;
