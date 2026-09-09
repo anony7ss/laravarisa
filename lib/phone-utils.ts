@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utilitários de normalização e comparação inteligente de telefones brasileiros
  * Unifica formatos:
  * - '5551989741970' (com DDI, DDD, 9 dígitos)
@@ -13,6 +13,18 @@ export function cleanPhoneDigits(raw?: string | null): string {
   if (!raw) return '';
   const withoutJid = String(raw).split('@')[0].split(':')[0];
   return withoutJid.replace(/\D/g, '');
+}
+
+/**
+ * Detecta se uma string representa um LID (Linked Device Identifier do WhatsApp Multi-Device)
+ * e não um número de telefone comum.
+ */
+export function isLid(raw?: string | null): boolean {
+  if (!raw) return false;
+  const str = String(raw).trim();
+  if (str.endsWith('@lid')) return true;
+  const digits = cleanPhoneDigits(str);
+  return digits.length >= 14 && !digits.startsWith('55');
 }
 
 /**

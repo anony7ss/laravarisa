@@ -18,6 +18,7 @@ const authPath = path.resolve(__dirname, '../auth_info_baileys');
 
 import { logInfo, logSuccess, logWarn, logError } from './terminal.js';
 import { publicarStatusBot } from './web-sync.js';
+import { isLid, registrarMapeamentoLid, resolverLidParaTelefone } from './phone-utils.js';
 
 const makeWASocket = typeof baileysPkg === 'function' ? baileysPkg : (baileysPkg?.default || baileysPkg);
 
@@ -249,27 +250,41 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const errorMsg = String(lastDisconnect?.error?.message || lastDisconnect?.error || '');
+
+      // 1. Reinicialização de stream padrão do WhatsApp Multi-Device (515 / restart required / Stream Errored)
+      // NUNCA DELETAR SESSÃO! Baileys precisa apenas reconectar mantendo os arquivos intactos.
+      const isRestartRequired =
+        statusCode === DisconnectReason?.restartRequired ||
+        statusCode === 515 ||
+        errorMsg.includes('Stream Errored') ||
+        errorMsg.includes('restart required');
+
+      if (isRestartRequired) {
+        logInfo('WhatsApp', 'WhatsApp solicitou reinicialização de stream (restart required). Reconectando mantendo credenciais...');
+        setTimeout(() => initWhatsApp(onMessageReceived, onConnectionUpdate), 1000);
+        return;
+      }
+
       consecutiveDisconnectCount++;
 
+      // 2. Erros críticos que justificam reset de credenciais:
+      // Apenas se o usuário desconectou no app (401) ou se houver falhas consecutivas reais
       const isLoggedOut = statusCode === DisconnectReason?.loggedOut || statusCode === 401;
-      const isBadSession = statusCode === DisconnectReason?.badSession || statusCode === 500;
-      const isMultideviceMismatch = errorMsg.includes('multidevice_mismatch') || errorMsg.includes('Bad MAC');
+      const isBadSession = (statusCode === DisconnectReason?.badSession || statusCode === 500) && consecutiveDisconnectCount >= 3;
+      const isMultideviceMismatch = (errorMsg.includes('multidevice_mismatch') || errorMsg.includes('Bad MAC')) && consecutiveDisconnectCount >= 3;
       const isCorruptOrConflict =
         statusCode === 403 ||
         statusCode === 405 ||
-        statusCode === 411 ||
-        errorMsg.includes('conflict') ||
-        errorMsg.includes('Stream Errored') ||
-        errorMsg.includes('QR refs attempts ended') ||
-        consecutiveDisconnectCount >= 4;
+        (errorMsg.includes('conflict') && consecutiveDisconnectCount >= 2) ||
+        consecutiveDisconnectCount >= 5;
 
       if (isLoggedOut || isBadSession || isMultideviceMismatch || isCorruptOrConflict) {
         const motivo = isLoggedOut
           ? 'Desconectado pelo WhatsApp (401)'
           : isBadSession
-          ? 'Sessão corrompida (500 - Bad Session)'
+          ? 'Sessão corrompida (500 - Bad Session repetida)'
           : isMultideviceMismatch
-          ? 'Desincronização de chaves Signal (Bad MAC)'
+          ? 'Desincronização de chaves Signal (Bad MAC persistente)'
           : isCorruptOrConflict
           ? `Sessão inválida ou falhas consecutivas (${errorMsg || statusCode})`
           : 'Sessão corrompida';
@@ -285,7 +300,42 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
           profile_name: null,
         });
         logWarn('WhatsApp', `Reconectando automaticamente (código: ${statusCode || 'rede'}, tentativa ${consecutiveDisconnectCount})...`);
-        setTimeout(() => initWhatsApp(onMessageReceived, onConnectionUpdate), 3000);
+        setTimeout(() => initWhatsApp(onMessageReceived, onConnectionUpdate), 2500);
+      }
+    }
+  });
+
+  // Captura mapeamento de LIDs via sincronização de contatos do WhatsApp
+  sock.ev.on('contacts.upsert', (contacts) => {
+    if (!Array.isArray(contacts)) return;
+    for (const c of contacts) {
+      if (c.lid && (c.id || c.jid)) {
+        const phone = (c.jid || c.id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+        const lid = c.lid.split('@')[0].replace(/\D/g, '');
+        if (phone && lid && phone !== lid) {
+          registrarMapeamentoLid({
+            lid,
+            phone,
+            name: c.name || c.notify || null,
+          });
+        }
+      }
+    }
+  });
+
+  sock.ev.on('contacts.update', (updates) => {
+    if (!Array.isArray(updates)) return;
+    for (const c of updates) {
+      if (c.lid && (c.id || c.jid)) {
+        const phone = (c.jid || c.id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+        const lid = c.lid.split('@')[0].replace(/\D/g, '');
+        if (phone && lid && phone !== lid) {
+          registrarMapeamentoLid({
+            lid,
+            phone,
+            name: c.name || c.notify || null,
+          });
+        }
       }
     }
   });

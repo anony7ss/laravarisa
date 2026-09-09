@@ -5,6 +5,7 @@ import {
   getPhoneSearchVariants,
   areSamePhone,
   cleanPhoneDigits,
+  isLid,
 } from '@/lib/phone-utils';
 
 export const dynamic = 'force-dynamic';
@@ -17,8 +18,34 @@ export async function GET(request: Request) {
 
   // 1. Se pediu mensagens de um telefone específico
   if (phoneParam) {
-    const searchVariants = getPhoneSearchVariants(phoneParam);
-    const canonicalPhone = normalizeCanonicalPhone(phoneParam) || cleanPhoneDigits(phoneParam);
+    let targetPhone = phoneParam;
+    const cleanParam = cleanPhoneDigits(phoneParam);
+
+    if (isLid(phoneParam)) {
+      const { data: lidRow } = await supabase
+        .from('whatsapp_lid_mapping')
+        .select('phone')
+        .eq('lid', cleanParam)
+        .maybeSingle();
+      if (lidRow?.phone) {
+        targetPhone = lidRow.phone;
+      }
+    }
+
+    const searchVariants = getPhoneSearchVariants(targetPhone);
+
+    // Também inclui qualquer LID associado a este telefone nas variantes de busca
+    const { data: lidsForPhone } = await supabase
+      .from('whatsapp_lid_mapping')
+      .select('lid')
+      .in('phone', searchVariants);
+    if (lidsForPhone && lidsForPhone.length > 0) {
+      for (const row of lidsForPhone) {
+        if (row.lid) searchVariants.push(cleanPhoneDigits(row.lid));
+      }
+    }
+
+    const canonicalPhone = normalizeCanonicalPhone(targetPhone) || cleanPhoneDigits(targetPhone);
 
     const [messagesRes, controlRes, clientRes] = await Promise.all([
       supabase
@@ -40,7 +67,7 @@ export async function GET(request: Request) {
     ]);
 
     const matchedClient = (clientRes.data || []).find((cl: any) =>
-      areSamePhone(cl.phone, phoneParam)
+      areSamePhone(cl.phone, targetPhone)
     ) || null;
 
     return Response.json({
@@ -56,10 +83,10 @@ export async function GET(request: Request) {
 
   // 2. Se pediu lista geral de contatos/conversas
   // Busca mensagens recentes para agrupar por telefone canônico
-  const [messagesRes, controlsRes, clientsRes] = await Promise.all([
+  const [messagesRes, controlsRes, clientsRes, lidMappingsRes] = await Promise.all([
     supabase
       .from('whatsapp_messages')
-      .select('phone, sender_name, content, created_at, from_me, media_type')
+      .select('phone, remote_jid, sender_name, content, created_at, from_me, media_type')
       .order('created_at', { ascending: false })
       .limit(600),
     supabase
@@ -68,16 +95,41 @@ export async function GET(request: Request) {
     supabase
       .from('clients')
       .select('id, name, phone, created_at'),
+    supabase
+      .from('whatsapp_lid_mapping')
+      .select('lid, phone, name'),
   ]);
 
   const clientsList = clientsRes.data || [];
   const controlsList = controlsRes.data || [];
 
+  const lidMap = new Map<string, string>();
+  for (const m of (lidMappingsRes.data || [])) {
+    if (m.lid && m.phone) {
+      lidMap.set(cleanPhoneDigits(m.lid), cleanPhoneDigits(m.phone));
+    }
+  }
+
   // Agrupa contatos a partir das mensagens recentes usando telefone canônico
   const contactsMap = new Map<string, any>();
   for (const msg of messagesRes.data || []) {
     if (!msg.phone) continue;
-    const canonical = normalizeCanonicalPhone(msg.phone);
+
+    let effectivePhone = msg.phone;
+    if (isLid(effectivePhone)) {
+      const cleanL = cleanPhoneDigits(effectivePhone);
+      if (lidMap.has(cleanL)) {
+        effectivePhone = lidMap.get(cleanL)!;
+      }
+    }
+    if (msg.remote_jid && isLid(msg.remote_jid)) {
+      const cleanL = cleanPhoneDigits(msg.remote_jid);
+      if (lidMap.has(cleanL)) {
+        effectivePhone = lidMap.get(cleanL)!;
+      }
+    }
+
+    const canonical = normalizeCanonicalPhone(effectivePhone);
     if (!canonical) continue;
 
     const matchedClient = clientsList.find((cl: any) =>
@@ -173,8 +225,20 @@ export async function POST(request: Request) {
     return jsonError('Telefone é obrigatório.', 422);
   }
 
+  let effectivePhone = rawPhone;
+  if (isLid(rawPhone)) {
+    const { data: lidRow } = await supabase
+      .from('whatsapp_lid_mapping')
+      .select('phone')
+      .eq('lid', rawPhone)
+      .maybeSingle();
+    if (lidRow?.phone) {
+      effectivePhone = lidRow.phone;
+    }
+  }
+
   // Formata telefone em formato canônico (com DDI 55 e 9º dígito se aplicável)
-  const cleanPhone = normalizeCanonicalPhone(rawPhone) || rawPhone;
+  const cleanPhone = normalizeCanonicalPhone(effectivePhone) || effectivePhone;
 
   // AÇÃO 1: Enviar mensagem manual do WhatsApp
   if (action === 'send_message') {

@@ -5,6 +5,7 @@
 import { supabase } from './supabase.js';
 import { isIAConectada, getModeloIA } from './ai.js';
 import { logInfo, logWarn, logAction, setRemoteLogHandler } from './terminal.js';
+import { isLid, resolverLidParaTelefone } from './phone-utils.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -93,8 +94,15 @@ export async function registrarMensagemChat({
   status = 'delivered',
 }) {
   try {
-    const cleanPhone = String(phone || remoteJid || '').replace(/\D/g, '');
+    let cleanPhone = String(phone || remoteJid || '').replace(/\D/g, '');
     if (!cleanPhone || !content) return;
+
+    if (isLid(cleanPhone)) {
+      const mapped = resolverLidParaTelefone(cleanPhone);
+      if (mapped) {
+        cleanPhone = mapped;
+      }
+    }
 
     await supabase.from('whatsapp_messages').insert({
       phone: cleanPhone,
