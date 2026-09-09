@@ -3,6 +3,7 @@
  */
 
 import { supabase } from './supabase.js';
+import config from './config.js';
 import { sendHumanizedMessage } from './queue.js';
 import { logAction, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
@@ -61,14 +62,24 @@ export async function processarFilaOutbox(sock) {
         .eq('id', item.id);
 
       try {
+        const isUrgent =
+          item.message_type === 'direct' ||
+          (typeof item.message === 'string' &&
+            (item.message.includes('código') ||
+              item.message.includes('Código') ||
+              item.message.includes('2FA') ||
+              item.message.includes('segurança')));
+
         logAction(
           'Outbox WhatsApp',
-          `Enviando [${item.message_type}] para ${item.client_name || item.phone} (${jid})...`
+          `Enviando [${item.message_type || 'msg'}] para ${item.client_name || item.phone} (${jid})...`
         );
 
         await sendHumanizedMessage(sock, jid, item.message, {
-          minTyping: 1000,
-          maxTyping: 2500,
+          immediate: isUrgent,
+          skipTyping: isUrgent,
+          minTyping: isUrgent ? 0 : 300,
+          maxTyping: isUrgent ? 0 : 800,
           skipChatLog: item.message_type === 'direct',
           senderType: 'system',
         });
@@ -87,12 +98,12 @@ export async function processarFilaOutbox(sock) {
           `✅ Enviado com sucesso para ${item.client_name || item.phone}`
         );
 
-        // Se for disparo em lote (broadcast), aguarda intervalo seguro anti-ban de 3s a 5s
+        // Disparos em lote aguardam intervalo anti-ban; mensagens urgentes/2FA são instantâneas sem delay
         if (item.message_type === 'broadcast') {
-          const delayAntiBan = 3000 + Math.floor(Math.random() * 2500);
+          const delayAntiBan = 2000 + Math.floor(Math.random() * 1500);
           await sleep(delayAntiBan);
-        } else {
-          await sleep(1000);
+        } else if (!isUrgent) {
+          await sleep(200);
         }
       } catch (errEnvio) {
         const msgErro = errEnvio instanceof Error ? errEnvio.message : 'Erro ao enviar';
@@ -120,8 +131,6 @@ export async function processarFilaOutbox(sock) {
 
 let isRealtimeHealthy = false;
 let adaptiveTimer = null;
-const OUTBOX_DELAYS = [3000, 5000, 10000, 30000];
-let outboxDelayIndex = 0;
 
 function agendarProximaExecucaoOutbox() {
   if (adaptiveTimer) {
@@ -129,16 +138,11 @@ function agendarProximaExecucaoOutbox() {
     adaptiveTimer = null;
   }
 
-  const delay = isRealtimeHealthy ? 45000 : OUTBOX_DELAYS[outboxDelayIndex];
+  // Frequência de ultra-resposta: 400ms para 2FA e códigos instantâneos
+  const delay = isProcessing ? 200 : 400;
   adaptiveTimer = setTimeout(async () => {
     if (!currentSocket) return;
-    const processou = await processarFilaOutbox(currentSocket);
-
-    if (processou) {
-      outboxDelayIndex = 0;
-    } else if (!isRealtimeHealthy) {
-      outboxDelayIndex = Math.min(outboxDelayIndex + 1, OUTBOX_DELAYS.length - 1);
-    }
+    await processarFilaOutbox(currentSocket);
     agendarProximaExecucaoOutbox();
   }, delay);
 
@@ -146,14 +150,20 @@ function agendarProximaExecucaoOutbox() {
     adaptiveTimer.unref();
   }
 }
-
 /**
- * Inicia a escuta da fila Outbox (Realtime prioritário + Polling progressivo adaptativo)
+ * Inicia a escuta da fila Outbox (Realtime instantâneo + Heartbeat de 400ms)
  * @param {any} sock Socket do Baileys
  */
 export function iniciarProcessadorOutbox(sock) {
   if (sock) currentSocket = sock;
   if (!currentSocket) return;
+
+  // Autenticação Realtime com service_role para tabelas com RLS
+  if (config.supabaseServiceRoleKey && supabase?.realtime) {
+    try {
+      supabase.realtime.setAuth(config.supabaseServiceRoleKey);
+    } catch {}
+  }
 
   // 1. Escuta Realtime na tabela whatsapp_outbox
   if (!realtimeSubscription) {
@@ -167,25 +177,20 @@ export function iniciarProcessadorOutbox(sock) {
           table: 'whatsapp_outbox',
         },
         () => {
-          outboxDelayIndex = 0;
           processarFilaOutbox(currentSocket);
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           isRealtimeHealthy = true;
-          agendarProximaExecucaoOutbox();
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           isRealtimeHealthy = false;
-          outboxDelayIndex = 0;
-          agendarProximaExecucaoOutbox();
         }
       });
   }
 
-  // 2. Executa uma primeira vez ao conectar e inicia agendamento adaptativo
-  processarFilaOutbox(currentSocket).then((processou) => {
-    if (processou) outboxDelayIndex = 0;
+  // 2. Executa uma primeira vez ao conectar e inicia heartbeat contínuo
+  processarFilaOutbox(currentSocket).finally(() => {
     agendarProximaExecucaoOutbox();
   });
 }

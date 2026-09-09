@@ -161,11 +161,11 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
           // Resolve o nome real do cliente de forma inteligente e persistente (memória, banco, cadastro)
           const pushName = await resolverNomeCliente(jid, realPhone, msg?.pushName || pushNameParam);
 
-          // Se for LID, mapeia para a sessão atual e sincroniza com o banco apenas se for cliente comprovado
+          // Se for LID, mapeia para a sessão atual e sincroniza com o banco apenas se for cliente comprovado (não-bloqueante)
           if (isLid(jid)) {
             const cleanLid = String(jid).replace(/\D/g, '');
             if (realPhone) {
-              await registrarMapeamentoLid({ lid: cleanLid, phone: realPhone, name: pushName });
+              registrarMapeamentoLid({ lid: cleanLid, phone: realPhone, name: pushName }).catch(() => {});
             }
           }
 

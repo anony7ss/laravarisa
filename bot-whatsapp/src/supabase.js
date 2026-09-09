@@ -79,9 +79,8 @@ export async function verificarAgendamentosPendentes(sock) {
 }
 
 /**
- * Executa o agendador de verificação adaptativa:
- * - Se Realtime saudável: checagem leve de segurança a cada 45s
- * - Se Realtime fora (fallback): polling progressivo 3s -> 5s -> 10s -> 30s
+ * Executa o agendador de verificação contínua ultra-rápida (600ms)
+ * garantindo percepção instantânea de agendamentos mesmo em oscilações de WebSocket
  */
 function agendarProximaVerificacao() {
   if (adaptivePollTimer) {
@@ -89,22 +88,12 @@ function agendarProximaVerificacao() {
     adaptivePollTimer = null;
   }
 
-  const delay = isRealtimeHealthy
-    ? 45000 // Realtime saudável: checagem esparsa de segurança
-    : PROGRESSIVE_DELAYS[progressiveDelayIndex]; // Fallback: progressivo 3s -> 5s -> 10s -> 30s
+  // Frequência ultra-rápida de 600ms
+  const delay = isCheckingPending ? 300 : 600;
 
   adaptivePollTimer = setTimeout(async () => {
     if (!currentSocket) return;
-    const encontrouRegistros = await verificarAgendamentosPendentes(currentSocket);
-
-    if (encontrouRegistros) {
-      // Houve atividade recente: reseta para verificação rápida (3s)
-      progressiveDelayIndex = 0;
-    } else if (!isRealtimeHealthy) {
-      // Sem eventos no fallback: avança progressivamente até 30s
-      progressiveDelayIndex = Math.min(progressiveDelayIndex + 1, PROGRESSIVE_DELAYS.length - 1);
-    }
-
+    await verificarAgendamentosPendentes(currentSocket);
     agendarProximaVerificacao();
   }, delay);
 
@@ -114,8 +103,8 @@ function agendarProximaVerificacao() {
 }
 
 /**
- * Inicia a sincronização inteligente dos agendamentos vindos do site.
- * Prioriza Realtime (WebSockets) com fallback de polling progressivo adaptativo (3s -> 5s -> 10s -> 30s).
+ * Inicia a sincronização inteligente e instantânea dos agendamentos vindos do site.
+ * Combina Realtime (WebSockets) com heartbeat ultra-rápido de 600ms.
  * 
  * @param {any} sock Instância ativa do Baileys Socket
  * @returns {any} Canal Realtime do Supabase
@@ -126,9 +115,15 @@ export function iniciarSincronizacaoSite(sock) {
   }
   if (!currentSocket) return null;
 
+  // Autenticação Realtime com service_role para tabelas com RLS
+  if (config.supabaseServiceRoleKey && supabase?.realtime) {
+    try {
+      supabase.realtime.setAuth(config.supabaseServiceRoleKey);
+    } catch {}
+  }
+
   // 1. Verificação imediata na inicialização
-  verificarAgendamentosPendentes(currentSocket).then((encontrou) => {
-    if (encontrou) progressiveDelayIndex = 0;
+  verificarAgendamentosPendentes(currentSocket).finally(() => {
     agendarProximaVerificacao();
   });
 
@@ -295,7 +290,11 @@ export async function notificarAgendamentoSite(sock, agendamento) {
     .trim();
 
   if (sock) {
-    await sendHumanizedMessage(sock, targetJid, mensagem);
+    await sendHumanizedMessage(sock, targetJid, mensagem, {
+      immediate: true,
+      skipTyping: true,
+      senderType: 'system',
+    });
   }
 
   // Registra no banco para NUNCA reenviar em caso de reinício
