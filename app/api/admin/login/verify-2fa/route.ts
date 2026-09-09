@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import {
   createServerSupabase,
   createPublicSupabase,
+  createAdminSupabase,
 } from '@/lib/supabase/server';
 import {
   checkRateLimit,
@@ -58,16 +59,31 @@ export async function POST(request: Request) {
     return jsonError('Token de segurança incompatível.', 401);
   }
 
+  const adminClient = createAdminSupabase();
   const authClient = createPublicSupabase();
-  if (!authClient) return jsonError('Serviço indisponível.', 503);
+  if (!adminClient && !authClient) return jsonError('Serviço indisponível.', 503);
 
-  const { data: profile, error } = await authClient
+  if (authClient && pendingData.access_token && pendingData.refresh_token) {
+    try {
+      await authClient.auth.setSession({
+        access_token: pendingData.access_token,
+        refresh_token: pendingData.refresh_token,
+      });
+    } catch {
+      // Ignora erro de setSession se adminClient existir
+    }
+  }
+
+  const db = adminClient || authClient!;
+
+  const { data: profile, error } = await db
     .from('profiles')
     .select('id, two_factor_code, two_factor_expires_at, two_factor_temp_token')
     .eq('id', pendingData.user_id)
     .single();
 
   if (error || !profile) {
+    console.error('[verify-2fa] Erro ao buscar perfil:', { error, userId: pendingData.user_id });
     return jsonError('Usuário não encontrado.', 404);
   }
 
@@ -83,7 +99,7 @@ export async function POST(request: Request) {
   }
 
   // Limpa o código usado no banco
-  await authClient
+  await db
     .from('profiles')
     .update({
       two_factor_code: null,

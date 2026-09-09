@@ -41,3 +41,18 @@ export function createPublicSupabase() {
     },
   });
 }
+
+export function createAdminSupabase() {
+  const { url, configured } = getSupabaseConfig();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!configured || !serviceRoleKey) return null;
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: {
+        'x-client-info': 'supabase-js/2.115.0-admin',
+      },
+    },
+  });
+}
+

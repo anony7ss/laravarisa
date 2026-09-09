@@ -355,40 +355,6 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     }
   });
 
-  // Captura mapeamento de LIDs via sincronização de contatos do WhatsApp
-  sock.ev.on('contacts.upsert', (contacts) => {
-    if (!Array.isArray(contacts)) return;
-    for (const c of contacts) {
-      if (c.lid && (c.id || c.jid)) {
-        const phone = (c.jid || c.id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
-        const lid = c.lid.split('@')[0].replace(/\D/g, '');
-        if (phone && lid && phone !== lid) {
-          registrarMapeamentoLid({
-            lid,
-            phone,
-            name: c.name || c.notify || null,
-          });
-        }
-      }
-    }
-  });
-
-  sock.ev.on('contacts.update', (updates) => {
-    if (!Array.isArray(updates)) return;
-    for (const c of updates) {
-      if (c.lid && (c.id || c.jid)) {
-        const phone = (c.jid || c.id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
-        const lid = c.lid.split('@')[0].replace(/\D/g, '');
-        if (phone && lid && phone !== lid) {
-          registrarMapeamentoLid({
-            lid,
-            phone,
-            name: c.name || c.notify || null,
-          });
-        }
-      }
-    }
-  });
 
   // Filtra e processa mensagens recebidas
   sock.ev.on('messages.upsert', async ({ messages, type }) => {

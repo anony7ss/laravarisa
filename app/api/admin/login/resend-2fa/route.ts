@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { createPublicSupabase } from '@/lib/supabase/server';
+import { createPublicSupabase, createAdminSupabase } from '@/lib/supabase/server';
 import {
   checkRateLimit,
   getClientIp,
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return jsonError('Sessão expirada. Faça login novamente.', 401);
   }
 
-  let pendingData: { user_id: string; temp_token: string };
+  let pendingData: { user_id: string; temp_token: string; access_token?: string; refresh_token?: string };
   try {
     const jsonStr = Buffer.from(rawPending, 'base64').toString('utf-8');
     pendingData = JSON.parse(jsonStr);
@@ -31,10 +31,24 @@ export async function POST(request: Request) {
     return jsonError('Sessão corrompida. Faça login novamente.', 400);
   }
 
+  const adminClient = createAdminSupabase();
   const authClient = createPublicSupabase();
-  if (!authClient) return jsonError('Serviço indisponível.', 503);
+  if (!adminClient && !authClient) return jsonError('Serviço indisponível.', 503);
 
-  const { data: profile, error } = await authClient
+  if (authClient && pendingData.access_token && pendingData.refresh_token) {
+    try {
+      await authClient.auth.setSession({
+        access_token: pendingData.access_token,
+        refresh_token: pendingData.refresh_token,
+      });
+    } catch {
+      // Ignora erro de setSession
+    }
+  }
+
+  const db = adminClient || authClient!;
+
+  const { data: profile, error } = await db
     .from('profiles')
     .select('id, full_name, phone')
     .eq('id', pendingData.user_id)
@@ -52,7 +66,7 @@ export async function POST(request: Request) {
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await authClient
+  await db
     .from('profiles')
     .update({
       two_factor_code: otpCode,
@@ -60,7 +74,7 @@ export async function POST(request: Request) {
     })
     .eq('id', pendingData.user_id);
 
-  await authClient.from('whatsapp_outbox').insert({
+  await db.from('whatsapp_outbox').insert({
     phone: cleanPhone,
     client_name: profile.full_name || 'Admin Astra',
     message: `*Astra Admin - Novo Código de Segurança*\n\nSeu novo código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos.`,

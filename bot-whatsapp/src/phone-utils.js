@@ -231,32 +231,95 @@ export function isLid(jidOrDigits) {
 }
 
 /**
- * Registra dinamicamente no banco e na memória o vínculo entre um LID e o telefone real do usuário.
- * Funciona universalmente para qualquer cliente ou contato.
+ * Verifica se um telefone pertence a um cliente comprovado do estúdio
+ * (possui cadastro em clients, agendamento em appointments ou ficha em anamnese).
  */
-export function registrarMapeamentoLid({ lid, phone, name = null }) {
+export async function isClienteComprovado(phone) {
+  if (!supabase || !phone) return { comprovado: false };
+  try {
+    const clean = String(phone).replace(/\D/g, '');
+    if (!clean) return { comprovado: false };
+    const variants = obterVariacoesTelefone(clean);
+
+    // 1. Verifica na tabela clients
+    const { data: cData } = await supabase
+      .from('clients')
+      .select('id, name')
+      .in('phone', variants)
+      .limit(1)
+      .maybeSingle();
+
+    if (cData?.id) {
+      return { comprovado: true, name: cData.name || null };
+    }
+
+    // 2. Verifica na tabela appointments
+    const { data: aData } = await supabase
+      .from('appointments')
+      .select('id, client_name')
+      .in('client_phone', variants)
+      .limit(1)
+      .maybeSingle();
+
+    if (aData?.id) {
+      return { comprovado: true, name: aData.client_name || null };
+    }
+
+    // 3. Verifica na tabela anamnese
+    const { data: anData } = await supabase
+      .from('anamnese')
+      .select('id, nome')
+      .in('whatsapp', variants)
+      .limit(1)
+      .maybeSingle();
+
+    if (anData?.id) {
+      return { comprovado: true, name: anData.nome || null };
+    }
+
+    return { comprovado: false };
+  } catch {
+    return { comprovado: false };
+  }
+}
+
+/**
+ * Registra dinamicamente na memória o vínculo entre um LID e o telefone real do usuário.
+ * No banco de dados Supabase, SOMENTE persiste se for comprovadamente um cliente do estúdio,
+ * jamais gravando contatos pessoais ou da agenda telefônica.
+ */
+export async function registrarMapeamentoLid({ lid, phone, name = null }) {
   if (!lid || !phone) return;
   const cleanLid = String(lid).replace(/\D/g, '');
   const cleanPhone = String(phone).replace(/\D/g, '');
   if (!cleanLid || !cleanPhone || cleanLid === cleanPhone) return;
 
+  // 1. Mantém em memória de execução para permitir funcionamento dinâmico durante a sessão
   lidToPhoneMap.set(cleanLid, cleanPhone);
   const vars = obterVariacoesTelefone(cleanPhone);
   for (const v of vars) {
     phoneToLidMap.set(v, cleanLid);
   }
 
+  // 2. No banco de dados Supabase, SOMENTE persiste se for comprovadamente cliente do estúdio
   if (supabase) {
-    supabase
-      .from('whatsapp_lid_mapping')
-      .upsert({
-        lid: cleanLid,
-        phone: cleanPhone,
-        name: name || null,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'lid' })
-      .then(() => {})
-      .catch(() => {});
+    try {
+      const checagem = await isClienteComprovado(cleanPhone);
+      if (checagem?.comprovado) {
+        const clientName = checagem.name || name || null;
+        await supabase
+          .from('whatsapp_lid_mapping')
+          .upsert(
+            {
+              lid: cleanLid,
+              phone: cleanPhone,
+              name: clientName,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'lid' }
+          );
+      }
+    } catch {}
   }
 }
 
