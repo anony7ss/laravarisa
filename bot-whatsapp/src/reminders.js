@@ -173,6 +173,60 @@ export async function processarLembretes(sock) {
         }
       }
     }
+
+    // -------------------------------------------------------------
+    // FLUXO 3: PÓS-ATENDIMENTO & PESQUISA DE SATISFAÇÃO (Google Review)
+    // -------------------------------------------------------------
+    if (settings.post_care_active) {
+      const horasDepois = Number(settings.post_care_hours_after) || 24;
+      const janelaMin = new Date(agora.getTime() - (horasDepois + 72) * 60 * 60 * 1000).toISOString();
+      const janelaMax = new Date(agora.getTime() - horasDepois * 60 * 60 * 1000).toISOString();
+
+      const { data: concluidos, error: errConcluidos } = await supabase
+        .from('appointments')
+        .select('id, starts_at, ends_at, client_name, client_phone, service:services(name)')
+        .eq('status', 'completed')
+        .gte('ends_at', janelaMin)
+        .lte('ends_at', janelaMax)
+        .is('post_care_sent_at', null)
+        .order('ends_at', { ascending: true })
+        .limit(10);
+
+      if (errConcluidos) {
+        logWarn('Lembretes', `Erro ao buscar agendamentos para pós-atendimento: ${errConcluidos.message}`);
+      } else if (concluidos && concluidos.length > 0) {
+        for (const ag of concluidos) {
+          const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
+          if (!targetJid) continue;
+
+          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
+          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
+          const nomeServico = ag.service?.name || 'Procedimento';
+          const linkAvaliacao = settings.google_review_url || 'https://laravarisa.com.br';
+
+          const templatePadraoPos =
+            'Oi, {nome}! ✨ Passando para saber como estão seus cílios e se você está amando o resultado! 💕\n\nLembre-se dos cuidados básicos:\n• Evite vapor excessivo e água muito quente nos olhos\n• Penteie suavemente com a escovinha sempre que acordar\n• Lave a região com espuminha neutra\n\nSua opinião é super especial para nós! Se puder deixar uma avaliação com 5 estrelas no Google, nos ajuda demais:\n⭐ {link_avaliacao}\n\nQualquer dúvida estou por aqui! Um beijo! 🥰';
+
+          const mensagem = preencherTemplate(settings.post_care_message_template || templatePadraoPos, {
+            nome: nomeCliente,
+            procedimento: nomeServico,
+            data: dataFmt,
+            horario: horaFmt,
+            local: config.studioCity,
+            link_avaliacao: linkAvaliacao,
+          });
+
+          await sendHumanizedMessage(sock, targetJid, mensagem);
+
+          await supabase
+            .from('appointments')
+            .update({ post_care_sent_at: new Date().toISOString() })
+            .eq('id', ag.id);
+
+          logReminder(nomeCliente, `Pós-Atendimento (${horasDepois}h)`, nomeServico, horaFmt);
+        }
+      }
+    }
   } catch (err) {
     logError('Lembretes', `Erro inesperado ao processar lembretes: ${err?.message || err}`);
   } finally {

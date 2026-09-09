@@ -158,6 +158,11 @@ export const settingsSchema = z.object({
   reminder_same_day_active: z.boolean().default(true),
   reminder_same_day_hours_before: z.coerce.number().int().min(1).max(24).default(2),
   reminder_same_day_message_template: z.string().trim().max(1500).default(''),
+  // Post-Care & Satisfaction Survey (Pós-Atendimento & Google Review)
+  post_care_active: z.boolean().default(true),
+  post_care_hours_after: z.coerce.number().int().min(1).max(168).default(24),
+  google_review_url: z.string().trim().max(500).default(''),
+  post_care_message_template: z.string().trim().max(1500).default(''),
   // Status change notifications
   notify_on_status_change: z.boolean().default(true),
   msg_cancelled_template: z.string().trim().max(1500).default(''),

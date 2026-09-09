@@ -123,6 +123,14 @@ export function SettingsManager({
         form.get('reminder_same_day_message_template') || '',
       ),
 
+      // Pós-Atendimento & Pesquisa de Satisfação (Google Review)
+      post_care_active: form.get('post_care_active') === 'on',
+      post_care_hours_after: Number(form.get('post_care_hours_after') || 24),
+      google_review_url: String(form.get('google_review_url') || ''),
+      post_care_message_template: String(
+        form.get('post_care_message_template') || '',
+      ),
+
       // Notificações automáticas de status no WhatsApp
       notify_on_status_change: form.get('notify_on_status_change') === 'on',
       msg_cancelled_template: String(form.get('msg_cancelled_template') || ''),
@@ -854,6 +862,64 @@ export function SettingsManager({
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
               Variáveis disponíveis: <code>&#123;nome&#125;</code>, <code>&#123;procedimento&#125;</code>, <code>&#123;horario&#125;</code>, <code>&#123;local&#125;</code>
+            </small>
+          </label>
+
+          <hr style={{ gridColumn: '1 / -1', border: 'none', borderTop: '1px solid var(--admin-line)', margin: '8px 0' }} />
+
+          {/* Lembrete 3: Pós-Atendimento & Pesquisa de Satisfação (Google Review) */}
+          <label className="admin-check wide">
+            <input
+              name="post_care_active"
+              type="checkbox"
+              defaultChecked={settings?.post_care_active ?? true}
+              disabled={role !== 'admin'}
+            />{' '}
+            <strong>Ativar Mensagem Automática de Pós-Atendimento e Pesquisa de Satisfação (Google Review)</strong>
+          </label>
+
+          <label>
+            Tempo após a conclusão do procedimento
+            <select
+              name="post_care_hours_after"
+              defaultValue={settings?.post_care_hours_after ?? 24}
+              disabled={role !== 'admin'}
+            >
+              <option value="12">12 horas após</option>
+              <option value="24">24 horas após (1 dia após - Recomendado)</option>
+              <option value="48">48 horas após (2 dias após)</option>
+              <option value="72">72 horas após (3 dias após)</option>
+            </select>
+          </label>
+
+          <label>
+            Link da Avaliação no Google Meu Negócio / Maps
+            <input
+              name="google_review_url"
+              type="url"
+              defaultValue={settings?.google_review_url || ''}
+              disabled={role !== 'admin'}
+              placeholder="https://g.page/r/.../review"
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Substitui a variável <code>&#123;link_avaliacao&#125;</code> na mensagem.
+            </small>
+          </label>
+
+          <label className="wide">
+            Texto do Pós-Atendimento & Avaliação no Google
+            <textarea
+              name="post_care_message_template"
+              rows={6}
+              defaultValue={
+                settings?.post_care_message_template ||
+                'Oi, {nome}! ✨ Passando para saber como estão seus cílios e se você está amando o resultado! 💕\n\nLembre-se dos cuidados básicos:\n• Evite vapor excessivo e água muito quente nos olhos\n• Penteie suavemente com a escovinha sempre que acordar\n• Lave a região com espuminha neutra\n\nSua opinião é super especial para nós! Se puder deixar uma avaliação com 5 estrelas no Google, nos ajuda demais:\n⭐ {link_avaliacao}\n\nQualquer dúvida estou por aqui! Um beijo! 🥰'
+              }
+              disabled={role !== 'admin'}
+              placeholder="Variáveis: {nome}, {procedimento}, {link_avaliacao}, {local}."
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Variáveis disponíveis: <code>&#123;nome&#125;</code>, <code>&#123;procedimento&#125;</code>, <code>&#123;link_avaliacao&#125;</code>, <code>&#123;local&#125;</code>
             </small>
           </label>
         </div>

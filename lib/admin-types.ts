@@ -63,6 +63,9 @@ export type AppointmentRow = {
   notes: string;
   origin?: string;
   is_blocked?: boolean;
+  reminder_sent_at?: string | null;
+  reminder_same_day_sent_at?: string | null;
+  post_care_sent_at?: string | null;
 };
 export type ExpenseRow = {
   id: string;
