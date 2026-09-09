@@ -13,7 +13,6 @@ import {
   User,
   Phone,
   HeartPulse,
-  Sparkles,
   FileCheck2,
   CalendarDays,
 } from 'lucide-react';
@@ -275,10 +274,6 @@ function AnamneseForm() {
       {/* Main Content */}
       <main className="max-w-lg mx-auto w-full px-4 py-8 sm:py-10 space-y-6">
         <div className="text-center space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 border border-[#d6d6cf] text-[10px] font-bold uppercase tracking-wider text-[var(--color-obsidian)]">
-            <Sparkles size={11} className="text-amber-600" />
-            <span>Atendimento Personalizado</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-obsidian)]">
             Ficha de Anamnese
           </h1>
