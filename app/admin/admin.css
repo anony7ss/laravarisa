@@ -4439,49 +4439,6 @@ html.dark .admin-calendar-subview-toggle button.active {
   margin-top: 1rem;
 }
 
-.admin-nav-tabs-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.admin-nav-scroll-btn {
-  position: absolute;
-  top: calc(50% - 3px);
-  transform: translateY(-50%);
-  z-index: 5;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--admin-card);
-  border: 1px solid var(--admin-line);
-  color: var(--admin-ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 0;
-}
-
-.admin-nav-scroll-btn:hover {
-  background: var(--admin-soft);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-50%) scale(1.08);
-}
-
-.admin-nav-scroll-btn.left {
-  left: -6px;
-}
-
-.admin-nav-scroll-btn.right {
-  right: -6px;
-}
-
 .admin-nav-tabs,
 .admin-account-tabs {
   display: flex;

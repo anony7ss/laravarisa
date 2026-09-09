@@ -221,14 +221,11 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
       {/* 1. TEMAS PRÉ-DEFINIDOS (PRESETS 1-CLIQUE) */}
       <section className="admin-panel">
         <div className="admin-panel-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={16} style={{ color: '#cca352' }} />
-            <div>
-              <p className="admin-kicker">TEMAS INSTANTÂNEOS</p>
-              <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
-                Selecione um Estilo de Luxo ou Crie o Seu
-              </h3>
-            </div>
+          <div>
+            <p className="admin-kicker">TEMAS INSTANTÂNEOS</p>
+            <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+              Selecione um Estilo de Luxo ou Crie o Seu
+            </h3>
           </div>
         </div>
 

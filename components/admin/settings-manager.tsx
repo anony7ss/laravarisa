@@ -13,8 +13,6 @@ import {
   Bell,
   Store,
   Palette,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { adminRequest } from './api';
 import { BookingCustomizer } from './booking-customizer';
@@ -55,41 +53,9 @@ export function SettingsManager({
     'horarios' | 'regras' | 'mensagens' | 'lembretes' | 'marketing' | 'estudio' | 'visual'
   >('visual');
 
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkTabsScroll = useCallback(() => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 6);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
-  }, []);
-
-  useEffect(() => {
-    checkTabsScroll();
-    const handleResize = () => checkTabsScroll();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [checkTabsScroll]);
-
-  const handleTabsScroll = (direction: 'left' | 'right') => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    const amount = 240;
-    el.scrollBy({
-      left: direction === 'left' ? -amount : amount,
-      behavior: 'smooth',
-    });
-    setTimeout(checkTabsScroll, 320);
-  };
-
   const handleTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    if (e.deltaY !== 0 && el.scrollWidth > el.clientWidth) {
-      el.scrollLeft += e.deltaY;
-      checkTabsScroll();
+    if (e.deltaY !== 0) {
+      e.currentTarget.scrollLeft += e.deltaY;
     }
   };
 
@@ -231,68 +197,33 @@ export function SettingsManager({
       style={{ display: 'grid', gap: '20px' }}
     >
       {/* NAVEGAÇÃO POR SUBPÁGINAS / ABAS INTERNAS PADRONIZADA */}
-      <div className="admin-nav-tabs-wrapper">
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => handleTabsScroll('left')}
-            className="admin-nav-scroll-btn left"
-            title="Rolar abas para a esquerda"
-            aria-label="Rolar abas para a esquerda"
-          >
-            <ChevronLeft size={16} />
-          </button>
-        )}
-
-        <div
-          ref={tabsContainerRef}
-          className="admin-nav-tabs"
-          onScroll={checkTabsScroll}
-          onWheel={handleTabsWheel}
-        >
-          {[
-            { id: 'visual' as const, label: 'Visual do Agendamento', icon: Palette },
-            { id: 'horarios' as const, label: 'Horários & Estúdio', icon: CalendarDays },
-            { id: 'regras' as const, label: 'Regras da Agenda', icon: Sliders },
-            { id: 'mensagens' as const, label: 'Mensagens & WhatsApp', icon: MessageCircle },
-            { id: 'lembretes' as const, label: 'Lembretes Automáticos', icon: Bell },
-            { id: 'marketing' as const, label: 'Marketing & Banner', icon: Megaphone },
-            { id: 'estudio' as const, label: 'Dados do Estúdio', icon: Store },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={(e) => {
-                  setActiveTab(tab.id);
-                  (e.currentTarget as HTMLElement)?.scrollIntoView({
-                    behavior: 'smooth',
-                    inline: 'nearest',
-                    block: 'nearest',
-                  });
-                }}
-                className={`admin-nav-tab-btn ${isActive ? 'active' : ''}`}
-              >
-                <Icon size={15} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => handleTabsScroll('right')}
-            className="admin-nav-scroll-btn right"
-            title="Rolar abas para a direita"
-            aria-label="Rolar abas para a direita"
-          >
-            <ChevronRight size={16} />
-          </button>
-        )}
+      <div
+        className="admin-nav-tabs"
+        onWheel={handleTabsWheel}
+      >
+        {[
+          { id: 'visual' as const, label: 'Visual do Agendamento', icon: Palette },
+          { id: 'horarios' as const, label: 'Horários & Estúdio', icon: CalendarDays },
+          { id: 'regras' as const, label: 'Regras da Agenda', icon: Sliders },
+          { id: 'mensagens' as const, label: 'Mensagens & WhatsApp', icon: MessageCircle },
+          { id: 'lembretes' as const, label: 'Lembretes Automáticos', icon: Bell },
+          { id: 'marketing' as const, label: 'Marketing & Banner', icon: Megaphone },
+          { id: 'estudio' as const, label: 'Dados do Estúdio', icon: Store },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`admin-nav-tab-btn ${isActive ? 'active' : ''}`}
+            >
+              <Icon size={15} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ABA: PERSONALIZAÇÃO VISUAL DO AGENDAMENTO (/agendar) */}

@@ -23,8 +23,6 @@ import {
   MessageSquare,
   Terminal as TerminalIcon,
   Link2,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/client';
@@ -81,41 +79,9 @@ export function WhatsAppManager({
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showConfirmDisconnect, setShowConfirmDisconnect] = useState(false);
 
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkTabsScroll = useCallback(() => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 6);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
-  }, []);
-
-  useEffect(() => {
-    checkTabsScroll();
-    const handleResize = () => checkTabsScroll();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [checkTabsScroll]);
-
-  const handleTabsScroll = (direction: 'left' | 'right') => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    const amount = 240;
-    el.scrollBy({
-      left: direction === 'left' ? -amount : amount,
-      behavior: 'smooth',
-    });
-    setTimeout(checkTabsScroll, 320);
-  };
-
   const handleTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const el = tabsContainerRef.current;
-    if (!el) return;
-    if (e.deltaY !== 0 && el.scrollWidth > el.clientWidth) {
-      el.scrollLeft += e.deltaY;
-      checkTabsScroll();
+    if (e.deltaY !== 0) {
+      e.currentTarget.scrollLeft += e.deltaY;
     }
   };
 
@@ -641,117 +607,51 @@ export function WhatsAppManager({
       </div>
 
       {/* NAVEGAÇÃO POR ABAS PADRONIZADA: CHAT, TERMINAL, CONEXÃO, DISPAROS, LINKS */}
-      <div className="admin-nav-tabs-wrapper" style={{ marginBottom: '20px' }}>
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => handleTabsScroll('left')}
-            className="admin-nav-scroll-btn left"
-            title="Rolar abas para a esquerda"
-            aria-label="Rolar abas para a esquerda"
-          >
-            <ChevronLeft size={16} />
-          </button>
-        )}
-
-        <div
-          ref={tabsContainerRef}
-          className="admin-nav-tabs"
-          onScroll={checkTabsScroll}
-          onWheel={handleTabsWheel}
+      <div className="admin-nav-tabs" onWheel={handleTabsWheel} style={{ marginBottom: '20px' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('chat')}
+          className={`admin-nav-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              setActiveTab('chat');
-              (e.currentTarget as HTMLElement)?.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'nearest',
-                block: 'nearest',
-              });
-            }}
-            className={`admin-nav-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
-          >
-            <MessageSquare size={15} />
-            <span>Chat ao Vivo</span>
-          </button>
+          <MessageSquare size={15} />
+          <span>Chat ao Vivo</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              setActiveTab('terminal');
-              (e.currentTarget as HTMLElement)?.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'nearest',
-                block: 'nearest',
-              });
-            }}
-            className={`admin-nav-tab-btn ${activeTab === 'terminal' ? 'active' : ''}`}
-          >
-            <TerminalIcon size={15} />
-            <span>Terminal & Logs</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('terminal')}
+          className={`admin-nav-tab-btn ${activeTab === 'terminal' ? 'active' : ''}`}
+        >
+          <TerminalIcon size={15} />
+          <span>Terminal & Logs</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              setActiveTab('connection');
-              (e.currentTarget as HTMLElement)?.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'nearest',
-                block: 'nearest',
-              });
-            }}
-            className={`admin-nav-tab-btn ${activeTab === 'connection' ? 'active' : ''}`}
-          >
-            <Smartphone size={15} />
-            <span>Conexão & Voz</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('connection')}
+          className={`admin-nav-tab-btn ${activeTab === 'connection' ? 'active' : ''}`}
+        >
+          <Smartphone size={15} />
+          <span>Conexão & Voz</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              setActiveTab('disparos');
-              (e.currentTarget as HTMLElement)?.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'nearest',
-                block: 'nearest',
-              });
-            }}
-            className={`admin-nav-tab-btn ${activeTab === 'disparos' ? 'active' : ''}`}
-          >
-            <SendHorizontal size={15} />
-            <span>Campanhas</span>
-          </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('disparos')}
+          className={`admin-nav-tab-btn ${activeTab === 'disparos' ? 'active' : ''}`}
+        >
+          <SendHorizontal size={15} />
+          <span>Campanhas</span>
+        </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              setActiveTab('links');
-              (e.currentTarget as HTMLElement)?.scrollIntoView({
-                behavior: 'smooth',
-                inline: 'nearest',
-                block: 'nearest',
-              });
-            }}
-            className={`admin-nav-tab-btn ${activeTab === 'links' ? 'active' : ''}`}
-          >
-            <Link2 size={15} />
-            <span>Gerador de Link</span>
-          </button>
-        </div>
-
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => handleTabsScroll('right')}
-            className="admin-nav-scroll-btn right"
-            title="Rolar abas para a direita"
-            aria-label="Rolar abas para a direita"
-          >
-            <ChevronRight size={16} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('links')}
+          className={`admin-nav-tab-btn ${activeTab === 'links' ? 'active' : ''}`}
+        >
+          <Link2 size={15} />
+          <span>Gerador de Link</span>
+        </button>
       </div>
 
       {activeTab === 'chat' && (

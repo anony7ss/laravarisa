@@ -268,6 +268,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     e.target.value = '';
   };
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 1. Carrega lista de contatos
@@ -418,9 +419,11 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     };
   }, [selectedPhone]);
 
-  // Scroll suave para última mensagem
+  // Scroll para última mensagem SOMENTE dentro do container interno (sem rolar a janela/página inteira)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const activeContact = useMemo(() => {
@@ -1117,6 +1120,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
 
             {/* Balões de Mensagem */}
             <div
+              ref={messagesContainerRef}
               style={{
                 flex: 1,
                 minHeight: 0,
