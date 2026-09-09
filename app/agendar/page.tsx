@@ -534,27 +534,19 @@ export default function AgendarPage() {
                       </span>
                     </div>
 
-                    {/* BANNER 1ª VEZ · ULTRA CLEAN */}
-                    <div className="bg-white rounded-2xl border border-[#d6d6cf] p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-3">
+                    {/* BANNER 1ª VEZ · MINIMALISTA */}
+                    <div className="bg-white rounded-2xl border border-[#d6d6cf] p-3.5 sm:p-4 shadow-sm flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] font-mono">
-                            Primeira Aplicação
-                          </span>
-                          <span className="text-[9px] text-[#595952] bg-[#f4f4f0] border border-[#e2e2dc] px-1.5 py-0.2 rounded font-semibold">
-                            Exclusivo 1ª vez
-                          </span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-[#4a4a44] mt-0.5 m-0 leading-snug">
-                          Qualquer modelo por apenas <strong className="text-[var(--color-obsidian)] font-bold">R$ 80,00</strong> na sua primeira vez no estúdio.
+                        <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-[#8c8c84] block">
+                          Primeira Sessão no Estúdio
+                        </span>
+                        <p className="text-xs sm:text-sm font-semibold text-[var(--color-obsidian)] m-0 mt-0.5">
+                          Qualquer extensão por apenas <strong className="font-bold">R$ 80,00</strong> na 1ª vez
                         </p>
                       </div>
-                      <div className="text-right shrink-0 pl-3 border-l border-[#f0f0ed]">
-                        <span className="text-lg sm:text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none">
+                      <div className="text-right shrink-0">
+                        <span className="text-xl sm:text-2xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none">
                           R$ 80
-                        </span>
-                        <span className="text-[9px] text-[#8c8c84] uppercase font-mono block mt-0.5 whitespace-nowrap">
-                          1ª sessão
                         </span>
                       </div>
                     </div>
@@ -639,14 +631,11 @@ export default function AgendarPage() {
 
                               <div className="text-right shrink-0 flex items-center gap-2.5">
                                 <div className="text-right">
-                                  <span className="text-[11px] text-[#9c9c94] line-through block leading-none">
+                                  <span className="text-[11px] text-[#a0a098] line-through block leading-none">
                                     {service.price}
                                   </span>
-                                  <span className="text-base sm:text-lg font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                                  <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                                     R$ 80
-                                  </span>
-                                  <span className="text-[9px] text-[#8c8c84] block leading-none mt-0.5">
-                                    1ª sessão
                                   </span>
                                 </div>
 
@@ -664,8 +653,8 @@ export default function AgendarPage() {
 
                 {(bookingStep === 2 || bookingStep === 3) && selectedService && (
                   <div className="space-y-4">
-                    <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="bg-white px-4 py-3 rounded-2xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -673,32 +662,27 @@ export default function AgendarPage() {
                             if (bookingStep === 3) setBookingStep(2);
                             else setBookingStep(1);
                           }}
-                          className="p-1.5 rounded-full hover:bg-[var(--color-limestone)] text-[#595952] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer shrink-0"
+                          className="p-1.5 -ml-1 rounded-full hover:bg-[var(--color-limestone)] text-[#707068] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer shrink-0"
                           title="Voltar"
                         >
                           <ArrowLeft size={16} />
                         </button>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ember)] block font-mono">
-                              Procedimento Escolhido
-                            </span>
-                            <span className="text-[9px] bg-[#f4f4f0] text-[#595952] border border-[#e2e2dc] px-1.5 py-0.2 rounded font-semibold uppercase">
-                              1ª VEZ · R$ 80
-                            </span>
-                          </div>
-                          <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block">
+                          <span className="text-[11px] text-[#8c8c84] block leading-none">
+                            Procedimento
+                          </span>
+                          <strong className="text-sm sm:text-base font-bold text-[var(--color-obsidian)] truncate block mt-0.5">
                             {selectedService.name}
                           </strong>
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0 flex items-center gap-2">
+                      <div className="flex items-center gap-3 shrink-0">
                         <div className="text-right">
-                          <span className="text-[11px] text-[#9c9c94] line-through block leading-none">
+                          <span className="text-[11px] text-[#a0a098] line-through block leading-none">
                             {selectedService.price}
                           </span>
-                          <span className="text-sm sm:text-base font-bold text-[var(--color-ember)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                          <span className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                             R$ 80
                           </span>
                         </div>
@@ -708,7 +692,7 @@ export default function AgendarPage() {
                             triggerHaptic('light');
                             setBookingStep(1);
                           }}
-                          className="text-[11px] font-semibold text-[#8c8c84] hover:text-[var(--color-obsidian)] underline ml-1 cursor-pointer"
+                          className="text-xs font-medium text-[#707068] hover:text-[var(--color-obsidian)] px-2.5 py-1 rounded-full bg-[#f4f4f0] hover:bg-[#eaeaec] transition-colors cursor-pointer"
                         >
                           Trocar
                         </button>
@@ -1187,22 +1171,6 @@ export default function AgendarPage() {
                     <ExternalLink size={12} className="text-[#8c8c84]" />
                   </a>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-[#707068]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                  Região segura com fácil acesso e estacionamento
-                </span>
-                <a
-                  href={siteSettings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[var(--color-obsidian)] hover:text-[var(--color-ember)] underline flex items-center gap-1 shrink-0"
-                >
-                  <span>Ver rota</span>
-                  <ExternalLink size={11} />
-                </a>
               </div>
             </div>
 

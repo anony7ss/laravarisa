@@ -1,7 +1,8 @@
 'use client';
 
 import { ChangeEvent } from 'react';
-import { User, Phone, ShieldCheck } from 'lucide-react';
+import { User, Phone } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
 
 export type ClientFormData = {
   name: string;
@@ -9,6 +10,7 @@ export type ClientFormData = {
   email: string;
   notes: string;
   isVip: boolean;
+  termsAccepted?: boolean;
 };
 
 export function formatBrPhone(value: string): string {
@@ -32,6 +34,8 @@ export function ClientForm({
     const formatted = formatBrPhone(e.target.value);
     onChange({ ...formData, phone: formatted });
   }
+
+  const isAccepted = formData.termsAccepted ?? true;
 
   return (
     <div className="space-y-3 w-full max-w-full overflow-hidden">
@@ -92,6 +96,24 @@ export function ClientForm({
             placeholder="Ex: Primeira vez com extensão, olhos sensíveis..."
             className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
           />
+        </div>
+
+        {/* Checkbox Termos & Lembretes */}
+        <div className="pt-2 border-t border-[#f0f0ed]">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isAccepted}
+              onChange={(e) => {
+                triggerHaptic('light');
+                onChange({ ...formData, termsAccepted: e.target.checked });
+              }}
+              className="w-3.5 h-3.5 rounded text-black accent-black cursor-pointer shrink-0"
+            />
+            <span className="text-[11px] text-[#707068] leading-tight">
+              Aceito os <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-[var(--color-obsidian)]">termos</a> e receber lembretes no WhatsApp.
+            </span>
+          </label>
         </div>
       </div>
     </div>
