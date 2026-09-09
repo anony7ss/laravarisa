@@ -2,14 +2,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @import './design-tokens.css';
 :root {
-  --font-display: var(--font-anton), 'Anton', sans-serif;
+  --font-display: var(--font-dm-sans), 'DM Sans', sans-serif;
   --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --color-ember: #c45424;
   --background: #e2e2df;
   --foreground: #070607;
   --popover: #f7f6f2;
   --popover-foreground: #070607;
   --muted-foreground: #4b4b46;
-  --accent: #a02c00;
+  --accent: #c45424;
   --fg: #070607;
   --fg-muted: #4b4b46;
   --border: #b5b5ac;
@@ -135,24 +136,31 @@ body:has(.admin-root:not(.dark)),
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 12px;
   border: 0;
   background: var(--color-ember);
+  color: #ffffff;
   border-radius: 800px;
-  padding: 17px 25px;
-  min-height: 52px;
+  padding: 15px 24px;
+  min-height: 50px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   transition:
     background 0.2s,
-    transform 0.2s;
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 .button:hover {
-  background: #ed4900;
+  background: #a84318;
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px -6px rgba(196, 84, 36, 0.3);
 }
 .header-cta {
-  font-size: 14px;
-  padding: 13px 22px;
-  min-height: 46px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 11px 20px;
+  min-height: 44px;
+  gap: 8px;
 }
 .menu-toggle {
   display: none;
@@ -189,32 +197,35 @@ p {
 h1,
 h2,
 h3 {
-  font-weight: 400;
+  font-weight: 700;
 }
 h1,
 h2,
 .style-info h3,
 .booking-title {
   font-family: var(--font-display);
-  letter-spacing: 0.02em;
+  letter-spacing: -0.03em;
 }
 .hero-title {
-  font-size: clamp(65px, 7.2vw, 104px);
-  line-height: 1.03;
-  margin: 0 0 27px;
+  font-size: clamp(50px, 6.2vw, 84px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  margin: 0 0 24px;
 }
 .hero-title > span {
   display: block;
   white-space: nowrap;
   overflow: hidden;
-  padding-top: 8px;
-  margin-top: -8px;
-  padding-bottom: 6px;
-  margin-bottom: -6px;
+  padding-top: 4px;
+  margin-top: -4px;
+  padding-bottom: 4px;
+  margin-bottom: -4px;
 }
 em {
-  font-style: normal;
-  color: #c43805;
+  font-style: italic;
+  color: var(--color-ember);
+  font-weight: 700;
 }
 .hero-e-accent {
   position: relative;
@@ -389,7 +400,7 @@ h2 {
 .style-visual {
   position: relative;
   overflow: hidden;
-  background: #fc5000;
+  background: var(--color-ember);
   min-height: 410px;
 }
 .style-visual img {
@@ -474,7 +485,7 @@ h2 {
   background: #d4d4cb;
 }
 .intensity i.active {
-  background: #fc5000;
+  background: var(--color-ember);
 }
 .text-link {
   border: 0;
@@ -487,7 +498,7 @@ h2 {
   text-align: left;
 }
 .text-link:hover {
-  color: #b03600;
+  color: var(--color-ember);
 }
 .experience {
   display: grid;
@@ -507,7 +518,7 @@ h2 {
 .large-spark {
   width: 65px;
   height: 65px;
-  color: #fc5000;
+  color: var(--color-ember);
   margin-top: 10px;
 }
 .steps {
@@ -577,12 +588,14 @@ h2 {
   margin: 0;
 }
 .closing {
-  background: #fc5000;
+  background: var(--color-obsidian);
+  color: #f7f6f2;
   border-radius: 40px;
   padding: 43px 48px;
 }
 .closing .eyebrow {
   margin-bottom: 30px;
+  color: var(--color-ember);
 }
 .closing-row {
   display: flex;
@@ -591,7 +604,7 @@ h2 {
   gap: 20px;
 }
 .closing h2 {
-  font-size: clamp(55px, 6.9vw, 96px);
+  font-size: clamp(48px, 6vw, 84px);
 }
 .closing h2 span {
   color: #f7f6f2;
@@ -986,7 +999,7 @@ h2 {
   text-underline-offset: 5px;
 }
 .hero-title {
-  font-size: clamp(58px, 6.8vw, 96px);
+  font-size: clamp(48px, 6vw, 80px);
 }
 .hero-art {
   height: 510px;
@@ -995,7 +1008,9 @@ h2 {
   border-top: 1px solid #c7c7bf;
 }
 h2 {
-  font-size: clamp(42px, 4.5vw, 62px);
+  font-size: clamp(34px, 4vw, 54px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
   line-height: 1.12;
   text-wrap: balance;
 }
@@ -1457,11 +1472,11 @@ h2 {
   flex-shrink: 0;
 }
 .brand-wordmark {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 400;
-  font-size: 30px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 22px;
   line-height: 1.05;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 .brand-specialty {
@@ -1474,11 +1489,11 @@ h2 {
   color: #595952;
 }
 .hero-title {
-  font-size: clamp(54px, 6.2vw, 88px);
+  font-size: clamp(48px, 6vw, 80px);
 }
 @media (min-width: 1500px) {
   .hero-title {
-    font-size: 90px;
+    font-size: 82px;
   }
 }
 @media (min-width: 761px) and (max-width: 1000px) {
@@ -1493,7 +1508,7 @@ h2 {
     height: 42px;
   }
   .header .brand-wordmark {
-    font-size: 24px;
+    font-size: 20px;
   }
   .header .nav a {
     padding-inline: 8px;
@@ -1504,7 +1519,7 @@ h2 {
     padding-inline: 14px;
   }
   .hero-title {
-    font-size: 6.1vw;
+    font-size: 5.6vw;
   }
 }
 @media (max-width: 760px) {
@@ -1514,11 +1529,11 @@ h2 {
     gap: 10px;
   }
   .brand-monogram {
-    width: 39px;
-    height: 43px;
+    width: 38px;
+    height: 38px;
   }
   .brand-wordmark {
-    font-size: 27px;
+    font-size: 20px;
   }
   .brand-specialty {
     font-size: 9px;
@@ -1526,10 +1541,10 @@ h2 {
     letter-spacing: 0.2em;
   }
   .hero-title {
-    font-size: clamp(39px, 10.4vw, 68px);
+    font-size: clamp(34px, 8.8vw, 56px);
   }
   .footer .brand-wordmark {
-    font-size: 25px;
+    font-size: 20px;
   }
 }
 @media (max-width: 350px) {
@@ -2396,10 +2411,10 @@ h2 {
   min-height: 44px;
 }
 .gallery-home-brand {
-  font:
-    30px Georgia,
-    serif;
-  letter-spacing: -0.035em;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.02em;
 }
 .gallery-page {
   padding-block: 60px 80px;
@@ -2597,7 +2612,7 @@ h2 {
   min-height: 44px;
 }
 .footer-talk:hover {
-  color: #fc5000;
+  color: var(--color-ember);
 }
 .footer-columns {
   display: grid;
@@ -2629,7 +2644,7 @@ h2 {
 }
 .footer-column > a:hover,
 .footer-column > button:hover {
-  color: #fc5000;
+  color: var(--color-ember);
 }
 .social-link {
   display: flex;
@@ -2685,10 +2700,12 @@ h2 {
   align-items: center;
 }
 .footer-signature {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(72px, 12vw, 172px);
-  line-height: 1.2;
-  letter-spacing: -0.06em;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: clamp(52px, 9vw, 130px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
   border-bottom: 1px solid #404039;
   padding: 5px 0 30px;
   display: flex;
@@ -2709,7 +2726,7 @@ h2 {
   display: grid;
   place-items: center;
   letter-spacing: -0.07em;
-  color: #fc5000;
+  color: var(--color-ember);
   flex-shrink: 0;
 }
 .footer-legal {
@@ -2734,7 +2751,7 @@ h2 {
   transition: color 0.15s ease;
 }
 .footer-policy-link:hover {
-  color: #fc5000;
+  color: var(--color-ember);
 }
 .footer-policy-sep {
   color: #55554f;
@@ -4011,7 +4028,7 @@ h2 {
 }
 
 .promo-link {
-  color: #fc5000;
+  color: #e07343;
   text-decoration: underline;
   text-underline-offset: 3px;
   font-weight: 600;
@@ -4020,7 +4037,7 @@ h2 {
 }
 
 .promo-link:hover {
-  color: #ff6e2d;
+  color: #f08e62;
 }
 
 .promo-close-btn {

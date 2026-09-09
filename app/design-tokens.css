@@ -1,6 +1,6 @@
 :root {
   /* Colors */
-  --color-ember: #fc5000;
+  --color-ember: #c45424;
   --color-plasma-violet: #524ae9;
   --color-sulfur: #f5f28e;
   --color-limestone: #f7f6f2;
@@ -90,6 +90,6 @@
   /* Surfaces */
   --surface-pumice-canvas: #e2e2df;
   --surface-limestone-surface: #f7f6f2;
-  --surface-ember-feature: #fc5000;
+  --surface-ember-feature: #c45424;
   --surface-plasma-hero: #524ae9;
 }

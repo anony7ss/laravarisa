@@ -264,7 +264,7 @@ export default function Home() {
             <h1 className="hero-title">
               <span>SEU OLHAR.</span>
               <span>
-                SUA <em>ESS<span className="hero-e-accent">Ê</span>NCIA.</em>
+                SUA <em>ESSÊNCIA.</em>
               </span>
             </h1>
             <p className="hero-description">
