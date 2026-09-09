@@ -65,8 +65,10 @@ export async function processarFilaOutbox(sock) {
         );
 
         await sendHumanizedMessage(sock, jid, item.message, {
-          minTyping: 1500,
-          maxTyping: 3500,
+          minTyping: 1000,
+          maxTyping: 2500,
+          skipChatLog: item.message_type === 'direct',
+          senderType: 'system',
         });
 
         await supabase

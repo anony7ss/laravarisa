@@ -4,7 +4,7 @@
 
 import { supabase } from './supabase.js';
 import { isIAConectada, getModeloIA } from './ai.js';
-import { logInfo, logWarn, logAction } from './terminal.js';
+import { logInfo, logWarn, logAction, setRemoteLogHandler } from './terminal.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,14 +15,102 @@ const authPath = path.resolve(__dirname, '../auth_info_baileys');
 
 let heartbeatInterval = null;
 let realtimeChannel = null;
+let chatControlChannel = null;
 let lastKnownStatus = 'disconnected';
 let lastKnownPhone = null;
 let lastKnownProfile = null;
 let lastKnownQr = null;
 let cachedAiEnabled = true;
 
+// Conecta o logger do terminal ao Supabase whatsapp_logs em tempo real
+setRemoteLogHandler(async ({ level, tag, message }) => {
+  try {
+    await supabase.from('whatsapp_logs').insert({
+      level,
+      tag: String(tag || '').slice(0, 80),
+      message: String(message || '').slice(0, 1000),
+    });
+  } catch {}
+});
+
+// Cache em memória de controle de IA por contato (para consulta ultra-rápida sem latência)
+const pausedChatsCache = new Map(); // phone -> { paused: boolean, until: Date | null }
+
+export async function carregarControleChats() {
+  try {
+    const { data } = await supabase
+      .from('whatsapp_chat_control')
+      .select('phone, ai_paused, ai_paused_until');
+    if (data) {
+      pausedChatsCache.clear();
+      for (const row of data) {
+        if (row.ai_paused) {
+          pausedChatsCache.set(row.phone, {
+            paused: true,
+            until: row.ai_paused_until ? new Date(row.ai_paused_until) : null,
+          });
+        }
+      }
+    }
+  } catch {}
+}
+
 /**
- * Retorna se o atendimento automático com IA está ativado no painel
+ * Retorna se a IA está pausada para um telefone específico (temporária ou permanentemente)
+ */
+export function isChatAiPaused(phone) {
+  const cleanPhone = String(phone || '').replace(/\D/g, '');
+  if (!cleanPhone) return false;
+  const control = pausedChatsCache.get(cleanPhone);
+  if (!control || !control.paused) return false;
+
+  // Se tem tempo limite de pausa
+  if (control.until) {
+    if (Date.now() < control.until.getTime()) {
+      return true;
+    } else {
+      // Expirou a pausa, reativa
+      pausedChatsCache.delete(cleanPhone);
+      return false;
+    }
+  }
+
+  // Pausa permanente
+  return true;
+}
+
+/**
+ * Registra uma mensagem na tabela whatsapp_messages para exibição no chat ao vivo
+ */
+export async function registrarMensagemChat({
+  phone,
+  remoteJid,
+  senderName,
+  fromMe,
+  senderType,
+  content,
+  mediaType = 'text',
+  status = 'delivered',
+}) {
+  try {
+    const cleanPhone = String(phone || remoteJid || '').replace(/\D/g, '');
+    if (!cleanPhone || !content) return;
+
+    await supabase.from('whatsapp_messages').insert({
+      phone: cleanPhone,
+      remote_jid: remoteJid || null,
+      sender_name: senderName || (fromMe ? 'Lara Varisa' : 'Cliente'),
+      from_me: Boolean(fromMe),
+      sender_type: senderType || (fromMe ? 'bot_ai' : 'client'),
+      content: String(content),
+      media_type: mediaType,
+      status: status,
+    });
+  } catch {}
+}
+
+/**
+ * Retorna se o atendimento automático com IA está ativado globalmente no painel
  */
 export function isAiEnabled() {
   return cachedAiEnabled;
@@ -199,6 +287,37 @@ export function escutarAcoesAdmin(onForceDisconnect) {
     } catch {}
   }, 5000);
 
+  // 3. Escuta alterações no whatsapp_chat_control para pausar/reativar IA por contato instantaneamente
+  carregarControleChats();
+  chatControlChannel = supabase
+    .channel('whatsapp_chat_control_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'whatsapp_chat_control',
+      },
+      (payload) => {
+        const row = payload?.new;
+        if (row && row.phone) {
+          const cleanPhone = String(row.phone).replace(/\D/g, '');
+          if (row.ai_paused) {
+            pausedChatsCache.set(cleanPhone, {
+              paused: true,
+              until: row.ai_paused_until ? new Date(row.ai_paused_until) : null,
+            });
+            const infoPausa = row.ai_paused_until ? `até ${new Date(row.ai_paused_until).toLocaleTimeString('pt-BR')}` : 'permanentemente';
+            logAction('Controle Chat', `IA pausada para ${row.client_name || cleanPhone} (${infoPausa})`);
+          } else {
+            pausedChatsCache.delete(cleanPhone);
+            logAction('Controle Chat', `IA reativada para ${row.client_name || cleanPhone}`);
+          }
+        }
+      }
+    )
+    .subscribe();
+
   if (pollInterval.unref) pollInterval.unref();
 }
 
@@ -206,4 +325,8 @@ export default {
   publicarStatusBot,
   iniciarHeartbeat,
   escutarAcoesAdmin,
+  isAiEnabled,
+  isChatAiPaused,
+  carregarControleChats,
+  registrarMensagemChat,
 };

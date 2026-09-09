@@ -348,6 +348,75 @@ export async function cancelarAgendamento(agendamentoId, motivo = '') {
 }
 
 /**
+ * 5.1. cancelarTodosAgendamentos
+ * Cancela TODOS os agendamentos futuros do cliente de uma única vez em lote.
+ * Executa em uma única chamada rápida sem precisar cancelar um a um.
+ */
+export async function cancelarTodosAgendamentos(telefone, motivo = '') {
+  try {
+    if (!telefone) {
+      return { ok: false, erro: 'Telefone não informado para cancelamento.' };
+    }
+
+    const cleanPhone = String(telefone).replace(/\D/g, '');
+    const phoneVariants = [cleanPhone];
+    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
+      phoneVariants.push(cleanPhone.slice(2));
+    } else if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
+      phoneVariants.push(`55${cleanPhone}`);
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const { data: ags, error: fetchErr } = await supabase
+      .from('appointments')
+      .select('id, starts_at, service:services(name)')
+      .in('client_phone', phoneVariants)
+      .in('status', ['scheduled', 'confirmed'])
+      .gte('starts_at', nowIso);
+
+    if (fetchErr) {
+      console.error('[tools:cancelarTodosAgendamentos] Erro fetch:', fetchErr.message);
+      return { ok: false, erro: 'Erro ao consultar agendamentos para cancelamento.' };
+    }
+
+    if (!ags || ags.length === 0) {
+      return {
+        ok: true,
+        sucesso: true,
+        total_cancelados: 0,
+        mensagem: 'Nenhum agendamento futuro ativo encontrado para cancelar.',
+      };
+    }
+
+    const ids = ags.map((a) => a.id);
+
+    const { error: updateErr } = await supabase
+      .from('appointments')
+      .update({
+        status: 'cancelled',
+        notes: motivo ? `Cancelamento geral pelo cliente: ${motivo}` : 'Cancelamento de todos os agendamentos via WhatsApp',
+      })
+      .in('id', ids);
+
+    if (updateErr) {
+      console.error('[tools:cancelarTodosAgendamentos] Erro update:', updateErr.message);
+      return { ok: false, erro: 'Falha ao cancelar todos os agendamentos.' };
+    }
+
+    return {
+      ok: true,
+      sucesso: true,
+      total_cancelados: ids.length,
+      mensagem: `Todos os seus ${ids.length} agendamentos foram cancelados com sucesso e os horários já estão liberados!`,
+    };
+  } catch (err) {
+    console.error('[tools:cancelarTodosAgendamentos] Exceção:', err);
+    return { ok: false, erro: err.message || 'Erro ao cancelar agendamentos em lote.' };
+  }
+}
+
+/**
  * 6. reagendarAgendamento
  * Altera a data/horário de um agendamento existente para um novo horário.
  * Utiliza a RPC atômica `reschedule_appointment` com lock de concorrência e liberação imediata.
@@ -496,6 +565,22 @@ export const ferramentasSchema = [
   {
     type: 'function',
     function: {
+      name: 'cancelarTodosAgendamentos',
+      description: 'Cancela TODOS os agendamentos futuros do cliente de uma única vez em lote e libera todos os horários na agenda instantaneamente. Use esta ferramenta IMEDIATAMENTE sempre que o cliente disser "cancelar todos", "cancela tudo", "cancela meus agendamentos", "não vou a nenhum", etc.',
+      parameters: {
+        type: 'object',
+        properties: {
+          motivo: {
+            type: 'string',
+            description: 'Motivo do cancelamento geral (opcional).',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'reagendarAgendamento',
       description: 'Altera a data/horário de um agendamento existente para um novo horário disponível no sistema. ATENÇÃO: Chame SOMENTE DEPOIS que a cliente escolher o novo horário e confirmar expressamente a alteração.',
       parameters: {
@@ -569,6 +654,15 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
         return res;
       }
 
+      case 'cancelarTodosAgendamentos': {
+        const phone = args.telefone || context.telefone;
+        const res = await cancelarTodosAgendamentos(phone, args.motivo);
+        if (res.ok && context.sock && context.msgKey) {
+          reactToMessage(context.sock, context.msgKey, '👌').catch(() => {});
+        }
+        return res;
+      }
+
       case 'reagendarAgendamento': {
         const res = await reagendarAgendamento(args.agendamento_id, args.novo_starts_at);
         if (res.ok && context.sock && context.msgKey) {
@@ -605,6 +699,7 @@ export default {
   criarAgendamento,
   consultarAgendamentoCliente,
   cancelarAgendamento,
+  cancelarTodosAgendamentos,
   reagendarAgendamento,
   ferramentasSchema,
   executarFerramenta,

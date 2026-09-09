@@ -24,6 +24,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { NotificationCenter } from '@/components/admin/notification-center';
 
 function playAppointmentChime() {
   try {
@@ -105,6 +106,8 @@ export function AdminShell({
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [pendingCount, setPendingCount] = useState(cachedScheduledCount);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsCount, setNotificationsCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -227,21 +230,22 @@ export function AdminShell({
             </span>
           </Link>
           <div className="admin-sidebar-head-actions">
-            <Link
-              href="/admin/dashboard/agenda"
+            <button
+              type="button"
+              onClick={() => setNotificationsOpen(true)}
               className="admin-bell-btn"
               title={
-                pendingCount > 0
-                  ? `${pendingCount} agendamento(s) aguardando`
-                  : 'Nenhum agendamento pendente'
+                notificationsCount > 0
+                  ? `${notificationsCount} novidade(s) na central`
+                  : 'Central de Notificações'
               }
-              aria-label="Agendamentos pendentes"
+              aria-label="Abrir central de notificações"
             >
               <Bell size={17} />
-              {pendingCount > 0 && (
-                <span className="admin-bell-badge">{pendingCount}</span>
+              {notificationsCount > 0 && (
+                <span className="admin-bell-badge">{notificationsCount}</span>
               )}
-            </Link>
+            </button>
             <button
               className="admin-sidebar-close"
               aria-label="Fechar menu"
@@ -322,17 +326,18 @@ export function AdminShell({
             <strong>{pageNames[pathname] || 'Lara Varisa'}</strong>
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Link
-              href="/admin/dashboard/agenda"
+            <button
+              type="button"
+              onClick={() => setNotificationsOpen(true)}
               className="admin-bell-btn"
-              title={`${pendingCount} agendamentos pendentes`}
-              aria-label="Agendamentos pendentes"
+              title={`${notificationsCount} novidade(s) na central`}
+              aria-label="Abrir central de notificações"
             >
               <Bell size={18} />
-              {pendingCount > 0 && (
-                <span className="admin-bell-badge">{pendingCount}</span>
+              {notificationsCount > 0 && (
+                <span className="admin-bell-badge">{notificationsCount}</span>
               )}
-            </Link>
+            </button>
             <Link href="/" aria-label="Abrir o site">
               <ExternalLink size={19} />
             </Link>
@@ -372,6 +377,12 @@ export function AdminShell({
           </button>
         </nav>
       </div>
+
+      <NotificationCenter
+        open={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        onTotalChange={setNotificationsCount}
+      />
     </div>
   );
 }

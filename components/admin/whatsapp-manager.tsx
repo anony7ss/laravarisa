@@ -20,10 +20,14 @@ import {
   Sparkles,
   Mic,
   Volume2,
+  MessageSquare,
+  Terminal as TerminalIcon,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import { DisparosManager, type ClientWithActivity, type OutboxItem } from './disparos-manager';
+import { WhatsAppChatSimulator } from './whatsapp-chat-simulator';
+import { WhatsAppTerminal } from './whatsapp-terminal';
 
 export interface WhatsAppSession {
   id: string;
@@ -59,8 +63,12 @@ export function WhatsAppManager({
   initialRecent?: OutboxItem[];
 }) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'connection' | 'disparos'>(() => {
-    return searchParams?.get('tab') === 'disparos' ? 'disparos' : 'connection';
+  const [activeTab, setActiveTab] = useState<'chat' | 'terminal' | 'connection' | 'disparos'>(() => {
+    const tab = searchParams?.get('tab');
+    if (tab === 'disparos') return 'disparos';
+    if (tab === 'terminal') return 'terminal';
+    if (tab === 'connection') return 'connection';
+    return 'chat';
   });
   const [session, setSession] = useState<WhatsAppSession>(initialSession);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -606,6 +614,46 @@ export function WhatsAppManager({
       >
         <button
           type="button"
+          onClick={() => setActiveTab('chat')}
+          className={activeTab === 'chat' ? 'admin-primary' : 'admin-secondary'}
+          style={{
+            borderRadius: '999px',
+            fontSize: '13px',
+            padding: '8px 18px',
+            minHeight: '38px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: activeTab === 'chat' ? 600 : 500,
+            cursor: 'pointer',
+          }}
+        >
+          <MessageSquare size={16} />
+          <span>Chat ao Vivo & Mensagens</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('terminal')}
+          className={activeTab === 'terminal' ? 'admin-primary' : 'admin-secondary'}
+          style={{
+            borderRadius: '999px',
+            fontSize: '13px',
+            padding: '8px 18px',
+            minHeight: '38px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: activeTab === 'terminal' ? 600 : 500,
+            cursor: 'pointer',
+          }}
+        >
+          <TerminalIcon size={16} />
+          <span>Terminal & Logs ao Vivo</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('connection')}
           className={activeTab === 'connection' ? 'admin-primary' : 'admin-secondary'}
           style={{
@@ -621,7 +669,7 @@ export function WhatsAppManager({
           }}
         >
           <Smartphone size={16} />
-          <span>Conexão & Atendimento</span>
+          <span>Conexão & Voz da IA</span>
         </button>
 
         <button
@@ -645,14 +693,24 @@ export function WhatsAppManager({
         </button>
       </div>
 
-      {activeTab === 'disparos' ? (
+      {activeTab === 'chat' && (
+        <WhatsAppChatSimulator session={session} />
+      )}
+
+      {activeTab === 'terminal' && (
+        <WhatsAppTerminal session={session} />
+      )}
+
+      {activeTab === 'disparos' && (
         <DisparosManager
           clients={clients}
           initialStats={initialStats}
           initialRecent={initialRecent}
           role={role}
         />
-      ) : (
+      )}
+
+      {activeTab === 'connection' && (
         <>
           {/* Alerta de feedback */}
           {actionMessage && (

@@ -511,7 +511,7 @@ export function AppointmentsManager({
     }
 
     const payload = {
-      client_name: `🔒 Bloqueio: ${finalReason}`,
+      client_name: `Bloqueio: ${finalReason}`,
       client_phone: '',
       starts_at: startsAt,
       ends_at: endsAt,
@@ -768,10 +768,10 @@ export function AppointmentsManager({
             </button>
           </div>
           {role !== 'viewer' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="admin-toolbar-buttons">
               <button
                 type="button"
-                className="admin-secondary"
+                className="admin-secondary admin-block-button"
                 onClick={() => openBlockModal()}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#eab308', borderColor: 'rgba(234, 179, 8, 0.35)' }}
                 title="Bloquear período para almoço, consulta ou compromisso pessoal"
@@ -1463,7 +1463,7 @@ export function AppointmentsManager({
                     Motivo do Bloqueio
                   </label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {['🍽️ Almoço', '🩺 Consulta Médica', '💆‍♀️ Pessoal', '📚 Curso / Estudo', '🏖️ Folga', 'Outro'].map((reason) => {
+                    {['Almoço', 'Consulta Médica', 'Pessoal', 'Curso / Estudo', 'Folga', 'Outro'].map((reason) => {
                       const active = blockReason === reason;
                       return (
                         <button
@@ -1532,8 +1532,8 @@ export function AppointmentsManager({
                   </label>
                 </div>
 
-                <div style={{ padding: '12px', background: 'rgba(234, 179, 8, 0.06)', border: '1px solid rgba(234, 179, 8, 0.2)', borderRadius: '8px', fontSize: '12px', color: '#fef08a', lineHeight: 1.4 }}>
-                  🔒 <strong>Bloqueio Automático:</strong> Este período será fechado na agenda. Clientes no site e no WhatsApp não conseguirão reservar essa faixa.
+                <div style={{ padding: '12px 14px', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.22)', borderRadius: '10px', fontSize: '12px', color: '#fef08a', lineHeight: 1.5 }}>
+                  <strong>Bloqueio Automático:</strong> Este período será fechado na agenda. Clientes no site e no WhatsApp não conseguirão reservar essa faixa.
                 </div>
               </div>
 
@@ -1552,7 +1552,7 @@ export function AppointmentsManager({
                   disabled={blockSaving}
                   style={{ background: '#eab308', color: '#000', borderColor: 'transparent' }}
                 >
-                  {blockSaving ? 'Bloqueando...' : 'Confirmar Bloqueio 🔒'}
+                  {blockSaving ? 'Bloqueando...' : 'Confirmar Bloqueio'}
                 </button>
               </div>
             </form>

@@ -37,6 +37,20 @@ const botStatus = {
   ai: 'Carregando...',
 };
 
+let remoteLogHandler = null;
+
+export function setRemoteLogHandler(handler) {
+  remoteLogHandler = handler;
+}
+
+function dispatchRemoteLog(level, tag, message) {
+  if (typeof remoteLogHandler === 'function') {
+    try {
+      remoteLogHandler({ level, tag, message, time: new Date().toISOString() });
+    } catch {}
+  }
+}
+
 function getTimestamp() {
   const d = new Date();
   return d.toLocaleTimeString('pt-BR', {
@@ -130,6 +144,7 @@ export function logSuccess(tag, message) {
   const time = getTimestamp();
   const cleanMsg = sanitizeForTerminal(message);
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}[OK] [${tag}]${colors.reset} ${cleanMsg}`);
+  dispatchRemoteLog('success', tag, cleanMsg);
 }
 
 /**
@@ -141,6 +156,7 @@ export function logIncoming(senderName, text) {
   const cleanTextRaw = sanitizeForTerminal(text);
   const cleanText = cleanTextRaw.replace(/\n+/g, ' ').slice(0, 65) + (cleanTextRaw.length > 65 ? '...' : '');
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightCyan}>> [${cleanSender}]${colors.reset} "${cleanText}"`);
+  dispatchRemoteLog('incoming', cleanSender, cleanTextRaw || cleanText);
 }
 
 /**
@@ -152,6 +168,7 @@ export function logOutgoing(recipientName, textSummary) {
   const cleanTextRaw = sanitizeForTerminal(textSummary);
   const cleanText = cleanTextRaw.replace(/\n+/g, ' ').slice(0, 65) + (cleanTextRaw.length > 65 ? '...' : '');
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightMagenta}<< [Lara -> ${cleanRecipient}]${colors.reset} "${cleanText}"`);
+  dispatchRemoteLog('outgoing', `Lara -> ${cleanRecipient}`, cleanTextRaw || cleanText);
 }
 
 /**
@@ -162,6 +179,7 @@ export function logSiteBooking(clientName, serviceName, dateStr) {
   const cleanClient = sanitizeForTerminal(clientName);
   const cleanService = sanitizeForTerminal(serviceName);
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightGreen}[+] [Novo Agendamento Site]${colors.reset} ${cleanClient} - ${cleanService} (${dateStr})`);
+  dispatchRemoteLog('booking', 'Novo Agendamento Site', `${cleanClient} - ${cleanService} (${dateStr})`);
 }
 
 /**
@@ -172,6 +190,7 @@ export function logReminder(clientName, tipoLembrete, serviceName, timeStr) {
   const cleanClient = sanitizeForTerminal(clientName);
   const cleanService = sanitizeForTerminal(serviceName);
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}[*] [Lembrete ${tipoLembrete}]${colors.reset} Enviado para ${cleanClient} - ${cleanService} as ${timeStr}`);
+  dispatchRemoteLog('reminder', `Lembrete ${tipoLembrete}`, `Enviado para ${cleanClient} - ${cleanService} às ${timeStr}`);
 }
 
 /**
@@ -187,6 +206,7 @@ export function logAction(actionType, details) {
   }
   const cleanDetails = sanitizeForTerminal(details);
   console.log(`${colors.gray}[${time}]${colors.reset} ${color}[>] [${actionType}]${colors.reset} ${cleanDetails}`);
+  dispatchRemoteLog('action', actionType, cleanDetails);
 }
 
 /**
@@ -196,6 +216,7 @@ export function logWarn(tag, message) {
   const time = getTimestamp();
   const cleanMsg = sanitizeForTerminal(message);
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightYellow}[!] [${tag}]${colors.reset} ${cleanMsg}`);
+  dispatchRemoteLog('warn', tag, cleanMsg);
 }
 
 /**
@@ -205,6 +226,7 @@ export function logError(tag, message) {
   const time = getTimestamp();
   const cleanMsg = sanitizeForTerminal(message);
   console.error(`${colors.gray}[${time}]${colors.reset} ${colors.red}[X] [${tag}]${colors.reset} ${cleanMsg}`);
+  dispatchRemoteLog('error', tag, cleanMsg);
 }
 
 /**
@@ -214,11 +236,13 @@ export function logInfo(tag, message) {
   const time = getTimestamp();
   const cleanMsg = sanitizeForTerminal(message);
   console.log(`${colors.gray}[${time}]${colors.reset} ${colors.brightBlue}[i] [${tag}]${colors.reset} ${cleanMsg}`);
+  dispatchRemoteLog('info', tag, cleanMsg);
 }
 
 export default {
   renderBanner,
   updateStatus,
+  setRemoteLogHandler,
   sanitizeForTerminal,
   logIncoming,
   logOutgoing,

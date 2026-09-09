@@ -2,6 +2,8 @@
  * Fila de envio humanizada com proteção anti-ban para Baileys
  */
 
+import { registrarMensagemChat } from './web-sync.js';
+
 const queues = new Map();
 
 /**
@@ -82,7 +84,21 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
     }
 
     // 3. Envia a mensagem imediatamente com quebras reais
-    return await sock.sendMessage(jid, { text: formattedText });
+    const sent = await sock.sendMessage(jid, { text: formattedText });
+
+    if (!options.skipChatLog) {
+      registrarMensagemChat({
+        phone: jid,
+        remoteJid: jid,
+        senderName: 'Lara Varisa',
+        fromMe: true,
+        senderType: options.senderType || 'bot_ai',
+        content: formattedText,
+        mediaType: 'text',
+      });
+    }
+
+    return sent;
   });
 }
 
@@ -127,11 +143,25 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
     }
 
     // 3. Envia a nota de voz como PTT (Push To Talk - microfone do WhatsApp)
-    return await sock.sendMessage(jid, {
+    const sent = await sock.sendMessage(jid, {
       audio: audioBuffer,
       mimetype: options.mimetype || 'audio/ogg; codecs=opus',
       ptt: true,
     });
+
+    if (!options.skipChatLog) {
+      registrarMensagemChat({
+        phone: jid,
+        remoteJid: jid,
+        senderName: 'Lara Varisa',
+        fromMe: true,
+        senderType: 'bot_ai',
+        content: options.transcription || '🎤 [Nota de voz enviada]',
+        mediaType: 'audio',
+      });
+    }
+
+    return sent;
   });
 }
 

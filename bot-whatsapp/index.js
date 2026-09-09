@@ -54,7 +54,14 @@ import { iniciarSincronizacaoSite } from './src/supabase.js';
 import { iniciarLembretesAutomaticos } from './src/reminders.js';
 import { iniciarProcessadorOutbox } from './src/outbox.js';
 import { testarConexaoIA, processarMensagemComIA, extrairPrimeiroNome } from './src/ai.js';
-import { iniciarHeartbeat, escutarAcoesAdmin, publicarStatusBot, isAiEnabled } from './src/web-sync.js';
+import {
+  iniciarHeartbeat,
+  escutarAcoesAdmin,
+  publicarStatusBot,
+  isAiEnabled,
+  isChatAiPaused,
+  registrarMensagemChat,
+} from './src/web-sync.js';
 import { renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError } from './src/terminal.js';
 
 /**
@@ -124,15 +131,31 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
           const pushName = extrairPrimeiroNome(msg.pushName);
           if (!texto.trim() && !ehAudio && !ehImagem) return;
 
+          // Registra a mensagem recebida para o Chat ao Vivo no Painel
+          registrarMensagemChat({
+            phone: jid,
+            remoteJid: jid,
+            senderName: pushName || 'Cliente',
+            fromMe: false,
+            senderType: 'client',
+            content: texto || (ehAudio ? '🎤 [Áudio / Nota de voz]' : (ehImagem ? '📷 [Foto enviada]' : 'Mensagem')),
+            mediaType: ehAudio ? 'audio' : (ehImagem ? 'image' : 'text'),
+          });
+
           if (!isAiEnabled()) {
-            logInfo('Atendimento', `IA pausada pelo Admin - mensagem de "${pushName}" silenciada para atendimento manual da Lara.`);
+            logInfo('Atendimento', `IA global pausada pelo Admin - mensagem de "${pushName}" silenciada para atendimento manual.`);
+            return;
+          }
+
+          if (isChatAiPaused(jid)) {
+            logInfo('Atendimento', `IA pausada para este contato (${pushName}) - atendimento manual da Lara.`);
             return;
           }
 
           await processarMensagemComIA(sock, msg);
         } else {
-          if (!isAiEnabled()) {
-            logInfo('Atendimento', 'IA pausada pelo Admin - mensagem silenciada para atendimento manual.');
+          if (!isAiEnabled() || isChatAiPaused(jid)) {
+            logInfo('Atendimento', 'IA pausada para este contato - atendimento manual.');
             return;
           }
           await processarMensagemComIA(sock, msgOrJid, textParam, pushNameParam);
