@@ -34,16 +34,17 @@ body {
   max-width: 100vw;
   width: 100%;
 }
-html.dark,
-html.dark body,
-html:has(.admin-root),
-body.dark,
-body:has(.admin-root),
-body:has(.admin-root.dark) {
+html:has(.admin-root.dark),
+html:has(.admin-root.dark) body,
+body:has(.admin-root.dark),
+.admin-root.dark {
   background: #11110f !important;
   color: #f7f7f2 !important;
 }
-html:not(.dark) body:has(.admin-root:not(.dark)) {
+html:has(.admin-root:not(.dark)),
+html:has(.admin-root:not(.dark)) body,
+body:has(.admin-root:not(.dark)),
+.admin-root:not(.dark) {
   background: #efefeb !important;
   color: #11110f !important;
 }

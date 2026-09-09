@@ -26,6 +26,7 @@ import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
 import { AntiDebugger } from '@/components/anti-debugger';
 import { ScrollToTop } from '@/components/scroll-to-top';
+import { PublicThemeGuard } from '@/components/public-theme-guard';
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
@@ -52,23 +53,16 @@ export const metadata: Metadata = {
   },
 };
 
-import { cookies } from 'next/headers';
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const themeCookie = cookieStore.get('admin-theme')?.value;
-  const isDark = themeCookie === 'dark';
-
   return (
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${anton.variable} ${dmSans.variable}${isDark ? ' dark' : ''}`}
-      style={isDark ? { backgroundColor: '#11110f', color: '#f7f7f2', colorScheme: 'dark' } : undefined}
+      className={`${anton.variable} ${dmSans.variable}`}
     >
       <head>
         <link rel="icon" type="image/png" href="/logo-emblem.png?v=4" sizes="any" />
@@ -76,7 +70,7 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/logo-emblem.png?v=4" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(p.indexOf('/admin')!==-1&&s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}catch(e){}})();`,
+            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}else{document.documentElement.classList.remove('dark');document.documentElement.style.backgroundColor='';document.documentElement.style.color='';document.documentElement.style.colorScheme='';if(document.body){document.body.classList.remove('dark');document.body.style.backgroundColor='';document.body.style.color='';}}}catch(e){}})();`,
           }}
         />
         <link
@@ -88,11 +82,8 @@ export default async function RootLayout({
           fetchPriority="high"
         />
       </head>
-      <body
-        suppressHydrationWarning
-        className={isDark ? 'dark' : ''}
-        style={isDark ? { backgroundColor: '#11110f', color: '#f7f7f2' } : undefined}
-      >
+      <body suppressHydrationWarning>
+        <PublicThemeGuard />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}catch(e){}`,

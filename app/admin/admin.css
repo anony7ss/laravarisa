@@ -1,9 +1,7 @@
-html.dark,
-html.dark body,
-html:has(.admin-root),
-body.dark,
-body:has(.admin-root),
-body:has(.admin-root.dark) {
+html:has(.admin-root.dark),
+html:has(.admin-root.dark) body,
+body:has(.admin-root.dark),
+.admin-root.dark {
   background: #11110f !important;
   color: #f7f7f2 !important;
 }

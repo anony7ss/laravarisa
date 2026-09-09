@@ -201,10 +201,23 @@ export function AdminShell({
         const root = document.querySelector('.admin-root');
         root?.classList.add('dark');
         document.documentElement.classList.add('dark');
-        if (document.body) document.body.classList.add('dark');
         document.cookie = 'admin-theme=dark; path=/; max-age=31536000; SameSite=Lax';
       }
     } catch {}
+
+    return () => {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin')) {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.backgroundColor = '';
+        document.documentElement.style.color = '';
+        document.documentElement.style.colorScheme = '';
+        if (document.body) {
+          document.body.classList.remove('dark');
+          document.body.style.backgroundColor = '';
+          document.body.style.color = '';
+        }
+      }
+    };
   }, []);
 
   function toggleTheme() {
