@@ -9,7 +9,7 @@ import {
   gallerySchema,
   serviceSchema,
 } from '@/lib/validation';
-import { areSamePhone } from '@/lib/phone-utils';
+import { areSamePhone, isLid } from '@/lib/phone-utils';
 
 const resources = {
   leads: { table: 'leads', schema: null, order: 'created_at' },
@@ -115,7 +115,19 @@ export async function POST(
 
   // Deduplicação inteligente de clientes: se já existir cliente com mesmo telefone, atualiza em vez de duplicar
   if (resource === 'clients') {
-    const rawPhone = String((payload as any).phone || '').replace(/\D/g, '');
+    let rawPhone = String((payload as any).phone || '').replace(/\D/g, '');
+    if (isLid(rawPhone)) {
+      const { data: lidRow } = await staff.supabase
+        .from('whatsapp_lid_mapping')
+        .select('phone')
+        .eq('lid', rawPhone)
+        .maybeSingle();
+      if (lidRow?.phone) {
+        rawPhone = String(lidRow.phone).replace(/\D/g, '');
+        (payload as any).phone = rawPhone;
+      }
+    }
+
     if (rawPhone && rawPhone.length >= 8) {
       const { data: allClients } = await staff.supabase
         .from('clients')

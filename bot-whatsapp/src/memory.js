@@ -118,6 +118,38 @@ export function setState(jid, state) {
 }
 
 /**
+ * Retorna o nome conhecido do cliente armazenado na sessão de memória
+ * @param {string} jid
+ * @returns {string|null}
+ */
+export function getSessionClientName(jid) {
+  if (!jid) return null;
+  const session = sessions.get(jid);
+  return session?.clientName || null;
+}
+
+/**
+ * Armazena o nome conhecido do cliente na sessão de memória
+ * @param {string} jid
+ * @param {string} name
+ */
+export function setSessionClientName(jid, name) {
+  if (!jid || !name) return;
+  let session = sessions.get(jid);
+  if (!session || Date.now() - session.lastActivity > TTL_MS) {
+    session = {
+      messages: [],
+      state: null,
+      clientName: name,
+      lastActivity: Date.now(),
+    };
+    sessions.set(jid, session);
+  } else {
+    session.clientName = name;
+  }
+}
+
+/**
  * Limpa o estado conversacional de uma sessão
  * @param {string} jid
  */

@@ -63,7 +63,7 @@ import {
   registrarMensagemChat,
 } from './src/web-sync.js';
 import { renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError } from './src/terminal.js';
-import { isLid, resolverLidParaTelefone, registrarMapeamentoLid } from './src/phone-utils.js';
+import { isLid, resolverLidParaTelefone, registrarMapeamentoLid, resolverNomeCliente } from './src/phone-utils.js';
 
 /**
  * Tratamento global de erros para prevenir quedas na Shard Cloud
@@ -129,7 +129,6 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
                         msg.message?.imageMessage?.caption ||
                         '';
 
-          const pushName = extrairPrimeiroNome(msg.pushName);
           if (!texto.trim() && !ehAudio && !ehImagem) return;
 
           // Extrai o número de telefone real correspondente (compatível com @s.whatsapp.net e @lid)
@@ -151,8 +150,6 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             const mapped = resolverLidParaTelefone(cleanLid);
             if (mapped) {
               realPhone = mapped;
-            } else if (realPhone) {
-              registrarMapeamentoLid({ lid: cleanLid, phone: realPhone, name: pushName });
             }
           }
 
@@ -160,7 +157,18 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             realPhone = String(jid).split('@')[0].replace(/\D/g, '');
           }
 
-          // Registra a mensagem recebida para o Chat ao Vivo no Painel com o telefone real
+          // Resolve o nome real do cliente de forma inteligente e persistente (memória, banco, cadastro)
+          const pushName = await resolverNomeCliente(jid, realPhone, msg?.pushName || pushNameParam);
+
+          // Se for LID, garante que o mapeamento no banco registre o nome atualizado do cliente
+          if (isLid(jid)) {
+            const cleanLid = String(jid).replace(/\D/g, '');
+            if (realPhone) {
+              registrarMapeamentoLid({ lid: cleanLid, phone: realPhone, name: pushName });
+            }
+          }
+
+          // Registra a mensagem recebida para o Chat ao Vivo no Painel com o telefone e nome reais
           registrarMensagemChat({
             phone: realPhone,
             remoteJid: jid,
@@ -181,7 +189,7 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             return;
           }
 
-          await processarMensagemComIA(sock, msg);
+          await processarMensagemComIA(sock, msg, null, pushName);
         } else {
           if (!isAiEnabled() || isChatAiPaused(jid)) {
             logInfo('Atendimento', 'IA pausada para este contato - atendimento manual.');

@@ -11,6 +11,7 @@ import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { transcreverAudio } from './transcribe.js';
 import { clientePediuAudio, gerarAudioVoz } from './tts.js';
+import { resolverNomeCliente } from './phone-utils.js';
 
 /**
  * Inicialização do cliente OpenAI apontando para o OpenCode Go (DeepSeek V4 Flash)
@@ -456,7 +457,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       jidOrMsg.message?.extendedTextMessage?.text ||
       jidOrMsg.message?.imageMessage?.caption ||
       '';
-    rawPushName = jidOrMsg.pushName || '';
+    rawPushName = pushNameParam || jidOrMsg.pushName || '';
     pushName = extrairPrimeiroNome(rawPushName);
   } else {
     jid = jidOrMsg;
@@ -532,6 +533,11 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     telefoneLimpo = String(jid).split('@')[0].replace(/\D/g, '');
   } else {
     telefoneLimpo = String(jid).replace(/\D/g, '');
+  }
+
+  // Se o pushName ainda for genérico ou não detectado, resolve o nome real do cliente
+  if (!pushName || pushName === 'Cliente' || pushName === 'Contato') {
+    pushName = await resolverNomeCliente(jid, telefoneLimpo, rawPushName);
   }
 
   // Registra chegada limpa da mensagem
