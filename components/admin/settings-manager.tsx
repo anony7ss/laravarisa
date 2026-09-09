@@ -157,6 +157,7 @@ export function SettingsManager({
       studio_directions_url: String(form.get('studio_directions_url') || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'),
 
       // Personalização Visual do Agendamento (/agendar)
+      booking_layout_style: String(form.get('booking_layout_style') || 'modern-app'),
       booking_theme: String(form.get('booking_theme') || 'classic-noir'),
       booking_bg_color: String(form.get('booking_bg_color') || '#e7e7e2'),
       booking_card_bg: String(form.get('booking_card_bg') || '#ffffff'),

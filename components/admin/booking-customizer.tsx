@@ -386,6 +386,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
   const handleExportJson = () => {
     const config = {
       theme,
+      layoutStyle,
       bgColor,
       cardBg,
       primaryColor,
@@ -428,6 +429,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target?.result as string);
+        if (parsed.layoutStyle) setLayoutStyle(parsed.layoutStyle);
         if (parsed.bgColor) setBgColor(parsed.bgColor);
         if (parsed.cardBg) setCardBg(parsed.cardBg);
         if (parsed.primaryColor) setPrimaryColor(parsed.primaryColor);
@@ -478,6 +480,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
       <link rel="stylesheet" href={googleFontsUrl} />
 
       {/* CAMPOS OCULTOS QUE SERÃO ENVIADOS NO FORMULÁRIO PRINCIPAL */}
+      <input type="hidden" name="booking_layout_style" value={layoutStyle} />
       <input type="hidden" name="booking_theme" value={theme} />
       <input type="hidden" name="booking_bg_color" value={bgColor} />
       <input type="hidden" name="booking_card_bg" value={cardBg} />
@@ -577,6 +580,105 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
         {/* COLUNA ESQUERDA: CONTROLES DE DESIGN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* 0. ESTRUTURA DO LAYOUT */}
+          <section className="admin-panel" style={{ margin: 0 }}>
+            <div className="admin-panel-head">
+              <div>
+                <p className="admin-kicker">ESTRUTURA DA PÁGINA</p>
+                <h3 style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: '15px', fontWeight: 600, margin: 0 }}>
+                  Estilo da Estrutura (/agendar)
+                </h3>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div
+                onClick={() => !disabled && setLayoutStyle('modern-app')}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: `2px solid ${layoutStyle === 'modern-app' ? 'var(--admin-ink)' : 'var(--admin-line)'}`,
+                  background: layoutStyle === 'modern-app' ? 'var(--admin-soft)' : 'var(--admin-card)',
+                  cursor: disabled ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--admin-ink)' }}>
+                    Modern Boutique (App)
+                  </span>
+                  {layoutStyle === 'modern-app' && (
+                    <div
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.35 }}>
+                  Avatar lateral, status &ldquo;ABERTO AGORA&rdquo;, abas sublinhadas e cards compactos.
+                </p>
+                <span style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: 'auto' }}>
+                  ★ Idêntico ao preview mobile
+                </span>
+              </div>
+
+              <div
+                onClick={() => !disabled && setLayoutStyle('classic-centered')}
+                style={{
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: `2px solid ${layoutStyle === 'classic-centered' ? 'var(--admin-ink)' : 'var(--admin-line)'}`,
+                  background: layoutStyle === 'classic-centered' ? 'var(--admin-soft)' : 'var(--admin-card)',
+                  cursor: disabled ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--admin-ink)' }}>
+                    Clássico Centralizado
+                  </span>
+                  {layoutStyle === 'classic-centered' && (
+                    <div
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.35 }}>
+                  Avatar centralizado grande, abas arredondadas tipo pílula e visual original.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* 1. TEMAS PRÉ-DEFINIDOS (PRESETS 1-CLIQUE) */}
           <section className="admin-panel" style={{ margin: 0 }}>
             <div className="admin-panel-head">

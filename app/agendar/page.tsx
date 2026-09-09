@@ -137,6 +137,7 @@ function AgendarContent() {
     studio_map_url?: string;
     google_review_url?: string;
     // Personalização Visual e de Conteúdo do Agendamento
+    booking_layout_style?: string;
     booking_theme?: string;
     booking_bg_color?: string;
     booking_card_bg?: string;
@@ -384,6 +385,9 @@ function AgendarContent() {
   const promoTag = siteSettings?.booking_promo_tag || '1ª visita: R$ 80 qualquer procedimento';
   const guaranteeText = siteSettings?.booking_guarantee_text || 'Procedimentos realizados com isolamento perfeito, fios hipoalergênicos e biossegurança rigorosa.';
 
+  const layoutStyle = siteSettings?.booking_layout_style || 'modern-app';
+  const isModernApp = layoutStyle !== 'classic-centered';
+
   return (
     <div
       className="booking-custom-root min-h-screen flex flex-col justify-between overflow-x-hidden"
@@ -460,168 +464,321 @@ function AgendarContent() {
       />
 
       {/* HEADER BOUTIQUE COM BANNER & FOTO DINÂMICOS */}
-      <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
-        <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
-          <img
-            src={coverUrl}
-            alt={studioTitle}
-            className="w-full h-full object-cover opacity-25 filter contrast-125"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-
-          <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
-            <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
-              >
-                <ArrowLeft size={13} />
-                <span>Início</span>
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => setShowMyAppointments(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--booking-text)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
-              >
-                <CalendarDays size={13} className="text-[var(--booking-accent)]" />
-                <span>Meus Horários</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-xl lg:max-w-3xl mx-auto px-4 -mt-10 sm:-mt-12 lg:-mt-14 pb-3 text-center relative z-10 flex flex-col items-center">
-          <div
-            className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 rounded-full p-1 shadow-md"
-            style={{ backgroundColor: customBg }}
-          >
+      {isModernApp ? (
+        <header className="w-full bg-[var(--booking-bg)]">
+          {/* Banner com fade inferior suave para o fundo da página */}
+          <div className="relative h-36 sm:h-44 md:h-52 w-full overflow-hidden bg-[#1c1b18]">
+            <img
+              src={coverUrl}
+              alt={studioTitle}
+              className="w-full h-full object-cover opacity-75 filter contrast-110"
+            />
             <div
-              className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+              className="absolute inset-0"
               style={{
-                backgroundColor: customCardBg,
-                border: `2px solid ${customBorder}`,
+                background: `linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 45%, ${customBg} 100%)`,
               }}
-            >
-              <img
-                src={avatarUrl}
-                alt={studioTitle}
-                width={80}
-                height={80}
-                className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
-              />
+            />
+
+            <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
+              <div className="max-w-xl lg:max-w-4xl mx-auto flex items-center justify-between">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Início</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMyAppointments(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--booking-text)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  <CalendarDays size={13} className="text-[var(--booking-accent)]" />
+                  <span>Meus Horários</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="mt-2 space-y-0.5">
-            <h1
-              className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-tight m-0"
-              style={{
-                color: customText,
-                fontFamily: `var(--booking-font-heading)`,
-              }}
-            >
-              {studioTitle}
-            </h1>
-            <p
-              className="text-xs sm:text-sm lg:text-base font-medium m-0"
-              style={{ color: customText, opacity: 0.75 }}
-            >
-              {studioSubtitle}
-            </p>
-            <div
-              className="flex items-center justify-center gap-2 pt-1 text-[11px] sm:text-xs"
-              style={{ color: customText, opacity: 0.65 }}
-            >
-              <span className="flex items-center gap-1">
-                <MapPin size={12} className="shrink-0" style={{ color: customAccent }} />
+          {/* Avatar & Identidade (Estrutura idêntica ao Preview Mobile) */}
+          <div className="max-w-xl lg:max-w-4xl mx-auto px-4 sm:px-6 -mt-10 sm:-mt-12 relative z-10">
+            <div className="flex items-end justify-between">
+              <div
+                className="w-[74px] h-[74px] sm:w-[84px] sm:h-[84px] rounded-full border-[3px] shadow-md overflow-hidden shrink-0"
+                style={{
+                  borderColor: customCardBg,
+                  backgroundColor: customCardBg,
+                }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt={studioTitle}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Status Aberto / Pausado */}
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold shadow-xs"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                  borderWidth: 1,
+                  color: siteSettings?.booking_enabled !== false ? '#10b981' : '#f59e0b',
+                }}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    siteSettings?.booking_enabled !== false
+                      ? 'bg-emerald-500 animate-pulse'
+                      : 'bg-amber-500'
+                  }`}
+                />
+                {siteSettings?.booking_enabled !== false ? 'ABERTO AGORA' : 'PAUSADO'}
+              </div>
+            </div>
+
+            {/* Nome e Especialidade */}
+            <div className="mt-2.5">
+              <h1
+                className="text-2xl sm:text-3xl font-bold tracking-tight m-0"
+                style={{
+                  color: customPrimary,
+                  fontFamily: 'var(--booking-font-heading)',
+                }}
+              >
+                {studioTitle}
+              </h1>
+              <p className="text-xs sm:text-sm mt-0.5 m-0" style={{ color: customText, opacity: 0.85 }}>
+                {studioSubtitle}
+              </p>
+            </div>
+
+            {/* Badges de Localização e Promoção */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs shadow-xs"
+                style={{
+                  backgroundColor: customCardBg,
+                  border: `1px solid ${customBorder}`,
+                  color: customText,
+                }}
+              >
+                <MapPin size={12} style={{ color: customAccent }} />
                 {locationText}
               </span>
-              <span>·</span>
-              {siteSettings?.booking_enabled !== false ? (
-                <span className="flex items-center gap-1 text-emerald-700 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Agenda aberta
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-amber-700 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  Agendamentos pausados
+
+              {promoTag && (
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-white shadow-xs"
+                  style={{ backgroundColor: customAccent }}
+                >
+                  {promoTag}
                 </span>
               )}
             </div>
           </div>
-        </div>
 
-        {/* 4 ABAS DE NAVEGAÇÃO */}
-        <div className="sticky top-0 z-30 bg-[var(--color-pumice)]/95 backdrop-blur-md border-t border-[#cfcfc9] px-4 sm:px-6 py-2.5">
-          <div className="max-w-xl lg:max-w-2xl mx-auto flex items-center justify-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveTab('agendar');
-              }}
-              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'agendar'
-                  ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
-                  : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
-              }`}
-            >
-              <CalendarDays size={14} className={activeTab === 'agendar' ? 'text-white' : ''} />
-              <span>Agendar</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveTab('galeria');
-              }}
-              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'galeria'
-                  ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
-                  : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
-              }`}
-            >
-              <Images size={14} className={activeTab === 'galeria' ? 'text-white' : ''} />
-              <span>Galeria</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveTab('avaliacoes');
-              }}
-              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'avaliacoes'
-                  ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
-                  : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
-              }`}
-            >
-              <Star size={14} className={activeTab === 'avaliacoes' ? 'text-white' : ''} />
-              <span>Avaliações</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setActiveTab('estudio');
-              }}
-              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'estudio'
-                  ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
-                  : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
-              }`}
-            >
-              <Info size={14} className={activeTab === 'estudio' ? 'text-white' : ''} />
-              <span>Estúdio</span>
-            </button>
+          {/* 4 ABAS DE NAVEGAÇÃO SUBLINHADAS */}
+          <div
+            className="border-b px-4 sm:px-6 mt-4 max-w-xl lg:max-w-4xl mx-auto flex items-center gap-6 sm:gap-8 overflow-x-auto no-scrollbar"
+            style={{ borderColor: customBorder }}
+          >
+            {[
+              { id: 'agendar', label: 'Agendar' },
+              { id: 'galeria', label: 'Galeria' },
+              { id: 'avaliacoes', label: 'Avaliações' },
+              { id: 'estudio', label: 'O Estúdio' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setActiveTab(tab.id as any);
+                  }}
+                  className="pb-2.5 text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer relative"
+                  style={{
+                    borderBottom: `2px solid ${isActive ? customPrimary : 'transparent'}`,
+                    color: isActive ? customPrimary : customText,
+                    fontWeight: isActive ? 700 : 500,
+                    opacity: isActive ? 1 : 0.65,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-        </div>
-      </header>
+        </header>
+      ) : (
+        <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
+          <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
+            <img
+              src={coverUrl}
+              alt={studioTitle}
+              className="w-full h-full object-cover opacity-25 filter contrast-125"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+            <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
+              <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
+                <Link
+                  href="/"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Início</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMyAppointments(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/90 hover:bg-white backdrop-blur-md text-[var(--booking-text)] border border-white/40 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  <CalendarDays size={13} className="text-[var(--booking-accent)]" />
+                  <span>Meus Horários</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-xl lg:max-w-3xl mx-auto px-4 -mt-10 sm:-mt-12 lg:-mt-14 pb-3 text-center relative z-10 flex flex-col items-center">
+            <div
+              className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-26 lg:h-26 rounded-full p-1 shadow-md"
+              style={{ backgroundColor: customBg }}
+            >
+              <div
+                className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+                style={{
+                  backgroundColor: customCardBg,
+                  border: `2px solid ${customBorder}`,
+                }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt={studioTitle}
+                  width={80}
+                  height={80}
+                  className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
+                />
+              </div>
+            </div>
+
+            <div className="mt-2 space-y-0.5">
+              <h1
+                className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-tight m-0"
+                style={{
+                  color: customText,
+                  fontFamily: `var(--booking-font-heading)`,
+                }}
+              >
+                {studioTitle}
+              </h1>
+              <p
+                className="text-xs sm:text-sm lg:text-base font-medium m-0"
+                style={{ color: customText, opacity: 0.75 }}
+              >
+                {studioSubtitle}
+              </p>
+              <div
+                className="flex items-center justify-center gap-2 pt-1 text-[11px] sm:text-xs"
+                style={{ color: customText, opacity: 0.65 }}
+              >
+                <span className="flex items-center gap-1">
+                  <MapPin size={12} className="shrink-0" style={{ color: customAccent }} />
+                  {locationText}
+                </span>
+                <span>·</span>
+                {siteSettings?.booking_enabled !== false ? (
+                  <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Agenda aberta
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-amber-700 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Agendamentos pausados
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 4 ABAS DE NAVEGAÇÃO CLÁSSICAS */}
+          <div className="sticky top-0 z-30 bg-[var(--color-pumice)]/95 backdrop-blur-md border-t border-[#cfcfc9] px-4 sm:px-6 py-2.5">
+            <div className="max-w-xl lg:max-w-2xl mx-auto flex items-center justify-center gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('agendar');
+                }}
+                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'agendar'
+                    ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
+                    : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
+                }`}
+              >
+                <CalendarDays size={14} className={activeTab === 'agendar' ? 'text-white' : ''} />
+                <span>Agendar</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('galeria');
+                }}
+                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'galeria'
+                    ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
+                    : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
+                }`}
+              >
+                <Images size={14} className={activeTab === 'galeria' ? 'text-white' : ''} />
+                <span>Galeria</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('avaliacoes');
+                }}
+                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'avaliacoes'
+                    ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
+                    : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
+                }`}
+              >
+                <Star size={14} className={activeTab === 'avaliacoes' ? 'text-white' : ''} />
+                <span>Avaliações</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setActiveTab('estudio');
+                }}
+                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'estudio'
+                    ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
+                    : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
+                }`}
+              >
+                <Info size={14} className={activeTab === 'estudio' ? 'text-white' : ''} />
+                <span>Estúdio</span>
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
       <main className="flex-1 w-full max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto px-3.5 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 lg:space-y-6">
         {activeTab === 'agendar' && (
           <div className="space-y-4 animate-in fade-in duration-200">
@@ -659,156 +816,296 @@ function AgendarContent() {
             ) : (
               <>
                 {bookingStep === 1 && (
-                  <div className="space-y-3 lg:space-y-4">
-                    <div className="flex items-center justify-between pb-1 px-1">
-                      <div>
-                        <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-[var(--color-obsidian)] tracking-tight">
-                          Procedimentos
-                        </h2>
-                        <p className="text-xs sm:text-sm text-[#707068]">
-                          Toque no serviço para escolher data e horário
-                        </p>
+                  isModernApp ? (
+                    <div className="space-y-3">
+                      {/* Card de Garantia & Biossegurança (Exatamente igual ao preview mobile) */}
+                      <div
+                        className="p-3 sm:p-3.5 rounded-2xl flex items-center gap-2.5 shadow-xs"
+                        style={{
+                          backgroundColor: customCardBg,
+                          border: `1px solid ${customBorder}`,
+                          color: customText,
+                        }}
+                      >
+                        <ShieldCheck size={16} className="shrink-0" style={{ color: customAccent }} />
+                        <span className="text-xs leading-relaxed opacity-90">{guaranteeText}</span>
                       </div>
-                      <span className="text-xs font-medium text-[#8c8c84] whitespace-nowrap shrink-0 ml-3">
-                        {filteredServices.length} opções
-                      </span>
-                    </div>
 
-                    {/* BANNER 1ª VEZ · MINIMALISTA & DIRETO */}
-                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <span
-                          className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
-                          style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
-                        >
-                          1ª Visita
-                        </span>
-                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1 truncate">
-                          Qualquer extensão na 1ª vez
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] text-[#8c8c84] uppercase tracking-wider block font-medium">
-                          Por apenas
-                        </span>
-                        <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
-                          R$ 80
-                        </span>
-                      </div>
-                    </div>
-
-                    {categories.length > 1 && (
-                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none lg:overflow-visible lg:flex-wrap lg:pb-0">
+                      {/* Filtro de Categorias (Chips idênticos ao preview) */}
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                         <button
                           type="button"
                           onClick={() => setSelectedCategory('all')}
-                          className={`px-3 py-1 lg:px-3.5 lg:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                            selectedCategory === 'all'
-                              ? 'bg-[var(--color-obsidian)] text-white font-semibold shadow-sm'
-                              : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#f7f6f2]'
-                          }`}
+                          className="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer"
+                          style={{
+                            backgroundColor: selectedCategory === 'all' ? customPrimary : customCardBg,
+                            color: selectedCategory === 'all' ? '#ffffff' : customText,
+                            border: selectedCategory === 'all' ? `1px solid ${customPrimary}` : `1px solid ${customBorder}`,
+                          }}
                         >
                           Todos
                         </button>
-                        {categories.map((cat) => (
+                        {categories.map((cat) => {
+                          const isSelected = selectedCategory === cat;
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setSelectedCategory(cat)}
+                              className="px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer"
+                              style={{
+                                backgroundColor: isSelected ? customPrimary : customCardBg,
+                                color: isSelected ? '#ffffff' : customText,
+                                border: isSelected ? `1px solid ${customPrimary}` : `1px solid ${customBorder}`,
+                              }}
+                            >
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Lista de Cards de Procedimentos */}
+                      {loadingServices ? (
+                        <div
+                          className="py-12 text-center text-xs flex items-center justify-center gap-2"
+                          style={{ color: customText, opacity: 0.6 }}
+                        >
+                          <Loader2 size={16} className="animate-spin" style={{ color: customAccent }} />
+                          <span>Carregando procedimentos...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:space-y-0 md:gap-3.5">
+                          {filteredServices.map((service) => (
+                            <div
+                              key={service.id}
+                              onClick={() => handleSelectService(service)}
+                              className="rounded-2xl p-4 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-2 group active:scale-[0.99]"
+                              style={{
+                                backgroundColor: customCardBg,
+                                border: `1px solid ${customBorder}`,
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                  <h3
+                                    className="text-sm sm:text-base font-bold truncate"
+                                    style={{
+                                      fontFamily: 'var(--booking-font-heading)',
+                                      color: customPrimary,
+                                    }}
+                                  >
+                                    {service.name}
+                                  </h3>
+                                  <span
+                                    className="text-xs font-semibold block mt-0.5"
+                                    style={{ color: customAccent }}
+                                  >
+                                    {service.category || 'Personalizado'}
+                                  </span>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span
+                                    className="text-base sm:text-lg font-bold"
+                                    style={{
+                                      fontFamily: 'var(--booking-font-heading)',
+                                      color: customPrimary,
+                                    }}
+                                  >
+                                    {service.price}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {service.description && (
+                                <p
+                                  className="text-xs line-clamp-2 leading-relaxed"
+                                  style={{ color: customText, opacity: 0.75 }}
+                                >
+                                  {service.description}
+                                </p>
+                              )}
+
+                              <div
+                                className="flex items-center justify-between pt-2 border-t mt-1"
+                                style={{ borderColor: `${customBorder}60` }}
+                              >
+                                <div
+                                  className="flex items-center gap-1.5 text-xs font-medium"
+                                  style={{ color: customText, opacity: 0.65 }}
+                                >
+                                  <Clock3 size={13} className="shrink-0" />
+                                  <span>{service.duration}</span>
+                                  {service.maintenance && <span>· {service.maintenance}</span>}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs hover:opacity-90 transition-opacity cursor-pointer"
+                                  style={{
+                                    backgroundColor: customPrimary,
+                                    color: '#ffffff',
+                                  }}
+                                >
+                                  Agendar
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3 lg:space-y-4">
+                      <div className="flex items-center justify-between pb-1 px-1">
+                        <div>
+                          <h2 className="text-base sm:text-lg lg:text-2xl font-bold text-[var(--color-obsidian)] tracking-tight">
+                            Procedimentos
+                          </h2>
+                          <p className="text-xs sm:text-sm text-[#707068]">
+                            Toque no serviço para escolher data e horário
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium text-[#8c8c84] whitespace-nowrap shrink-0 ml-3">
+                          {filteredServices.length} opções
+                        </span>
+                      </div>
+
+                      {/* BANNER 1ª VEZ · MINIMALISTA & DIRETO */}
+                      <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <span
+                            className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                            style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
+                          >
+                            1ª Visita
+                          </span>
+                          <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1 truncate">
+                            Qualquer extensão na 1ª vez
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] text-[#8c8c84] uppercase tracking-wider block font-medium">
+                            Por apenas
+                          </span>
+                          <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                            R$ 80
+                          </span>
+                        </div>
+                      </div>
+
+                      {categories.length > 1 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none lg:overflow-visible lg:flex-wrap lg:pb-0">
                           <button
-                            key={cat}
                             type="button"
-                            onClick={() => setSelectedCategory(cat)}
+                            onClick={() => setSelectedCategory('all')}
                             className={`px-3 py-1 lg:px-3.5 lg:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                              selectedCategory === cat
+                              selectedCategory === 'all'
                                 ? 'bg-[var(--color-obsidian)] text-white font-semibold shadow-sm'
                                 : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#f7f6f2]'
                             }`}
                           >
-                            {cat}
+                            Todos
                           </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {loadingServices ? (
-                      <div className="py-12 text-center text-xs text-[#707068] flex items-center justify-center gap-2">
-                        <Loader2 size={16} className="animate-spin text-[var(--color-ember)]" />
-                        <span>Carregando procedimentos...</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
-                        {filteredServices.map((service) => {
-                          const isPopular = service.category === 'Marcante';
-
-                          return (
-                            <div
-                              key={service.id}
-                              onClick={() => handleSelectService(service)}
-                              className="group relative bg-white hover:bg-[#fafaf8] p-4 sm:p-4.5 lg:p-5 rounded-2xl lg:rounded-3xl border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/60 shadow-sm hover:shadow-md transition-all cursor-pointer flex lg:flex-col items-center lg:items-stretch justify-between gap-3 lg:gap-4 active:scale-[0.99] lg:hover:-translate-y-0.5"
+                          {categories.map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setSelectedCategory(cat)}
+                              className={`px-3 py-1 lg:px-3.5 lg:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                                selectedCategory === cat
+                                  ? 'bg-[var(--color-obsidian)] text-white font-semibold shadow-sm'
+                                  : 'bg-white border border-[#d6d6cf] text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#f7f6f2]'
+                              }`}
                             >
-                              <div className="space-y-1 lg:space-y-2 min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="text-sm sm:text-base lg:text-lg font-bold text-[var(--color-obsidian)] group-hover:text-[var(--color-ember)] transition-colors truncate">
-                                    {service.name}
-                                  </h3>
-                                  {isPopular && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ember)] bg-[#fcedea] px-2 py-0.5 rounded-full shrink-0">
-                                      Mais pedido
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {loadingServices ? (
+                        <div className="py-12 text-center text-xs text-[#707068] flex items-center justify-center gap-2">
+                          <Loader2 size={16} className="animate-spin text-[var(--color-ember)]" />
+                          <span>Carregando procedimentos...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
+                          {filteredServices.map((service) => {
+                            const isPopular = service.category === 'Marcante';
+
+                            return (
+                              <div
+                                key={service.id}
+                                onClick={() => handleSelectService(service)}
+                                className="group relative bg-white hover:bg-[#fafaf8] p-4 sm:p-4.5 lg:p-5 rounded-2xl lg:rounded-3xl border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/60 shadow-sm hover:shadow-md transition-all cursor-pointer flex lg:flex-col items-center lg:items-stretch justify-between gap-3 lg:gap-4 active:scale-[0.99] lg:hover:-translate-y-0.5"
+                              >
+                                <div className="space-y-1 lg:space-y-2 min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-sm sm:text-base lg:text-lg font-bold text-[var(--color-obsidian)] group-hover:text-[var(--color-ember)] transition-colors truncate">
+                                      {service.name}
+                                    </h3>
+                                    {isPopular && (
+                                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ember)] bg-[#fcedea] px-2 py-0.5 rounded-full shrink-0">
+                                        Mais pedido
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {service.description && (
+                                    <p className="text-xs lg:text-sm text-[#707068] line-clamp-1 lg:line-clamp-2 leading-relaxed">
+                                      {service.description}
+                                    </p>
+                                  )}
+
+                                  <div className="flex items-center gap-2 text-[11px] lg:text-xs text-[#8c8c84] font-medium pt-0.5">
+                                    <span className="flex items-center gap-1">
+                                      <Clock3 size={12} className="shrink-0 text-[#a0a098]" />
+                                      {service.duration}
                                     </span>
-                                  )}
+                                    {service.maintenance && (
+                                      <>
+                                        <span>·</span>
+                                        <span>{service.maintenance}</span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
 
-                                {service.description && (
-                                  <p className="text-xs lg:text-sm text-[#707068] line-clamp-1 lg:line-clamp-2 leading-relaxed">
-                                    {service.description}
-                                  </p>
-                                )}
+                                <div className="text-right shrink-0 flex lg:w-full items-center justify-between gap-2.5 lg:border-t lg:border-[#f0f0ed] lg:pt-3">
+                                  <div className="text-right lg:text-left">
+                                    <span className="text-[11px] text-[#a0a098] line-through block leading-none">
+                                      {service.price}
+                                    </span>
+                                    <span className="text-base sm:text-lg lg:text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
+                                      R$ 80
+                                    </span>
+                                  </div>
 
-                                <div className="flex items-center gap-2 text-[11px] lg:text-xs text-[#8c8c84] font-medium pt-0.5">
-                                  <span className="flex items-center gap-1">
-                                    <Clock3 size={12} className="shrink-0 text-[#a0a098]" />
-                                    {service.duration}
-                                  </span>
-                                  {service.maintenance && (
-                                    <>
-                                      <span>·</span>
-                                      <span>{service.maintenance}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="text-right shrink-0 flex lg:w-full items-center justify-between gap-2.5 lg:border-t lg:border-[#f0f0ed] lg:pt-3">
-                                <div className="text-right lg:text-left">
-                                  <span className="text-[11px] text-[#a0a098] line-through block leading-none">
-                                    {service.price}
-                                  </span>
-                                  <span className="text-base sm:text-lg lg:text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
-                                    R$ 80
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <span className="hidden lg:inline-block text-xs font-semibold text-[#707068] group-hover:text-[var(--color-obsidian)] transition-colors">
-                                    Agendar
-                                  </span>
-                                  <div className="w-8 h-8 rounded-full bg-[var(--color-limestone)] group-hover:bg-[var(--color-obsidian)] text-[var(--color-obsidian)] group-hover:text-white flex items-center justify-center transition-colors shadow-sm">
-                                    <ChevronRight size={16} />
+                                  <div className="flex items-center gap-2">
+                                    <span className="hidden lg:inline-block text-xs font-semibold text-[#707068] group-hover:text-[var(--color-obsidian)] transition-colors">
+                                      Agendar
+                                    </span>
+                                    <div className="w-8 h-8 rounded-full bg-[var(--color-limestone)] group-hover:bg-[var(--color-obsidian)] text-[var(--color-obsidian)] group-hover:text-white flex items-center justify-center transition-colors shadow-sm">
+                                      <ChevronRight size={16} />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
 
-                    {/* GARANTIA & BIOSSEGURANÇA CUSTOMIZÁVEL */}
-                    <div
-                      className="pt-2 text-center text-xs opacity-75 flex items-center justify-center gap-1.5"
-                      style={{ color: customText }}
-                    >
-                      <ShieldCheck size={14} style={{ color: customAccent }} />
-                      <span>{guaranteeText}</span>
+                      {/* GARANTIA & BIOSSEGURANÇA CUSTOMIZÁVEL */}
+                      <div
+                        className="pt-2 text-center text-xs opacity-75 flex items-center justify-center gap-1.5"
+                        style={{ color: customText }}
+                      >
+                        <ShieldCheck size={14} style={{ color: customAccent }} />
+                        <span>{guaranteeText}</span>
+                      </div>
                     </div>
-                  </div>
+                  )
                 )}
 
                 {(bookingStep === 2 || bookingStep === 3) && selectedService && (
