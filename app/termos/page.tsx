@@ -1,173 +1,234 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Clock3,
+  CalendarCheck,
+  AlertTriangle,
+  Sparkles,
+  ShieldAlert,
+  MessageCircle,
+} from 'lucide-react';
+import { SiteFooter } from '@/components/site-footer';
+import { studio } from '@/lib/studio';
 
 export const metadata: Metadata = {
-  title: 'Termos de Agendamento — Lara Varisa',
+  title: 'Termos de Agendamento & Políticas — Lara Varisa',
   description:
-    'Regras e políticas do estúdio Lara Varisa: horários, tolerância de atrasos, cancelamento gratuito, manutenções e cuidados pré e pós procedimento.',
+    'Regras e políticas do estúdio de Lara Varisa: horários, tolerância de atrasos, cancelamento, manutenções e cuidados pré/pós procedimento.',
 };
 
 export default function TermsPage() {
   const lastUpdated = '07 de setembro de 2026';
 
-  const sections = [
-    {
-      num: '01',
-      title: 'Agendamento & Endereço',
-      text: 'Atendimentos exclusivamente com hora marcada. O endereço completo na Zona Norte de Porto Alegre e orientações de acesso são enviados diretamente no seu WhatsApp logo após a confirmação da reserva.',
-    },
-    {
-      num: '02',
-      title: 'Tolerância de Atraso',
-      text: 'Tolerância máxima de 15 minutos. Atrasos superiores comprometem a secagem do adesivo ou o horário da próxima cliente, podendo exigir adaptação do procedimento ou remarcação.',
-    },
-    {
-      num: '03',
-      title: 'Cancelamento & Reagendamento',
-      text: 'Cancelamento gratuito com até 24 horas de antecedência. Reagendamentos são feitos conforme disponibilidade de horários na agenda do mês.',
-    },
-    {
-      num: '04',
-      title: 'Orientações Pré-Procedimento',
-      text: 'Venha com os olhos limpos (sem rímel, delineador ou protetor oleoso). Lentes de contato devem ser retiradas antes da sessão e recomendamos evitar excesso de cafeína.',
-    },
-    {
-      num: '05',
-      title: 'Manutenção de Cílios',
-      text: 'Recomendada entre 14 e 21 dias, com ao menos 40% a 50% dos fios preservados. Após 25 dias ou com perda maior, o serviço é considerado nova aplicação.',
-    },
-    {
-      num: '06',
-      title: 'Garantia & Retoques',
-      text: 'Utilizamos produtos certificados pela Anvisa. Em caso de perda atípica de fios nas primeiras 48 horas, avaliamos e realizamos o retoque cortesia sem custo adicional.',
-    },
-    {
-      num: '07',
-      title: 'Pagamento & 1ª Visita',
-      text: 'Pagamento realizado no dia do procedimento (Pix ou cartões). A promoção de primeira visita (R$ 80,00) é válida para novas clientes em qualquer estilo de extensão.',
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between">
-      {/* Top Header */}
-      <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-xl mx-auto px-4 h-14 relative flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
-          >
-            <ArrowLeft size={14} />
-            <span>Voltar ao início</span>
-          </Link>
-
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
-            <Link
-              href="/"
-              className="font-serif text-lg tracking-tight text-[var(--color-obsidian)] hover:opacity-80 transition-opacity"
-            >
-              Lara Varisa
-            </Link>
-          </div>
-
-          <Link
-            href="/agendar"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-obsidian)] hover:opacity-70 transition-opacity"
-          >
-            <span>Agendar</span>
-            <ArrowUpRight size={13} />
-          </Link>
-        </div>
+    <>
+      <header className="wrap gallery-header">
+        <Link href="/" className="back-link">
+          <ArrowLeft size={18} />
+          Voltar ao início
+        </Link>
+        <Link className="gallery-home-brand" href="/">
+          Lara Varisa
+        </Link>
+        <Link className="secondary-link" href="/agendar">
+          Agendar <ArrowUpRight size={17} />
+        </Link>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-xl mx-auto w-full px-4 py-8 sm:py-10 space-y-6">
-        
-        {/* Title */}
-        <div className="text-center space-y-1">
-          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84]">
-            Políticas do Estúdio
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-serif text-[var(--color-obsidian)]">
-            Termos de Agendamento
+      <main id="conteudo" className="wrap legal-page">
+        <div className="legal-header">
+          <div className="legal-badge">
+            <CalendarCheck size={16} />
+            <span>POLÍTICAS DO ESTÚDIO</span>
+          </div>
+          <h1>
+            TERMOS DE <em>AGENDAMENTO.</em>
           </h1>
-          <p className="text-xs text-[#595952] max-w-sm mx-auto leading-relaxed">
-            Regras simples de pontualidade, cancelamento e cuidados para garantir excelência no seu atendimento.
+          <p className="legal-intro">
+            Para garantir uma experiência de excelência, pontualidade rigorosa e a máxima retenção
+            da sua extensão de cílios, estabelecemos termos claros para o atendimento no estúdio{' '}
+            <strong>Lara Varisa · Lash Designer</strong> em Porto Alegre.
           </p>
-          <p className="text-[11px] text-[#8c8c84] pt-0.5">
-            Atualizado em {lastUpdated}
-          </p>
+          <p className="legal-updated">Última atualização: {lastUpdated}</p>
         </div>
 
-        {/* Tab Switcher entre Termos e Privacidade */}
-        <div className="max-w-xs mx-auto p-1 bg-white/80 rounded-full border border-[#d6d6cf] flex items-center shadow-xs text-xs">
-          <span className="flex-1 py-1.5 px-3 rounded-full font-semibold text-center bg-[var(--color-obsidian)] text-white shadow-xs cursor-default">
-            Termos
-          </span>
-          <Link
-            href="/privacidade"
-            className="flex-1 py-1.5 px-3 rounded-full text-center text-[#707068] hover:text-[var(--color-obsidian)] transition-colors"
-          >
-            Privacidade & LGPD
-          </Link>
-        </div>
+        <div className="legal-content">
+          <section className="legal-section">
+            <div className="legal-section-num">01</div>
+            <div className="legal-section-body">
+              <h2>Reservas e Confirmação de Horário</h2>
+              <p>
+                Os atendimentos ocorrem exclusivamente mediante <strong>agendamento prévio</strong>{' '}
+                pelo portal online ou WhatsApp oficial.
+              </p>
+              <ul>
+                <li>
+                  O agendamento realizado pelo site fica registrado em nosso sistema e será
+                  confirmado com você pela nossa equipe via WhatsApp.
+                </li>
+                <li>
+                  O <strong>endereço completo</strong> e as orientações detalhadas de acesso ao
+                  estúdio (localizado na Zona Norte de Porto Alegre) são enviados diretamente no seu
+                  WhatsApp após a confirmação da reserva.
+                </li>
+              </ul>
+            </div>
+          </section>
 
-        {/* Compact Sections Card */}
-        <div className="bg-white rounded-3xl border border-[#d6d6cf] shadow-xs divide-y divide-[#f0f0ed] overflow-hidden">
-          {sections.map((sec) => (
-            <div key={sec.num} className="p-4 sm:p-5 space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono font-bold text-[#8c8c84]">
-                  {sec.num}
-                </span>
-                <h2 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">
-                  {sec.title}
-                </h2>
+          <section className="legal-section">
+            <div className="legal-section-num">02</div>
+            <div className="legal-section-body">
+              <h2>Pontualidade e Tolerância de Atrasos</h2>
+              <p>
+                Cada procedimento de extensão de cílios exige concentração minuciosa, isolamento fio
+                a fio e respeito ao tempo biológico de secagem do adesivo:
+              </p>
+              <div className="legal-highlight-box">
+                <Clock3 size={20} />
+                <div>
+                  <strong>Tolerância Máxima de 15 Minutos</strong>
+                  <p>
+                    Atrasos superiores a 15 minutos comprometem a quantidade de fios aplicados ou o
+                    atendimento da cliente seguinte. Nesse caso, a sessão poderá ser realizada de
+                    forma adaptada ou remarcada para uma nova data.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-[#595952] leading-relaxed pl-5 sm:pl-6">
-                {sec.text}
+            </div>
+          </section>
+
+          <section className="legal-section">
+            <div className="legal-section-num">03</div>
+            <div className="legal-section-body">
+              <h2>Cancelamento e Reagendamento Gratuito</h2>
+              <p>
+                Entendemos que imprevistos acontecem. Pedimos apenas a gentileza de nos avisar com
+                antecedência para podermos disponibilizar o horário a outra cliente na fila de
+                espera:
+              </p>
+              <ul>
+                <li>
+                  <strong>Cancelamento Gratuito:</strong> pode ser feito sem qualquer custo com até{' '}
+                  <strong>24 horas de antecedência</strong> do horário agendado.
+                </li>
+                <li>
+                  <strong>Reagendamento:</strong> sujeito à disponibilidade de horários na agenda
+                  do mês.
+                </li>
+                <li>
+                  <strong>Não Comparecimento (No-Show):</strong> clientes que faltarem sem aviso
+                  prévio poderão ter novos agendamentos condicionados ao pagamento antecipado da
+                  reserva.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="legal-section">
+            <div className="legal-section-num">04</div>
+            <div className="legal-section-body">
+              <h2>Orientações Pré-Atendimento (Como Vir Preparada)</h2>
+              <p>Para otimizar o tempo de procedimento e garantir a máxima retenção da cola:</p>
+              <ul>
+                <li>
+                  <strong>Sem Maquiagem nos Olhos:</strong> venha sem rímel, delineador, sombra,
+                  corretivo ou protetor solar oleoso na região dos olhos. Resíduos de maquiagem
+                  impedem a aderência perfeita do adesivo.
+                </li>
+                <li>
+                  <strong>Lentes de Contato:</strong> recomendamos retirar as lentes de contato antes
+                  do início do procedimento para maior conforto durante o fechamento dos olhos.
+                </li>
+                <li>
+                  <strong>Evite Cafeína em Excesso:</strong> o consumo excessivo de café antes da
+                  sessão pode provocar tremores involuntários nas pálpebras, dificultando o
+                  acoplamento dos fios.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="legal-section">
+            <div className="legal-section-num">05</div>
+            <div className="legal-section-body">
+              <h2>Regras para Manutenção de Cílios</h2>
+              <p>
+                A manutenção consiste na limpeza profunda, remoção dos fios que cresceram com a raiz
+                e preenchimento das novas fases de crescimento dos seus cílios naturais:
+              </p>
+              <ul>
+                <li>
+                  <strong>Prazo Recomendado:</strong> entre <strong>14 e 21 dias</strong> após a
+                  aplicação anterior.
+                </li>
+                <li>
+                  <strong>Quantidade Mínima de Fios:</strong> é necessário ter pelo menos{' '}
+                  <strong>40% a 50% da extensão intacta</strong>.
+                </li>
+                <li>
+                  Após 25 dias ou com perda superior a 60% dos fios, o procedimento é considerado
+                  tecnicamente uma <em>Nova Aplicação Completa</em>.
+                </li>
+                <li>
+                  Não realizamos manutenção sobre aplicação feita em outros estabelecimentos sem
+                  avaliação prévia (caso necessário, realizamos a remoção segura seguida de nova
+                  aplicação).
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section className="legal-section">
+            <div className="legal-section-num">06</div>
+            <div className="legal-section-body">
+              <h2>Garantia e Retoques</h2>
+              <p>
+                Trabalhamos com produtos hipoalergênicos e adesivos certificados pela Anvisa. Caso
+                você note qualquer perda atípica de fios dentro das primeiras{' '}
+                <strong>48 horas</strong>, entre em contato imediatamente com fotos para que
+                possamos avaliar e realizar o retoque cortesia caso necessário.
               </p>
             </div>
-          ))}
+          </section>
+
+          <section className="legal-section">
+            <div className="legal-section-num">07</div>
+            <div className="legal-section-body">
+              <h2>Formas de Pagamento e Condições Promocionais</h2>
+              <p>
+                O pagamento é realizado <strong>apenas no dia do atendimento</strong>, ao final da
+                sessão. Aceitamos Pix, cartões de crédito e débito.
+              </p>
+              <p>
+                Condições promocionais (ex: 20% OFF na primeira visita ou promoções especiais) são
+                válidas para 1 procedimento por CPF/telefone, aplicadas diretamente no valor final e
+                não são cumulativas entre si ou com outros vouchers de desconto.
+              </p>
+            </div>
+          </section>
         </div>
 
-        {/* Clean Actions */}
-        <div className="text-center pt-2 space-y-2">
-          <p className="text-xs text-[#707068]">Dúvidas ou agendamento de horário?</p>
-          <div className="flex items-center justify-center gap-2">
-            <Link
-              href="/agendar"
-              className="px-4 py-2 rounded-full bg-[var(--color-obsidian)] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              <span>Agendar Horário</span>
-              <ArrowUpRight size={13} />
+        <div className="legal-footer-cta">
+          <p>Tudo pronto para realçar a beleza do seu olhar com uma profissional dedicada?</p>
+          <div className="legal-cta-actions">
+            <Link href="/agendar" className="button">
+              Agendar Procedimento Online <ArrowUpRight size={18} />
             </Link>
-            <Link
-              href="/privacidade"
-              className="px-4 py-2 rounded-full bg-white text-[var(--color-obsidian)] text-xs font-semibold border border-[#d6d6cf] hover:bg-[#f4f4f0] transition-colors flex items-center gap-1.5"
+            <a
+              href={studio.bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button button-outline"
             >
-              <span>Ver Privacidade</span>
-              <ArrowUpRight size={13} />
-            </Link>
+              <MessageCircle size={18} /> Falar com a Lara no WhatsApp
+            </a>
           </div>
         </div>
-
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84] mt-auto">
-        <div className="max-w-xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© {new Date().getFullYear()} Lara Varisa Studio</span>
-          <div className="flex items-center gap-3 text-[11px]">
-            <Link href="/termos" className="text-[var(--color-obsidian)] font-semibold">Termos</Link>
-            <span>·</span>
-            <Link href="/privacidade" className="hover:text-[var(--color-obsidian)] transition-colors">Privacidade</Link>
-            <span>·</span>
-            <Link href="/anamnese" className="hover:text-[var(--color-obsidian)] transition-colors">Anamnese</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+      <SiteFooter />
+    </>
   );
 }
