@@ -195,7 +195,7 @@ export function DateTimePicker({
               Horários disponíveis
             </span>
             {slots.length > 0 && (
-              <span className="text-[11px] text-[#8c8c84]">
+              <span className="text-[11px] text-[#8c8c84] whitespace-nowrap shrink-0 ml-2">
                 {slots.length} opções
               </span>
             )}

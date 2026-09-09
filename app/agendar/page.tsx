@@ -669,32 +669,28 @@ function AgendarContent() {
                           Toque no serviço para escolher data e horário
                         </p>
                       </div>
-                      <span className="text-xs font-medium text-[#8c8c84] bg-white px-2.5 py-1 rounded-full border border-[#d6d6cf] shadow-sm">
+                      <span className="text-xs font-medium text-[#8c8c84] whitespace-nowrap shrink-0 ml-3">
                         {filteredServices.length} opções
                       </span>
                     </div>
 
-                    {/* BANNER 1ª VEZ · MINIMALISTA */}
-                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3.5 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3 lg:gap-4">
+                    {/* BANNER 1ª VEZ · MINIMALISTA & DIRETO */}
+                    <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#d6d6cf] p-3 sm:p-4 lg:p-5 shadow-sm flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
-                            style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
-                          >
-                            {promoTag}
-                          </span>
-                          <span className="hidden sm:inline-block text-[11px] text-[#8c8c84]">· Condição Exclusiva</span>
-                        </div>
-                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1">
-                          Qualquer extensão por apenas <strong className="font-bold" style={{ color: customAccent }}>R$ 80,00</strong> na 1ª vez
-                        </p>
-                        <p className="hidden lg:block text-xs text-[#707068] mt-0.5 m-0">
-                          Agendamento online com confirmação instantânea no WhatsApp.
+                        <span
+                          className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                          style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
+                        >
+                          1ª Visita
+                        </span>
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-[var(--color-obsidian)] m-0 mt-1 truncate">
+                          Qualquer extensão na 1ª vez
                         </p>
                       </div>
-                      <div className="text-right shrink-0 bg-[#f7f6f2] px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-[#e2e2df]">
-                        <span className="text-[10px] text-[#8c8c84] uppercase tracking-wider block font-medium">Por apenas</span>
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-[#8c8c84] uppercase tracking-wider block font-medium">
+                          Por apenas
+                        </span>
                         <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-0.5">
                           R$ 80
                         </span>

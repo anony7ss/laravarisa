@@ -265,6 +265,9 @@ async function compressImageToWebp(file: File, maxWidth: number, maxHeight: numb
 
 export function BookingCustomizer({ settings, disabled = false }: BookingCustomizerProps) {
   // Estados principais
+  const [layoutStyle, setLayoutStyle] = useState<'modern-app' | 'classic-centered'>(
+    settings?.booking_layout_style || 'modern-app'
+  );
   const [theme, setTheme] = useState(settings?.booking_theme || 'classic-noir');
   const [bgColor, setBgColor] = useState(settings?.booking_bg_color || '#e7e7e2');
   const [cardBg, setCardBg] = useState(settings?.booking_card_bg || '#ffffff');

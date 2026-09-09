@@ -172,6 +172,7 @@ export const settingsSchema = z.object({
   whatsapp_audio_mode: z.enum(['direct_request', 'mirror', 'always', 'disabled']).default('direct_request'),
   whatsapp_audio_voice: z.string().trim().max(100).default('pt-BR-FranciscaNeural'),
   // Personalização da Página de Agendamento (/agendar)
+  booking_layout_style: z.string().trim().max(50).default('modern-app'),
   booking_theme: z.string().trim().max(50).default('classic-noir'),
   booking_bg_color: z.string().trim().max(30).default('#e7e7e2'),
   booking_card_bg: z.string().trim().max(30).default('#ffffff'),
