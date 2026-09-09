@@ -174,7 +174,7 @@ export function DateTimePicker({
                   {item.weekDayShort}
                 </span>
                 <span
-                  className="text-lg sm:text-xl font-bold font-[family-name:var(--font-display)] leading-none"
+                  className="text-lg sm:text-xl font-bold leading-none"
                   style={{ color: isSelected ? '#ffffff' : '#070607' }}
                 >
                   {item.dayNum}
@@ -272,8 +272,8 @@ export function DateTimePicker({
           >
             1. Selecione a Data
           </label>
-          <div className="grid grid-cols-4 gap-2">
-            {availableDays.slice(0, 4).map((item, idx) => {
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none touch-pan-x -mx-1 px-1">
+            {availableDays.map((item, idx) => {
               const isSelected = item.dateStr === selectedDateStr;
               const disabled = item.isSunday;
               const labelTop =
@@ -314,7 +314,7 @@ export function DateTimePicker({
                       ? 'var(--booking-primary, #121211)'
                       : 'var(--booking-border, #cfcfc9)',
                   }}
-                  className={`p-2 sm:p-2.5 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                  className={`shrink-0 w-[78px] sm:w-[86px] p-2 sm:p-2.5 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     disabled
                       ? 'opacity-30 cursor-not-allowed'
                       : isSelected
@@ -322,8 +322,8 @@ export function DateTimePicker({
                       : 'hover:border-black/30'
                   }`}
                 >
-                  <span className="text-xs font-bold block">{labelTop}</span>
-                  <span className="text-[10px] opacity-75">{labelBottom}</span>
+                  <span className="text-xs font-bold block whitespace-nowrap">{labelTop}</span>
+                  <span className="text-[10px] opacity-75 block capitalize">{labelBottom}</span>
                 </button>
               );
             })}
