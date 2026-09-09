@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowUpRight,
   Clock3,
@@ -70,14 +71,12 @@ export function ServiceCatalog() {
                 <dd>{service.maintenance}</dd>
               </div>
             </dl>
-            <a
+            <Link
               className="button"
-              href={serviceWhatsAppUrl(service)}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/agendar?servico=${encodeURIComponent(service.id || service.name)}`}
             >
               Agendar {service.name} <ArrowUpRight size={19} />
-            </a>
+            </Link>
           </article>
         ))}
       </div>

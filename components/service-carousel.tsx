@@ -114,15 +114,13 @@ export function ServiceCarousel() {
                     <dd>{service.duration}</dd>
                   </div>
                 </dl>
-                <a
+                <Link
                   className="service-action"
-                  href={serviceWhatsAppUrl(service)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Quero agendar ${service.name}`}
+                  href={`/agendar?servico=${encodeURIComponent(service.id || service.name)}`}
+                  aria-label={`Agendar ${service.name}`}
                 >
-                  Quero este serviço <ArrowUpRight size={19} />
-                </a>
+                  Agendar este estilo <ArrowUpRight size={19} />
+                </Link>
               </article>
             </CarouselItem>
           ))}

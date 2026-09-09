@@ -39,14 +39,12 @@ export function SiteHeader() {
           Dúvidas
         </a>
       </nav>
-      <a
+      <Link
         className="button header-cta"
-        href={studio.bookingUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        href="/agendar"
       >
         Agendar agora <ArrowUpRight size={18} />
-      </a>
+      </Link>
       <button
         className="menu-toggle"
         aria-label={menu ? 'Fechar menu' : 'Abrir menu'}

@@ -242,14 +242,12 @@ export default function Home() {
             Dúvidas
           </a>
         </nav>
-        <a
+        <Link
           className="button header-cta"
-          href={studio.bookingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/agendar"
         >
           Agendar agora <ArrowUpRight size={18} />
-        </a>
+        </Link>
         <button
           className="menu-toggle"
           aria-label={menu ? 'Fechar menu' : 'Abrir menu'}
@@ -273,14 +271,12 @@ export default function Home() {
               Extensão de Cílios e Lash Lift pensados para você, realçando a beleza do seu olhar. Atendimento exclusivo na Zona Norte de Porto Alegre.
             </p>
             <div className="hero-actions">
-              <a
+              <Link
                 className="button"
-                href={studio.bookingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/agendar"
               >
                 Agendar agora <ArrowUpRight size={20} />
-              </a>
+              </Link>
               <a className="secondary-link" href="#estilos">
                 Explorar estilos <ArrowUpRight size={17} />
               </a>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   CalendarDays,
@@ -75,7 +76,10 @@ type TestimonialItem = {
   rating: number;
 };
 
-export default function AgendarPage() {
+function AgendarContent() {
+  const searchParams = useSearchParams();
+  const servicoParam = searchParams.get('servico') || searchParams.get('service') || searchParams.get('id') || '';
+
   const [activeTab, setActiveTab] = useState<'agendar' | 'galeria' | 'avaliacoes' | 'estudio'>('agendar');
   const [bookingStep, setBookingStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -199,7 +203,24 @@ export default function AgendarPage() {
       mounted = false;
     };
   }, []);
-﻿  const categories = useMemo(() => {
+
+  useEffect(() => {
+    if (!servicoParam || services.length === 0) return;
+    const normalize = (str: string) =>
+      str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const target = normalize(servicoParam);
+    const matched = services.find(
+      (s) => s.id === servicoParam || normalize(s.id) === target || normalize(s.name) === target
+    );
+    if (matched) {
+      setSelectedService(matched);
+      setSelectedSlot(null);
+      setBookingStep(2);
+      window.scrollTo({ top: 220, behavior: 'smooth' });
+    }
+  }, [servicoParam, services]);
+
+  const categories = useMemo(() => {
     const set = new Set<string>();
     for (const s of services) {
       if (s.category) set.add(s.category);
@@ -414,21 +435,21 @@ export default function AgendarPage() {
         </div>
 
         {/* 4 ABAS DE NAVEGAÇÃO */}
-        <div className="sticky top-0 z-30 bg-[var(--color-pumice)]/95 backdrop-blur-md border-t border-[#cfcfc9] px-2 sm:px-4 py-2">
-          <div className="max-w-xl mx-auto flex items-center justify-center gap-1 sm:gap-2">
+        <div className="sticky top-0 z-30 bg-[var(--color-pumice)]/95 backdrop-blur-md border-t border-[#cfcfc9] px-4 sm:px-6 py-2.5">
+          <div className="max-w-xl mx-auto flex items-center justify-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => {
                 triggerHaptic('light');
                 setActiveTab('agendar');
               }}
-              className={`flex-1 py-2 sm:py-2.5 px-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'agendar'
                   ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
                   : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
               }`}
             >
-              <CalendarDays size={14} className={activeTab === 'agendar' ? 'text-[var(--color-ember)]' : ''} />
+              <CalendarDays size={14} className={activeTab === 'agendar' ? 'text-white' : ''} />
               <span>Agendar</span>
             </button>
 
@@ -438,13 +459,13 @@ export default function AgendarPage() {
                 triggerHaptic('light');
                 setActiveTab('galeria');
               }}
-              className={`flex-1 py-2 sm:py-2.5 px-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'galeria'
                   ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
                   : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
               }`}
             >
-              <Images size={14} className={activeTab === 'galeria' ? 'text-[var(--color-ember)]' : ''} />
+              <Images size={14} className={activeTab === 'galeria' ? 'text-white' : ''} />
               <span>Galeria</span>
             </button>
 
@@ -454,13 +475,13 @@ export default function AgendarPage() {
                 triggerHaptic('light');
                 setActiveTab('avaliacoes');
               }}
-              className={`flex-1 py-2 sm:py-2.5 px-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'avaliacoes'
                   ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
                   : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
               }`}
             >
-              <Star size={14} className={activeTab === 'avaliacoes' ? 'text-[var(--color-ember)]' : ''} />
+              <Star size={14} className={activeTab === 'avaliacoes' ? 'text-white' : ''} />
               <span>Avaliações</span>
             </button>
 
@@ -470,13 +491,13 @@ export default function AgendarPage() {
                 triggerHaptic('light');
                 setActiveTab('estudio');
               }}
-              className={`flex-1 py-2 sm:py-2.5 px-2.5 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-full text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'estudio'
                   ? 'bg-[var(--color-obsidian)] text-white shadow-sm'
                   : 'text-[#6b6b63] hover:text-[var(--color-obsidian)] hover:bg-[#e4e4df]'
               }`}
             >
-              <Info size={14} className={activeTab === 'estudio' ? 'text-[var(--color-ember)]' : ''} />
+              <Info size={14} className={activeTab === 'estudio' ? 'text-white' : ''} />
               <span>Estúdio</span>
             </button>
           </div>
@@ -1228,5 +1249,19 @@ export default function AgendarPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function AgendarPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[var(--color-pumice)] flex items-center justify-center text-xs text-[#8c8c84]">
+          Carregando portal de agendamento...
+        </div>
+      }
+    >
+      <AgendarContent />
+    </Suspense>
   );
 }

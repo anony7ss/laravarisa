@@ -28,14 +28,9 @@ export default function LocationPage() {
         <Link className="gallery-home-brand" href="/">
           Lara Varisa
         </Link>
-        <a
-          className="secondary-link"
-          href={studio.bookingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <Link className="secondary-link" href="/agendar">
           Agendar <ArrowUpRight size={17} />
-        </a>
+        </Link>
       </header>
 
       <main id="conteudo" className="wrap location-page">
