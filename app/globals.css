@@ -86,20 +86,8 @@ body:has(.admin-root:not(.dark)),
 }
 .wrap {
   width: calc(100% - 96px);
-  max-width: 1280px;
+  max-width: 1240px;
   margin-inline: auto;
-}
-@media (min-width: 1280px) {
-  .wrap {
-    width: calc(100% - 80px);
-    max-width: 1440px;
-  }
-}
-@media (min-width: 1500px) {
-  .wrap {
-    width: calc(100% - 96px);
-    max-width: 1540px;
-  }
 }
 .header {
   height: 110px;
@@ -714,17 +702,17 @@ h2 {
 }
 @media (min-width: 1500px) {
   .hero {
-    grid-template-columns: 1.35fr 1fr;
+    grid-template-columns: 1.15fr 1fr;
     padding-top: 40px;
     padding-bottom: 65px;
   }
   .hero-art {
-    max-width: 540px;
-    height: 580px;
+    max-width: 520px;
+    height: 560px;
     margin-left: auto;
   }
   .hero-title {
-    font-size: 64px;
+    font-size: 70px;
   }
 }
 @media (max-width: 1100px) {
@@ -3135,8 +3123,9 @@ h2 {
 /* Wide-screen composition. Mobile rules above remain unchanged. */
 @media (min-width: 761px) {
   .wrap {
-    width: calc(100% - clamp(48px, 6vw, 192px));
-    max-width: none;
+    width: calc(100% - clamp(48px, 6vw, 96px));
+    max-width: 1240px;
+    margin-inline: auto;
   }
   .hero,
   .experience,
@@ -3151,9 +3140,9 @@ h2 {
     min-width: 0;
   }
   .hero {
-    max-width: 1380px;
+    max-width: 1240px;
     margin-inline: auto;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     align-items: center;
     gap: clamp(32px, 4.5vw, 64px);
   }
@@ -3286,7 +3275,7 @@ h2 {
     padding-block: 32px 64px;
   }
   .hero-title {
-    font-size: clamp(68px, 6.05vw, 156px);
+    font-size: clamp(50px, 4.6vw, 70px);
   }
   .hero-description {
     max-width: 38ch;

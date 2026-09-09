@@ -263,8 +263,9 @@ export default function Home() {
             <p className="eyebrow">LASH DESIGN</p>
             <h1 className="hero-title">
               <span>SEU OLHAR.</span>
+              <span>SUA</span>
               <span>
-                SUA <em>ESSÊNCIA.</em>
+                <em>ESSÊNCIA.</em>
               </span>
             </h1>
             <p className="hero-description">

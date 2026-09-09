@@ -10,6 +10,8 @@ import {
   Eye,
   Mail,
   MessageCircle,
+  FileLock2,
+  CheckCircle2,
 } from 'lucide-react';
 import { SiteFooter } from '@/components/site-footer';
 import { studio } from '@/lib/studio';
@@ -24,283 +26,280 @@ export default function PrivacyPolicyPage() {
   const lastUpdated = '07 de setembro de 2026';
 
   return (
-    <>
-      <header className="wrap gallery-header">
-        <Link href="/" className="back-link">
-          <ArrowLeft size={18} />
-          Voltar ao início
-        </Link>
-        <Link className="gallery-home-brand" href="/">
-          Lara Varisa
-        </Link>
-        <Link className="secondary-link" href="/agendar">
-          Agendar <ArrowUpRight size={17} />
-        </Link>
+    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-start">
+      {/* Top Header */}
+      <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto px-4 h-14 relative flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
+          >
+            <ArrowLeft size={14} />
+            <span>Voltar</span>
+          </Link>
+
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto">
+            <Link
+              href="/"
+              className="text-xs font-bold tracking-widest uppercase text-[var(--color-obsidian)] hover:opacity-80 transition-opacity"
+            >
+              Lara Varisa
+            </Link>
+          </div>
+
+          <Link
+            href="/agendar"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[var(--color-obsidian)] hover:opacity-70 transition-opacity"
+          >
+            <span>Agendar</span>
+            <ArrowUpRight size={13} />
+          </Link>
+        </div>
       </header>
 
-      <main id="conteudo" className="wrap legal-page">
-        <div className="legal-header">
-          <div className="legal-badge">
-            <ShieldCheck size={16} />
+      {/* Main Content */}
+      <main id="conteudo" className="max-w-3xl mx-auto w-full px-4 py-8 sm:py-12 space-y-8">
+        {/* Navigation Switcher: Privacidade <-> Termos */}
+        <div className="flex items-center justify-center">
+          <div className="inline-flex p-1 rounded-full bg-[#deded7] border border-[#cfcfc7] shadow-2xs">
+            <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-[var(--color-obsidian)] shadow-xs">
+              Privacidade & LGPD
+            </span>
+            <Link
+              href="/termos"
+              className="px-4 py-1.5 rounded-full text-xs font-semibold text-[#66665e] hover:text-[var(--color-obsidian)] transition-all flex items-center gap-1"
+            >
+              <span>Termos de Agendamento</span>
+              <ArrowUpRight size={12} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Header Title */}
+        <div className="text-center space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white border border-[#d6d6cf] text-[11px] font-bold tracking-wider text-[var(--color-obsidian)] uppercase">
+            <ShieldCheck size={14} className="text-emerald-600" />
             <span>LGPD · LEI Nº 13.709/2018</span>
           </div>
-          <h1>
-            POLÍTICA DE <em>PRIVACIDADE.</em>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-obsidian)]">
+            Política de <em className="italic text-[var(--color-ember)]">Privacidade.</em>
           </h1>
-          <p className="legal-intro">
+          <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-xl mx-auto">
             A sua privacidade e a segurança dos seus dados são fundamentais para o estúdio{' '}
             <strong>Lara Varisa · Lash Designer</strong>. Este documento esclarece com total
-            transparência como coletamos, utilizamos, armazenamos e protegemos as suas informações
-            pessoais em conformidade com a legislação brasileira de proteção de dados.
+            transparência como coletamos, utilizamos, armazenamos e protegemos suas informações.
           </p>
-          <p className="legal-updated">Última atualização: {lastUpdated}</p>
+          <p className="text-[11px] font-medium text-[#8c8c84] uppercase tracking-wider">
+            Última atualização: {lastUpdated}
+          </p>
         </div>
 
-        <div className="legal-content">
-          <section className="legal-section">
-            <div className="legal-section-num">01</div>
-            <div className="legal-section-body">
-              <h2>Controlador dos Dados e Identificação</h2>
-              <p>
-                O estúdio <strong>Lara Varisa · Lash Designer</strong>, com sede e atendimento
-                presencial na Zona Norte de Porto Alegre/RS, atua como <em>Controlador</em> dos dados
-                pessoais coletados por meio deste site e de seus canais oficiais de comunicação.
-              </p>
-              <div className="legal-contact-box">
-                <p>
-                  <strong>Encarregado pelo Tratamento de Dados (DPO):</strong> Lara Varisa
-                </p>
-                <p>
-                  <strong>E-mail de Contato:</strong> {studio.email}
-                </p>
-                <p>
-                  <strong>WhatsApp Oficial:</strong> {studio.whatsappFormatted}
-                </p>
-                <p>
-                  <strong>Localização:</strong> {studio.city}
-                </p>
+        {/* Legal Content Cards */}
+        <div className="space-y-6">
+          {/* Section 01 */}
+          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
+                01
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+                Controlador dos Dados e Identificação
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+              O estúdio <strong>Lara Varisa · Lash Designer</strong>, com sede e atendimento presencial na Zona Norte de Porto Alegre/RS, atua como <em>Controlador</em> dos dados pessoais coletados por meio deste site e de seus canais oficiais de comunicação.
+            </p>
+            <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] text-xs text-[#595952] space-y-1.5">
+              <p><strong>Encarregado pelo Tratamento de Dados (DPO):</strong> Lara Varisa</p>
+              <p><strong>E-mail de Contato:</strong> {studio.email}</p>
+              <p><strong>WhatsApp Oficial:</strong> {studio.whatsappFormatted}</p>
+              <p><strong>Localização:</strong> {studio.city}</p>
+            </div>
+          </section>
+
+          {/* Section 02 */}
+          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-4">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
+                02
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+                Quais Dados Coletamos e Para Quais Finalidades
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+              Coletamos apenas os dados estritamente necessários para a prestação dos serviços estéticos e a organização dos atendimentos:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
+                  <UserCheck size={16} />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">Agendamento de Procedimentos</h3>
+                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Nome completo, número de WhatsApp e e-mail.</p>
+                <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Reservar o horário na agenda, enviar confirmações, fornecer o endereço do estúdio e viabilizar suporte em reagendamentos.</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
+                  <Eye size={16} />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">Ficha de Anamnese (Saúde Ocular)</h3>
+                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Alergias a cosméticos/colas, cirurgias oculares, gestação e tireoide.</p>
+                <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Avaliar contraindicações médicas e garantir total biossegurança na aplicação das extensões.</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
+                  <Mail size={16} />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">Formulário de Dúvidas</h3>
+                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Nome, e-mail, telefone e mensagem.</p>
+                <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Responder prontamente a dúvidas sobre estilos, valores e recomendações estéticas.</p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
+                <div className="w-8 h-8 rounded-full bg-white border border-[#dcdcd4] flex items-center justify-center text-[var(--color-ember)]">
+                  <Lock size={16} />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">Segurança Técnica</h3>
+                <p className="text-xs text-[#595952]"><strong>Dados:</strong> Endereço IP (hash criptográfico temporário) e registros de integridade.</p>
+                <p className="text-xs text-[#707068] leading-relaxed"><strong>Finalidade:</strong> Proteger a plataforma contra acessos maliciosos, ataques de força bruta e spam automatizado.</p>
               </div>
             </div>
           </section>
 
-          <section className="legal-section">
-            <div className="legal-section-num">02</div>
-            <div className="legal-section-body">
-              <h2>Quais Dados Coletamos e Para Quais Finalidades</h2>
-              <p>
-                Coletamos apenas os dados estritamente necessários para a prestação dos serviços
-                estéticos e a organização dos atendimentos:
-              </p>
-              <div className="legal-cards-grid">
-                <div className="legal-card">
-                  <div className="legal-card-icon">
-                    <UserCheck size={20} />
-                  </div>
-                  <h3>Agendamento de Procedimentos</h3>
-                  <p>
-                    <strong>Dados:</strong> Nome completo, número de WhatsApp/telefone e e-mail.
-                  </p>
-                  <p>
-                    <strong>Finalidade:</strong> Identificar a cliente, reservar o horário na
-                    agenda, enviar confirmações e lembretes automáticos pré-atendimento, fornecer o
-                    endereço completo do estúdio e viabilizar suporte em caso de imprevistos ou
-                    reagendamentos.
-                  </p>
-                </div>
+          {/* Section 03 */}
+          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
+                03
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+                Bases Legais do Tratamento (Art. 7º e 11 da LGPD)
+              </h2>
+            </div>
+            <ul className="space-y-2 text-xs sm:text-sm text-[#595952] leading-relaxed list-disc list-inside">
+              <li><strong>Execução de Contrato (Art. 7º, V):</strong> necessário para processar sua solicitação de agendamento e prestar o atendimento estético.</li>
+              <li><strong>Consentimento Expresso (Art. 7º, I e Art. 11, I):</strong> fornecido ao solicitar agendamento e preencher a ficha de anamnese.</li>
+              <li><strong>Legítimo Interesse e Segurança (Art. 7º, IX):</strong> para proteção da integridade física da cliente no procedimento e proteção contra fraudes.</li>
+            </ul>
+          </section>
 
-                <div className="legal-card">
-                  <div className="legal-card-icon">
-                    <Eye size={20} />
-                  </div>
-                  <h3>Ficha de Anamnese (Saúde Ocular)</h3>
-                  <p>
-                    <strong>Dados Sensíveis:</strong> Histórico de alergias a cosméticos/colas,
-                    sensibilidade ocular, uso de lentes de contato, cirurgias oculares recentes,
-                    gestação ou condições de saúde pertinentes (ex: tireoide).
-                  </p>
-                  <p>
-                    <strong>Finalidade:</strong> Avaliar contraindicações médicas e técnicas,
-                    garantir a saúde dos seus olhos e a biossegurança na aplicação dos fios de
-                    extensão.
-                  </p>
-                </div>
-
-                <div className="legal-card">
-                  <div className="legal-card-icon">
-                    <Mail size={20} />
-                  </div>
-                  <h3>Formulário &quot;Vamos Conversar&quot;</h3>
-                  <p>
-                    <strong>Dados:</strong> Nome, e-mail, telefone (opcional) e mensagem.
-                  </p>
-                  <p>
-                    <strong>Finalidade:</strong> Responder prontamente a dúvidas sobre estilos,
-                    valores e recomendações estéticas enviadas pela usuária.
-                  </p>
-                </div>
-
-                <div className="legal-card">
-                  <div className="legal-card-icon">
-                    <Lock size={20} />
-                  </div>
-                  <h3>Navegação e Segurança Técnica</h3>
-                  <p>
-                    <strong>Dados:</strong> Endereço IP (criptografado em hash temporário para rate
-                    limiting), tipo de navegador e registros de segurança contra spam e ataques
-                    (Cloudflare Turnstile).
-                  </p>
-                  <p>
-                    <strong>Finalidade:</strong> Proteger a plataforma contra acessos maliciosos,
-                    ataques de negação de serviço e requisições automatizadas abusivas.
-                  </p>
-                </div>
+          {/* Section 04 */}
+          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
+                04
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+                Compartilhamento e Sigilo dos Dados
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+              <strong>Nunca comercializamos, alugamos ou compartilhamos</strong> seus dados pessoais com terceiros para marketing ou anúncios.
+            </p>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+              O compartilhamento ocorre estritamente com provedores de infraestrutura de alta segurança essenciais à operação:
+            </p>
+            <div className="space-y-2 pt-1 text-xs text-[#595952]">
+              <div className="p-3 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <strong>Supabase:</strong> banco de dados criptografado em nuvem com isolamento Row Level Security (RLS) e certificações ISO 27001 / SOC 2.
+              </div>
+              <div className="p-3 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <strong>Cloudflare:</strong> verificação inteligente contra bots e proteção HTTPS sem cookies invasivos.
+              </div>
+              <div className="p-3 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <strong>WhatsApp / Meta:</strong> envio pontual de lembretes e confirmações diretas de agendamento solicitadas pela cliente.
               </div>
             </div>
           </section>
 
-          <section className="legal-section">
-            <div className="legal-section-num">03</div>
-            <div className="legal-section-body">
-              <h2>Bases Legais do Tratamento (Art. 7º e 11 da LGPD)</h2>
-              <p>O tratamento dos seus dados fundamenta-se nas seguintes hipóteses legais:</p>
-              <ul>
-                <li>
-                  <strong>Execução de Contrato e Procedimentos Preliminares (Art. 7º, V):</strong>{' '}
-                  necessário para processar sua solicitação de agendamento e realizar o atendimento
-                  estético contratado.
-                </li>
-                <li>
-                  <strong>Consentimento Expresso do Titular (Art. 7º, I e Art. 11, I):</strong>{' '}
-                  fornecido ao preencher o formulário de contato, solicitar agendamento e
-                  responder à ficha de anamnese com dados de saúde ocular.
-                </li>
-                <li>
-                  <strong>Legítimo Interesse e Segurança (Art. 7º, IX):</strong> para proteção da
-                  integridade física da cliente no procedimento estético e segurança contra fraudes.
-                </li>
-              </ul>
+          {/* Section 05 */}
+          <section className="bg-white p-5 sm:p-7 rounded-3xl border border-[#d6d6cf] shadow-2xs space-y-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-mono font-bold text-[var(--color-ember)] bg-[#faefe8] px-2 py-0.5 rounded-md">
+                05
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)]">
+                Seus Direitos como Titular de Dados
+              </h2>
             </div>
-          </section>
-
-          <section className="legal-section">
-            <div className="legal-section-num">04</div>
-            <div className="legal-section-body">
-              <h2>Compartilhamento e Sigilo dos Dados</h2>
-              <p>
-                <strong>Nunca comercializamos, alugamos ou compartilhamos</strong> seus dados
-                pessoais com terceiros para fins de marketing ou publicidade.
-              </p>
-              <p>
-                O compartilhamento de dados ocorre exclusivamente com provedores de infraestrutura de
-                alta segurança contratados para viabilizar a operação técnica do site:
-              </p>
-              <ul>
-                <li>
-                  <strong>Supabase Inc.:</strong> banco de dados em nuvem criptografado com
-                  isolamento por <em>Row Level Security (RLS)</em> e certificações ISO 27001 e SOC 2.
-                </li>
-                <li>
-                  <strong>Cloudflare:</strong> verificação de segurança inteligente sem cookies
-                  invasivos (Cloudflare Turnstile) para prevenção de robôs e spams.
-                </li>
-                <li>
-                  <strong>WhatsApp / Meta:</strong> envio de mensagens diretas de confirmação
-                  quando solicitado ou autorizado pela cliente.
-                </li>
-              </ul>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed">
+              Nos termos do Art. 18 da LGPD, você pode a qualquer momento:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#595952]">
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Confirmar e acessar seus dados cadastrados</span>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Solicitar correção de dados incompletos</span>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Solicitar a exclusão de dados informados</span>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#fafaf8] border border-[#e8e8e4]">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>Revogar o consentimento a qualquer momento</span>
+              </div>
             </div>
-          </section>
-
-          <section className="legal-section">
-            <div className="legal-section-num">05</div>
-            <div className="legal-section-body">
-              <h2>Armazenamento, Retenção e Segurança</h2>
-              <p>
-                Adotamos rígidas medidas técnicas e organizacionais para proteger suas informações:
-              </p>
-              <ul>
-                <li>
-                  Criptografia de ponta a ponta nas transmissões de dados (HTTPS / TLS moderno).
-                </li>
-                <li>
-                  Controle de acesso autenticado com tokens JWT criptografados com algoritmo
-                  HS256 e cookies <code>HttpOnly</code>, <code>Secure</code> e <code>SameSite=Lax</code>.
-                </li>
-                <li>
-                  Proteção contra injeção de scripts (Content Security Policy estrita), blindagem de
-                  cabeçalhos HTTP e isolamento transacional no banco de dados.
-                </li>
-                <li>
-                  Os dados de agendamentos são retidos apenas pelo tempo necessário para cumprimento
-                  das finalidades do serviço, histórico estético da cliente ou obrigações legais
-                  pertinentes.
-                </li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="legal-section">
-            <div className="legal-section-num">06</div>
-            <div className="legal-section-body">
-              <h2>Seus Direitos como Titular de Dados</h2>
-              <p>
-                Nos termos do Art. 18 da LGPD, você possui os seguintes direitos a qualquer
-                momento:
-              </p>
-              <ul>
-                <li>Confirmar a existência de tratamento de seus dados pessoais;</li>
-                <li>Acessar os seus dados cadastrados em nosso sistema;</li>
-                <li>Solicitar a correção de dados incompletos, inexatos ou desatualizados;</li>
-                <li>
-                  Solicitar a eliminação dos dados tratados com base no seu consentimento prévio;
-                </li>
-                <li>Revogar o consentimento a qualquer momento de forma simples e gratuita;</li>
-                <li>
-                  Obter informações sobre as entidades públicas ou privadas com as quais seus dados
-                  foram compartilhados.
-                </li>
-              </ul>
-              <p>
-                Para exercer qualquer um desses direitos, basta enviar uma mensagem direta para o
-                nosso WhatsApp ({studio.whatsappFormatted}) ou para o e-mail{' '}
-                <a href={`mailto:${studio.email}`}>{studio.email}</a>. Responderemos à sua
-                solicitação com prioridade.
-              </p>
-            </div>
-          </section>
-
-          <section className="legal-section">
-            <div className="legal-section-num">07</div>
-            <div className="legal-section-body">
-              <h2>Uso de Cookies</h2>
-              <p>
-                Este site utiliza apenas cookies estritamente necessários para o funcionamento e
-                segurança da navegação (como a sessão administrativa segura e proteção de requisições).
-                Não utilizamos cookies de rastreamento de terceiros para anúncios invasivos.
-              </p>
-            </div>
+            <p className="text-xs text-[#707068] pt-1">
+              Para exercer qualquer direito, basta enviar mensagem para nosso WhatsApp ({studio.whatsappFormatted}) ou e-mail ({studio.email}). Responderemos prontamente.
+            </p>
           </section>
         </div>
 
-        <div className="legal-footer-cta">
-          <p>Deseja agendar seu procedimento com total segurança e exclusividade?</p>
-          <div className="legal-cta-actions">
-            <Link href="/agendar" className="button">
-              Agendar Horário Online <ArrowUpRight size={18} />
+        {/* Cross-link to Termos */}
+        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-[#d6d6cf] shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold text-[var(--color-obsidian)] block">
+              Regras e Políticas do Estúdio
+            </span>
+            <p className="text-xs text-[#707068]">
+              Consulte tolerância de atrasos, prazos de cancelamento, regras de manutenção e garantia.
+            </p>
+          </div>
+          <Link
+            href="/termos"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--color-ember)] hover:underline shrink-0"
+          >
+            <span>Ver Termos de Agendamento</span>
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+
+        {/* Luxury Footer CTA */}
+        <div className="bg-[var(--color-obsidian)] text-white p-6 sm:p-8 rounded-3xl text-center space-y-4 shadow-sm">
+          <p className="text-sm sm:text-base font-medium max-w-md mx-auto leading-snug">
+            Deseja agendar seu procedimento com total segurança e exclusividade no estúdio?
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+            <Link
+              href="/agendar"
+              className="w-full sm:w-auto py-3 px-6 rounded-full bg-[var(--color-ember)] hover:bg-[#a84318] text-white text-xs font-bold transition-colors inline-flex items-center justify-center gap-2"
+            >
+              <span>Agendar Horário Online</span>
+              <ArrowUpRight size={15} />
             </Link>
             <a
               href={studio.bookingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="button button-outline"
+              className="w-full sm:w-auto py-3 px-6 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/20 transition-colors inline-flex items-center justify-center gap-2"
             >
-              <MessageCircle size={18} /> Falar no WhatsApp
+              <MessageCircle size={15} />
+              <span>Falar no WhatsApp</span>
             </a>
           </div>
         </div>
       </main>
 
       <SiteFooter />
-    </>
+    </div>
   );
 }
+
