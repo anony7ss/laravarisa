@@ -2242,21 +2242,21 @@ a.admin-stat-card:hover {
     white-space: nowrap;
   }
   .admin-mobile-nav {
-    height: 64px;
+    height: 60px;
     position: fixed;
-    z-index: 18;
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    left: 16px;
+    z-index: 99;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 12px;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    border-radius: 24px;
+    border-radius: 22px;
     border: 1px solid rgba(255, 255, 255, 0.4);
-    background: rgba(255, 255, 255, 0.75);
-    padding: 6px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 4px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
   }
   .admin-mobile-nav a,
   .admin-mobile-nav button {
@@ -2264,12 +2264,13 @@ a.admin-stat-card:hover {
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     border: 0;
-    border-radius: 18px;
+    border-radius: 16px;
     background: transparent;
     color: #77776f;
-    font-size: 8px;
+    font-size: 10px;
+    font-weight: 500;
     transition: all 0.2s ease;
   }
   .admin-mobile-nav a.active {
@@ -2281,7 +2282,7 @@ a.admin-stat-card:hover {
   }
   .admin-page {
     width: calc(100% - 24px);
-    padding: 20px 0 34px;
+    padding: 16px 0 calc(96px + env(safe-area-inset-bottom));
   }
   .admin-page-title {
     margin-bottom: 20px;

@@ -43,30 +43,58 @@ export interface OutboxItem {
   sent_at?: string | null;
 }
 
+function formatPhoneBR(raw?: string | null): string {
+  if (!raw) return 'Sem telefone';
+  const d = String(raw).replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('55')) {
+    return `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`;
+  }
+  if (d.length === 12 && d.startsWith('55')) {
+    return `(${d.slice(2, 4)}) ${d.slice(4, 8)}-${d.slice(8)}`;
+  }
+  if (d.length === 11) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+  if (d.length === 10) {
+    return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  }
+  return raw;
+}
+
+function getInactivityText(client: ClientWithActivity): string {
+  if (client.has_future_appointment) return 'Agendamento futuro';
+  if (client.days_since_last_appointment === 0) return 'Atendida hoje';
+  if (client.days_since_last_appointment === 1) return 'Ontem';
+  if (typeof client.days_since_last_appointment === 'number') {
+    return `Há ${client.days_since_last_appointment} dias`;
+  }
+  return 'Nova cliente';
+}
+
 const TEMPLATES = [
   {
     id: 'reativacao',
-    title: '🌟 Reativação / Saudades',
-    desc: 'Convidar clientes que estão há semanas sem vir',
-    text: 'Oi, {primeiro_nome}! ✨ Que saudades de você aqui no estúdio! Faz um tempinho que não te vejo. Que tal renovar seu olhar esta semana? Se quiser, me avisa por aqui que reservo um horário especial pra você! 💕 - Lara Varisa',
+    title: 'Reativação de Contato',
+    desc: 'Convidar clientes que estão há semanas sem agendar',
+    text: 'Oi, {primeiro_nome}! Que saudades de você no estúdio. Que tal renovar seu olhar esta semana? Se quiser, me avisa por aqui que reservo seu horário! - Lara Varisa',
   },
   {
     id: 'cupom',
-    title: '🎁 Cupom Especial VIP',
+    title: 'Condição Especial VIP',
     desc: 'Oferecer condição exclusiva ou desconto',
-    text: 'Oi, {primeiro_nome}! Tudo bem? ✨ Preparei uma condição exclusiva pras nossas clientes queridas: 10% OFF na sua próxima aplicação ou manutenção essa semana! Quer aproveitar? Responde aqui que eu te passo os horários livres! 💖 - Lara Varisa',
+    text: 'Oi, {primeiro_nome}! Tudo bem? Preparei uma condição exclusiva para clientes VIP: 10% de desconto no seu próximo procedimento esta semana. Gostaria de agendar? Responda por aqui que te passo os horários livres. - Lara Varisa',
   },
   {
     id: 'agenda',
-    title: '📢 Abertura de Agenda',
+    title: 'Abertura de Agenda',
     desc: 'Avisar abertura de novos dias e horários',
-    text: 'Oi, {primeiro_nome}! ✨ Passando para avisar que abri novos horários na agenda deste mês! Se quiser garantir o seu antes que esgote, é só me responder por aqui que eu reservo! 💕 - Lara Varisa',
+    text: 'Oi, {primeiro_nome}! Passando para avisar que abri novos horários na agenda deste mês. Se quiser garantir o seu, responda por aqui para reservarmos. - Lara Varisa',
   },
   {
     id: 'personalizada',
-    title: '✍️ Mensagem Livre',
+    title: 'Mensagem Livre',
     desc: 'Escrever um texto do zero',
-    text: 'Olá, {primeiro_nome}! ✨ ',
+    text: 'Olá, {primeiro_nome}! ',
   },
 ];
 
@@ -76,7 +104,21 @@ function renderOriginBadge(origin?: string) {
 
   if (isWa) {
     return (
-      <span className="admin-origin-badge whatsapp" title="WhatsApp Bot">
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '2px 8px',
+          borderRadius: '999px',
+          fontSize: '10px',
+          fontWeight: 600,
+          background: 'rgba(37, 211, 102, 0.12)',
+          color: '#25d366',
+          border: '1px solid rgba(37, 211, 102, 0.25)',
+        }}
+        title="Origem: WhatsApp Bot"
+      >
         <MessageCircle size={10} />
         <span>WhatsApp</span>
       </span>
@@ -85,7 +127,21 @@ function renderOriginBadge(origin?: string) {
 
   if (isWeb) {
     return (
-      <span className="admin-origin-badge web" title="Site">
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '2px 8px',
+          borderRadius: '999px',
+          fontSize: '10px',
+          fontWeight: 600,
+          background: 'rgba(59, 130, 246, 0.12)',
+          color: '#3b82f6',
+          border: '1px solid rgba(59, 130, 246, 0.25)',
+        }}
+        title="Origem: Site Oficial"
+      >
         <Globe size={10} />
         <span>Site</span>
       </span>
@@ -93,7 +149,21 @@ function renderOriginBadge(origin?: string) {
   }
 
   return (
-    <span className="admin-origin-badge manual" title="Balcão">
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 8px',
+        borderRadius: '999px',
+        fontSize: '10px',
+        fontWeight: 600,
+        background: 'rgba(255, 255, 255, 0.06)',
+        color: 'var(--admin-muted)',
+        border: '1px solid var(--admin-line)',
+      }}
+      title="Origem: Balcão / Manual"
+    >
       <Store size={10} />
       <span>Balcão</span>
     </span>
@@ -288,7 +358,7 @@ export function DisparosManager({
       if (res.ok && data.ok) {
         setFeedback({
           type: 'success',
-          text: `🎉 ${data.queued} mensagens adicionadas à fila de disparos! O bot enviará uma a uma com intervalo seguro.`,
+          text: `${data.queued} mensagens adicionadas à fila de disparos. O bot enviará com cadência segura.`,
         });
         setSelectedIds(new Set());
         fetchStats();
@@ -314,12 +384,35 @@ export function DisparosManager({
           width: 100%;
           max-width: 100%;
           box-sizing: border-box;
+          padding-bottom: calc(110px + env(safe-area-inset-bottom));
         }
         .disparos-stats-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(4, 1fr);
           gap: 14px;
           width: 100%;
+        }
+        .disparos-stat-card {
+          background: var(--admin-card);
+          border: 1px solid var(--admin-line);
+          border-radius: 20px;
+          padding: 18px 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 14px;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .disparos-stat-number {
+          font-size: 32px;
+          font-weight: 700;
+          font-family: var(--font-display);
+          line-height: 1;
+        }
+        .disparos-stat-sub {
+          margin: 6px 0 0;
+          font-size: 12px;
+          color: var(--admin-muted);
         }
         .disparos-main-grid {
           display: grid;
@@ -332,19 +425,41 @@ export function DisparosManager({
           grid-template-columns: 1fr 1fr;
           gap: 8px;
         }
+        @media (max-width: 1024px) {
+          .disparos-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
         @media (max-width: 860px) {
           .disparos-main-grid {
             grid-template-columns: 1fr !important;
             gap: 16px !important;
           }
-          .disparos-stats-grid {
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px !important;
-          }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 640px) {
+          .disparos-container {
+            gap: 16px !important;
+            padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+          }
           .disparos-stats-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .disparos-stat-card {
+            padding: 12px 14px !important;
+            border-radius: 16px !important;
+            gap: 8px !important;
+          }
+          .disparos-stat-number {
+            font-size: 24px !important;
+          }
+          .disparos-stat-sub {
+            font-size: 11px !important;
+            margin-top: 3px !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
           .disparos-templates-grid {
             grid-template-columns: 1fr !important;
@@ -374,26 +489,15 @@ export function DisparosManager({
 
       <div className="disparos-stats-grid">
         {/* Total de Clientes */}
-        <div
-          style={{
-            background: 'var(--admin-card)',
-            border: '1px solid var(--admin-line)',
-            borderRadius: '20px',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: '14px',
-          }}
-        >
+        <div className="disparos-stat-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
               Total de Clientes
             </span>
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '10px',
                 display: 'grid',
                 placeItems: 'center',
@@ -402,40 +506,29 @@ export function DisparosManager({
                 border: '1px solid var(--admin-line)',
               }}
             >
-              <Users size={17} />
+              <Users size={16} />
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--admin-ink)', lineHeight: 1 }}>
+            <div className="disparos-stat-number" style={{ color: 'var(--admin-ink)' }}>
               {clients.length}
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--admin-muted)' }}>
-              Na sua base de contatos
+            <p className="disparos-stat-sub">
+              Na base de contatos
             </p>
           </div>
         </div>
 
         {/* Disparos Enviados */}
-        <div
-          style={{
-            background: 'var(--admin-card)',
-            border: '1px solid var(--admin-line)',
-            borderRadius: '20px',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: '14px',
-          }}
-        >
+        <div className="disparos-stat-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
               Disparos Enviados
             </span>
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '10px',
                 display: 'grid',
                 placeItems: 'center',
@@ -444,40 +537,29 @@ export function DisparosManager({
                 border: stats.sent > 0 ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <Check size={17} strokeWidth={2.5} />
+              <Check size={16} strokeWidth={2.5} />
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', color: stats.sent > 0 ? '#22c55e' : 'var(--admin-ink)', lineHeight: 1 }}>
+            <div className="disparos-stat-number" style={{ color: stats.sent > 0 ? '#22c55e' : 'var(--admin-ink)' }}>
               {stats.sent}
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--admin-muted)' }}>
-              Entregues via WhatsApp
+            <p className="disparos-stat-sub">
+              Entregues com sucesso
             </p>
           </div>
         </div>
 
         {/* Pendentes na Fila */}
-        <div
-          style={{
-            background: 'var(--admin-card)',
-            border: '1px solid var(--admin-line)',
-            borderRadius: '20px',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: '14px',
-          }}
-        >
+        <div className="disparos-stat-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
               Pendentes na Fila
             </span>
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '10px',
                 display: 'grid',
                 placeItems: 'center',
@@ -486,40 +568,29 @@ export function DisparosManager({
                 border: stats.pending > 0 ? '1px solid rgba(255, 102, 34, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <Clock size={17} />
+              <Clock size={16} />
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', color: stats.pending > 0 ? 'var(--admin-orange)' : 'var(--admin-ink)', lineHeight: 1 }}>
+            <div className="disparos-stat-number" style={{ color: stats.pending > 0 ? 'var(--admin-orange)' : 'var(--admin-ink)' }}>
               {stats.pending}
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--admin-muted)' }}>
-              Aguardando cadência segura
+            <p className="disparos-stat-sub">
+              Aguardando cadência
             </p>
           </div>
         </div>
 
         {/* Falhas no Envio */}
-        <div
-          style={{
-            background: 'var(--admin-card)',
-            border: '1px solid var(--admin-line)',
-            borderRadius: '20px',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: '14px',
-          }}
-        >
+        <div className="disparos-stat-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
               Falhas no Envio
             </span>
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '10px',
                 display: 'grid',
                 placeItems: 'center',
@@ -528,15 +599,15 @@ export function DisparosManager({
                 border: stats.failed > 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <AlertTriangle size={17} />
+              <AlertTriangle size={16} />
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '32px', fontWeight: 700, fontFamily: 'var(--font-display)', color: stats.failed > 0 ? '#ef4444' : 'var(--admin-ink)', lineHeight: 1 }}>
+            <div className="disparos-stat-number" style={{ color: stats.failed > 0 ? '#ef4444' : 'var(--admin-ink)' }}>
               {stats.failed}
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--admin-muted)' }}>
-              Número inválido ou bloqueado
+            <p className="disparos-stat-sub">
+              Número inválido / erro
             </p>
           </div>
         </div>
@@ -609,12 +680,12 @@ export function DisparosManager({
                   minWidth: '170px',
                 }}
               >
-                <option value="all">👥 Todas as clientes cadastradas</option>
-                <option value="inativo_30">💤 Inativas (+30 dias sem agendar)</option>
-                <option value="inativo_45">💤 Inativas (+45 dias sem agendar)</option>
-                <option value="inativo_60">💤 Inativas (+60 dias sem agendar)</option>
-                <option value="sem_futuros">📅 Sem agendamentos futuros</option>
-                <option value="recentes">✨ Clientes recentes (&lt; 30 dias)</option>
+                <option value="all">Todas as clientes cadastradas</option>
+                <option value="inativo_30">Inativas (+30 dias)</option>
+                <option value="inativo_45">Inativas (+45 dias)</option>
+                <option value="inativo_60">Inativas (+60 dias)</option>
+                <option value="sem_futuros">Sem agendamentos futuros</option>
+                <option value="recentes">Clientes recentes (&lt; 30 dias)</option>
               </select>
 
               <select
@@ -629,7 +700,7 @@ export function DisparosManager({
                   minWidth: '130px',
                 }}
               >
-                <option value="all">🌐 Todas origens</option>
+                <option value="all">Todas origens</option>
                 <option value="whatsapp">WhatsApp Bot</option>
                 <option value="web">Site Oficial</option>
                 <option value="manual">Balcão / Manual</option>
@@ -709,37 +780,62 @@ export function DisparosManager({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '10px 14px',
+                      padding: '11px 14px',
                       borderBottom: '1px solid var(--admin-line)',
                       cursor: hasValidPhone ? 'pointer' : 'not-allowed',
                       opacity: hasValidPhone ? 1 : 0.45,
                       background: isSelected ? 'rgba(252, 80, 0, 0.08)' : 'transparent',
-                      transition: 'background 0.1s ease',
+                      transition: 'background 0.15s ease',
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      disabled={!hasValidPhone}
-                      onChange={() => toggleSelectOne(client.id)}
-                      style={{ width: '16px', height: '16px', cursor: hasValidPhone ? 'pointer' : 'not-allowed' }}
-                    />
+                    {/* Custom Checkbox */}
+                    <div
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '6px',
+                        border: isSelected ? '1.5px solid var(--admin-orange)' : '1.5px solid rgba(255, 255, 255, 0.22)',
+                        background: isSelected ? 'var(--admin-orange)' : 'transparent',
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: '#ffffff',
+                        flexShrink: 0,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {isSelected && <Check size={12} strokeWidth={3} />}
+                    </div>
+
+                    {/* Avatar com inicial */}
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: isSelected ? 'rgba(252, 80, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                        border: `1px solid ${isSelected ? 'rgba(252, 80, 0, 0.35)' : 'var(--admin-line)'}`,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: isSelected ? 'var(--admin-orange)' : 'var(--admin-ink)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {(client.name || 'C').trim().charAt(0).toUpperCase()}
+                    </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
                           {client.name}
                         </strong>
                         {renderOriginBadge(client.origin)}
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--admin-muted)', marginTop: '2px' }}>
-                        <span>{client.phone || 'Sem telefone'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-muted)', marginTop: '2px' }}>
+                        <span>{formatPhoneBR(client.phone)}</span>
                         <span>•</span>
-                        <span>
-                          {client.days_since_last_appointment !== null && client.days_since_last_appointment !== undefined
-                            ? `${client.days_since_last_appointment} dias sem agendar`
-                            : 'Sem histórico anterior'}
-                        </span>
+                        <span>{getInactivityText(client)}</span>
                       </div>
                     </div>
                   </div>
@@ -931,7 +1027,7 @@ export function DisparosManager({
                   : `Disparar para ${selectedClients.length} ${selectedClients.length === 1 ? 'cliente' : 'clientes'}`}
               </button>
               <small style={{ display: 'block', textAlign: 'center', color: 'var(--admin-muted)', fontSize: '11px', marginTop: '6px' }}>
-                🛡️ Proteção anti-bloqueio ativa: cadência segura de 3 a 5 segundos por mensagem
+                Proteção anti-bloqueio ativa: cadência de envio segura de 3 a 5 segundos por mensagem
               </small>
             </div>
           </div>

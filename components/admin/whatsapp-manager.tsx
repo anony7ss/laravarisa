@@ -461,61 +461,20 @@ export function WhatsAppManager({
           width: 100%;
           max-width: 100%;
           box-sizing: border-box;
+          padding-bottom: calc(100px + env(safe-area-inset-bottom));
         }
-        .wa-header {
+        .wa-nav-tabs {
           display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 14px;
-          width: 100%;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 2px 10px;
+          border-bottom: 1px solid var(--admin-line);
+          scrollbar-width: none;
+          margin-bottom: 20px;
+          -webkit-overflow-scrolling: touch;
         }
-        .wa-header-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .wa-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 20px;
-          width: 100%;
-        }
-        .wa-hero-card {
-          grid-column: span 2;
-        }
-        .wa-qr-box {
-          background: #ffffff;
-          padding: 14px;
-          border-radius: 20px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-          border: 2px solid var(--admin-line);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          max-width: 100%;
-          box-sizing: border-box;
-        }
-        .wa-qr-img {
-          width: min(260px, 75vw);
-          height: auto;
-          aspect-ratio: 1 / 1;
-          display: block;
-        }
-        .wa-instructions {
-          text-align: left;
-          font-size: 13px;
-          color: var(--admin-muted);
-          background: var(--admin-card);
-          border: 1px solid var(--admin-line);
-          border-radius: 16px;
-          padding: 16px 20px;
-          margin: 0;
-          line-height: 1.7;
-          width: 100%;
-          max-width: 440px;
-          box-sizing: border-box;
+        .wa-nav-tabs::-webkit-scrollbar {
+          display: none;
         }
         @media (max-width: 860px) {
           .wa-hero-card {
@@ -532,6 +491,26 @@ export function WhatsAppManager({
           .wa-header-actions {
             justify-content: space-between !important;
             width: 100% !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .wa-container {
+            gap: 16px !important;
+            padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+          }
+          .wa-nav-tabs {
+            margin-bottom: 14px !important;
+            gap: 6px !important;
+          }
+          .wa-nav-tabs button {
+            padding: 7px 13px !important;
+            font-size: 12px !important;
+            min-height: 34px !important;
+            gap: 6px !important;
+          }
+          .wa-nav-tabs button svg {
+            width: 14px !important;
+            height: 14px !important;
           }
         }
         @media (max-width: 480px) {
