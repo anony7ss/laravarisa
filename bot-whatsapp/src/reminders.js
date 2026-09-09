@@ -82,7 +82,7 @@ export async function processarLembretes(sock) {
 
       const { data: pendentes, error: errPendentes } = await supabase
         .from('appointments')
-        .select('id, starts_at, client_name, client_phone, service:services(name)')
+        .select('id, starts_at, created_at, whatsapp_notification_sent_at, client_name, client_phone, service:services(name)')
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', agoraIso)
         .lte('starts_at', janelaLimite)
@@ -92,6 +92,36 @@ export async function processarLembretes(sock) {
 
       if (!errPendentes && pendentes && pendentes.length > 0) {
         for (const ag of pendentes) {
+          const inicioMs = new Date(ag.starts_at).getTime();
+          const criacaoMs = new Date(ag.created_at || ag.whatsapp_notification_sent_at || agora).getTime();
+          const antecedenciaCriacaoHoras = (inicioMs - criacaoMs) / (1000 * 60 * 60);
+
+          // Se o agendamento foi criado com antecedência menor ou igual à janela de lembrete (ex: agendou para amanhã ou hoje),
+          // o cliente acabou de receber a confirmação de agendamento e NÃO deve receber um lembrete redundante 24h.
+          if (antecedenciaCriacaoHoras <= horasAntes) {
+            await supabase
+              .from('appointments')
+              .update({ reminder_sent_at: new Date().toISOString() })
+              .eq('id', ag.id);
+            continue;
+          }
+
+          // Cooldown de segurança: se o agendamento foi criado ou confirmado há menos de 6 horas, não envia lembrete ainda
+          const horasDesdeCriacao = (agora.getTime() - criacaoMs) / (1000 * 60 * 60);
+          if (horasDesdeCriacao < 6) {
+            continue;
+          }
+
+          // Se o horário de início já está a menos de 2 horas, não envia mais o lembrete de 24h
+          const horasAteAtendimento = (inicioMs - agora.getTime()) / (1000 * 60 * 60);
+          if (horasAteAtendimento <= 2) {
+            await supabase
+              .from('appointments')
+              .update({ reminder_sent_at: new Date().toISOString() })
+              .eq('id', ag.id);
+            continue;
+          }
+
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
 
@@ -132,7 +162,7 @@ export async function processarLembretes(sock) {
 
       const { data: pendentesDia, error: errDia } = await supabase
         .from('appointments')
-        .select('id, starts_at, client_name, client_phone, service:services(name)')
+        .select('id, starts_at, created_at, whatsapp_notification_sent_at, client_name, client_phone, service:services(name)')
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', agoraIso)
         .lte('starts_at', janelaLimiteDia)
@@ -144,6 +174,25 @@ export async function processarLembretes(sock) {
         logWarn('Lembretes', `Erro ao buscar agendamentos para lembrete no dia: ${errDia.message}`);
       } else if (pendentesDia && pendentesDia.length > 0) {
         for (const ag of pendentesDia) {
+          const inicioMs = new Date(ag.starts_at).getTime();
+          const criacaoMs = new Date(ag.created_at || ag.whatsapp_notification_sent_at || agora).getTime();
+          const antecedenciaCriacaoHoras = (inicioMs - criacaoMs) / (1000 * 60 * 60);
+
+          // Se foi agendado em cima da hora (com menos de 2h de antecedência), a confirmação já serviu como aviso
+          if (antecedenciaCriacaoHoras <= horasAntesDia) {
+            await supabase
+              .from('appointments')
+              .update({ reminder_same_day_sent_at: new Date().toISOString() })
+              .eq('id', ag.id);
+            continue;
+          }
+
+          // Cooldown de segurança: se foi criado há menos de 2 horas, não envia lembrete no mesmo dia
+          const horasDesdeCriacao = (agora.getTime() - criacaoMs) / (1000 * 60 * 60);
+          if (horasDesdeCriacao < 2) {
+            continue;
+          }
+
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
 

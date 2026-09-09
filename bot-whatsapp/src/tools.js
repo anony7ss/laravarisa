@@ -212,6 +212,33 @@ export async function criarAgendamento(params = {}) {
       return { ok: false, erro: error.message || 'Não foi possível confirmar o agendamento.' };
     }
 
+    // Se agendado para as próximas 24h ou 2h, marca como já notificado/lembrado para não disparar lembrete imediato
+    if (data?.appointment_id || data?.id) {
+      const apptId = data.appointment_id || data.id;
+      try {
+        const inicioMs = new Date(startsAt).getTime();
+        const agoraMs = Date.now();
+        const horasAteAtendimento = (inicioMs - agoraMs) / (1000 * 60 * 60);
+        const updateData = {};
+
+        if (horasAteAtendimento <= 24) {
+          updateData.reminder_sent_at = new Date().toISOString();
+        }
+        if (horasAteAtendimento <= 2) {
+          updateData.reminder_same_day_sent_at = new Date().toISOString();
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await supabase
+            .from('appointments')
+            .update(updateData)
+            .eq('id', apptId);
+        }
+      } catch (errRem) {
+        console.warn('[tools:criarAgendamento] Aviso ao inicializar flags de lembrete:', errRem?.message || errRem);
+      }
+    }
+
     return {
       ok: true,
       sucesso: true,

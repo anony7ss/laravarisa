@@ -300,9 +300,25 @@ export async function notificarAgendamentoSite(sock, agendamento) {
   // Registra no banco para NUNCA reenviar em caso de reinício
   agendamentosNotificados.add(agendamento.id);
   try {
+    const updateData = { whatsapp_notification_sent_at: new Date().toISOString() };
+
+    // Se o agendamento foi marcado para acontecer dentro das próximas 24h (ou hoje),
+    // o cliente acabou de receber esta notificação de confirmação.
+    // Marcamos reminder_sent_at para evitar que o robô de lembrete 24h dispare um minuto depois!
+    const inicioMs = new Date(agendamento.starts_at).getTime();
+    const agoraMs = Date.now();
+    const horasAteAtendimento = (inicioMs - agoraMs) / (1000 * 60 * 60);
+
+    if (horasAteAtendimento <= 24) {
+      updateData.reminder_sent_at = new Date().toISOString();
+    }
+    if (horasAteAtendimento <= 2) {
+      updateData.reminder_same_day_sent_at = new Date().toISOString();
+    }
+
     await supabase
       .from('appointments')
-      .update({ whatsapp_notification_sent_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', agendamento.id);
   } catch (errDb) {
     logWarn('Supabase', `Falha ao registrar envio no banco: ${errDb?.message}`);
