@@ -93,7 +93,7 @@ export const DesktopSidebar = ({
   return (
     <motion.div
       className={cn(
-        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#161614]/95 backdrop-blur-2xl text-[#f7f6f2] w-[280px] flex-shrink-0 border-r border-white/10 select-none overflow-hidden z-30',
+        'h-screen sticky top-0 px-3 py-5 hidden md:flex md:flex-col bg-[#f4f3ec] dark:bg-[#161614]/95 backdrop-blur-2xl text-[#11110f] dark:text-[#f7f6f2] w-[280px] flex-shrink-0 border-r border-black/[0.08] dark:border-white/10 select-none overflow-hidden z-30',
         className,
       )}
       animate={{
@@ -119,59 +119,35 @@ export const MobileSidebar = ({
 }: React.ComponentProps<'div'>) => {
   const { open, setOpen } = useSidebar();
   return (
-    <div
-      className={cn(
-        'h-12 px-4 flex flex-row md:hidden items-center justify-between bg-[#161614] text-[#f7f6f2] w-full border-b border-white/10',
-      )}
-      {...props}
-    >
-      <div className="flex items-center justify-between w-full z-20">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-[#fc5000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-sm">
-            LV
-          </div>
-          <span className="font-medium text-sm text-white tracking-wide">
-            Lara Varisa
-          </span>
-        </div>
-        <button
-          type="button"
-          aria-label="Abrir menu de navegação"
-          onClick={() => setOpen(!open)}
-          className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ x: '-100%', opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: '-100%', opacity: 0 }}
+          transition={{
+            duration: 0.28,
+            ease: [0.32, 0.72, 0, 1],
+          }}
+          className={cn(
+            'fixed h-full w-full inset-0 bg-[#fbfaf6] dark:bg-[#141412] text-[#11110f] dark:text-[#f7f6f2] p-6 z-[100] flex flex-col justify-between shadow-2xl overflow-y-auto md:hidden',
+            className,
+          )}
+          {...(props as any)}
         >
-          <Menu className="h-5 w-5" />
-        </button>
-      </div>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ x: '-100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '-100%', opacity: 0 }}
-            transition={{
-              duration: 0.28,
-              ease: [0.32, 0.72, 0, 1],
-            }}
-            className={cn(
-              'fixed h-full w-full inset-0 bg-[#161614] text-[#f7f6f2] p-6 z-[100] flex flex-col justify-between shadow-2xl overflow-y-auto',
-              className,
-            )}
+          <div
+            className="absolute right-5 top-5 z-50 p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-black/5 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-white/10 cursor-pointer transition-colors"
+            onClick={() => setOpen(false)}
+            role="button"
+            tabIndex={0}
+            aria-label="Fechar menu"
           >
-            <div
-              className="absolute right-5 top-5 z-50 p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
-              onClick={() => setOpen(false)}
-              role="button"
-              tabIndex={0}
-              aria-label="Fechar menu"
-            >
-              <X className="h-5 w-5" />
-            </div>
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            <X className="h-5 w-5" />
+          </div>
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -196,9 +172,9 @@ export const SidebarLink = ({
         setOpen(false);
       }}
       className={cn(
-        'flex items-center gap-3 px-2.5 h-10 rounded-xl text-neutral-300 hover:text-white hover:bg-white/[0.08] transition-colors duration-150 group/sidebar relative overflow-hidden',
+        'flex items-center gap-3 px-2.5 h-10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors duration-150 group/sidebar relative overflow-hidden',
         isActive &&
-          'bg-gradient-to-r from-[#fc5000]/20 to-[#fc5000]/10 text-white font-medium shadow-sm border border-[#fc5000]/30',
+          'bg-[#fc5000]/10 dark:bg-gradient-to-r dark:from-[#fc5000]/20 dark:to-[#fc5000]/10 text-[#fc5000] dark:text-white font-medium shadow-sm border border-[#fc5000]/30',
         className,
       )}
       {...props}
@@ -208,7 +184,7 @@ export const SidebarLink = ({
           'flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg transition-colors',
           isActive
             ? 'text-[#fc5000]'
-            : 'text-neutral-400 group-hover/sidebar:text-white',
+            : 'text-neutral-500 dark:text-neutral-400 group-hover/sidebar:text-neutral-900 dark:group-hover/sidebar:text-white',
         )}
       >
         {link.icon}

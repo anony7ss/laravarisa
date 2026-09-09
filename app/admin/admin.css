@@ -673,10 +673,13 @@ body:has(.admin-shell) {
   min-height: 180px;
   display: grid;
   place-items: center;
-  border: 1px dashed #c9c9c0;
+  border: 1px dashed var(--admin-line);
   border-radius: 18px;
   color: var(--admin-muted);
   font-size: 14px;
+  padding: 28px 20px;
+  text-align: center;
+  word-break: break-word;
 }
 .admin-toolbar {
   display: flex;
@@ -1118,9 +1121,10 @@ body:has(.admin-shell) {
   .admin-toolbar-actions .admin-primary {
     width: 100%;
     justify-content: center;
-    padding: 0 10px;
+    padding: 0 8px;
     font-size: 12px;
     min-height: 42px;
+    white-space: nowrap;
   }
 }
 
@@ -1430,22 +1434,25 @@ a.admin-stat-card:hover {
 
 .admin-bell-btn {
   position: relative;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  background: rgba(255, 255, 255, 0.05);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-line);
+  background: var(--admin-card);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--admin-ink);
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .admin-bell-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--admin-soft);
+  color: var(--admin-ink);
+  border-color: var(--admin-muted);
 }
 
 .admin-bell-badge {
@@ -2216,29 +2223,53 @@ a.admin-stat-card:hover {
     margin-top: 18px;
   }
   .admin-mobile-head {
-    height: 64px;
+    height: 60px;
     padding: 0 14px;
-    background: rgba(241, 241, 237, 0.9);
+    background: var(--admin-bg);
+    border-bottom: 1px solid var(--admin-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
-  .admin-mobile-head > button,
-  .admin-mobile-head > a {
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
+  .admin-mobile-head .admin-bell-btn,
+  .admin-mobile-head-link,
+  .admin-mobile-menu-btn {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid var(--admin-line);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.55);
+    border-radius: 10px;
+    background: var(--admin-card);
+    color: var(--admin-ink);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    flex-shrink: 0;
   }
-  .admin-mobile-head > span {
-    display: grid;
+  .admin-mobile-head .admin-bell-btn:hover,
+  .admin-mobile-head-link:hover,
+  .admin-mobile-menu-btn:hover {
+    background: var(--admin-soft);
+    color: var(--admin-ink);
+  }
+  .admin-mobile-head span {
+    display: flex;
+    flex-direction: column;
     gap: 1px;
-    text-align: center;
+    text-align: left;
   }
   .admin-mobile-head small {
     color: var(--admin-muted);
-    font-size: 7px;
-    letter-spacing: 0.16em;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    font-weight: 600;
   }
   .admin-mobile-head strong {
     max-width: 160px;
@@ -2246,6 +2277,7 @@ a.admin-stat-card:hover {
     font: 600 13px/1.2 var(--font-body);
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--admin-ink);
   }
   .admin-mobile-nav {
     height: 60px;
@@ -2324,16 +2356,48 @@ a.admin-stat-card:hover {
     display: grid;
     grid-template-columns: 38px minmax(0, 1fr) 38px auto;
   }
+  .admin-calendar-period.is-kanban {
+    display: flex;
+    width: 100%;
+    grid-template-columns: none;
+  }
   .admin-calendar-period > div {
     width: auto;
     min-width: 0;
     padding: 0;
+  }
+  .admin-calendar-period.is-kanban > div,
+  .admin-calendar-period.is-kanban .admin-kanban-title {
+    width: 100%;
+    flex: 1;
+    grid-column: 1 / -1;
   }
   .admin-calendar-period h2 {
     overflow: hidden;
     font-size: 23px;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .admin-calendar-period.is-kanban h2 {
+    font-size: 22px;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+    line-height: 1.2;
+  }
+  .admin-kanban-board {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 20px;
+  }
+  .admin-kanban-column {
+    min-width: 280px;
+    max-width: 86vw;
+    scroll-snap-align: start;
+    flex-shrink: 0;
   }
   .admin-calendar-toolbar {
     flex-direction: column;
@@ -2467,10 +2531,10 @@ a.admin-stat-card:hover {
   .admin-stat-card {
     min-height: 125px;
   }
-  .admin-calendar-period {
+  .admin-calendar-period:not(.is-kanban) {
     grid-template-columns: 36px minmax(0, 1fr) 36px;
   }
-  .admin-calendar-period .admin-today-button {
+  .admin-calendar-period:not(.is-kanban) .admin-today-button {
     grid-column: 1 / -1;
     min-height: 34px;
   }
@@ -2517,6 +2581,11 @@ a.admin-stat-card:hover {
 .admin-root.dark .admin-status.no_show {
   background: #3a3331;
   color: #c9ada7;
+}
+
+.admin-root.dark .admin-empty,
+.admin-root.dark .admin-kanban-empty {
+  border-color: #33332e;
 }
 
 .admin-root.dark .admin-mobile-head {

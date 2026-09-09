@@ -747,7 +747,7 @@ export function AppointmentsManager({
   return (
     <>
       <section className="admin-calendar-toolbar">
-        <div className="admin-calendar-period">
+        <div className={`admin-calendar-period ${viewMode === 'kanban' ? 'is-kanban' : ''}`}>
           {viewMode === 'calendar' ? (
             <>
               <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
@@ -770,7 +770,7 @@ export function AppointmentsManager({
               </button>
             </>
           ) : (
-            <div style={{ width: 'auto' }}>
+            <div className="admin-kanban-title">
               <small>QUADRO</small>
               <h2>Kanban da Agenda</h2>
             </div>

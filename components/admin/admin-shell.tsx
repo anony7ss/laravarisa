@@ -244,10 +244,10 @@ export function AdminShell({
                   transition={{ duration: 0.15 }}
                   className="flex flex-col min-w-0 overflow-hidden whitespace-nowrap"
                 >
-                  <strong className="text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
+                  <strong className="text-neutral-900 dark:text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
                     Lara Varisa
                   </strong>
-                  <small className="text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
+                  <small className="text-neutral-500 dark:text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
                     Lash Designer
                   </small>
                 </motion.div>
@@ -278,7 +278,7 @@ export function AdminShell({
                 />
               ))}
 
-              <div className="my-2 border-t border-white/10" />
+              <div className="my-2 border-t border-black/[0.08] dark:border-white/10" />
 
               <SidebarLink
                 link={{
@@ -294,8 +294,8 @@ export function AdminShell({
           </div>
 
           {/* User Profile & Actions Footer */}
-          <div className="pt-3 border-t border-white/10 flex flex-col gap-2 flex-shrink-0">
-            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] h-12 overflow-hidden">
+          <div className="pt-3 border-t border-black/[0.08] dark:border-white/10 flex flex-col gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-black/[0.04] border border-black/[0.08] dark:bg-white/[0.04] dark:border-white/[0.06] h-12 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
                 {(name || 'A').trim().slice(0, 1).toUpperCase()}
               </div>
@@ -307,10 +307,10 @@ export function AdminShell({
                 transition={{ duration: 0.15 }}
                 className="flex flex-col min-w-0 flex-1 overflow-hidden whitespace-nowrap"
               >
-                <strong className="text-white text-xs font-medium truncate block leading-tight">
+                <strong className="text-neutral-900 dark:text-white text-xs font-medium truncate block leading-tight">
                   {name || 'Conta administrativa'}
                 </strong>
-                <small className="text-neutral-400 text-[10px] truncate block">
+                <small className="text-neutral-500 dark:text-neutral-400 text-[10px] truncate block">
                   {roleLabel}
                 </small>
               </motion.div>
@@ -320,7 +320,7 @@ export function AdminShell({
               <button
                 type="button"
                 onClick={() => setNotificationsOpen(true)}
-                className="relative p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                className="relative p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 title={
                   notificationsCount > 0
                     ? `${notificationsCount} novidade(s) na central`
@@ -342,7 +342,7 @@ export function AdminShell({
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                className="p-2 rounded-lg text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 aria-label="Alternar tema"
                 title="Alternar tema"
               >
@@ -357,7 +357,7 @@ export function AdminShell({
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-auto"
+                className="p-2 rounded-lg text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-auto"
                 aria-label="Sair do painel"
                 title="Sair"
               >
@@ -369,10 +369,15 @@ export function AdminShell({
       </Sidebar>
       <div className="admin-main">
         <header className="admin-mobile-head">
-          <span>
-            <small>PAINEL</small>
-            <strong>{pageNames[pathname] || 'Lara Varisa'}</strong>
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="h-7 w-7 rounded-lg bg-[#fc5000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-sm flex-shrink-0">
+              LV
+            </div>
+            <span>
+              <small>PAINEL</small>
+              <strong>{pageNames[pathname] || 'Lara Varisa'}</strong>
+            </span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
@@ -386,9 +391,17 @@ export function AdminShell({
                 <span className="admin-bell-badge">{notificationsCount}</span>
               )}
             </button>
-            <Link href="/" aria-label="Abrir o site">
-              <ExternalLink size={19} />
+            <Link href="/" aria-label="Abrir o site" className="admin-mobile-head-link">
+              <ExternalLink size={18} />
             </Link>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Abrir menu lateral"
+              className="admin-mobile-menu-btn"
+            >
+              <Menu size={19} />
+            </button>
           </div>
         </header>
         {children}
