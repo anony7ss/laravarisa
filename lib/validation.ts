@@ -191,4 +191,18 @@ export const expenseSchema = z.object({
   notes: z.string().trim().max(1000).nullable().optional(),
 });
 
+export const shortLinkSchema = z.object({
+  title: cleanText(100).min(2),
+  slug: z
+    .string()
+    .trim()
+    .min(2, 'O slug deve ter pelo menos 2 caracteres')
+    .max(60, 'O slug deve ter no máximo 60 caracteres')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'O slug deve conter apenas letras, números, hífen (-) ou sublinhado (_)'),
+  target_url: z.string().trim().url('URL de destino inválida').max(2000),
+  phone: z.string().trim().max(30).optional().default(''),
+  message: z.string().trim().max(1500).optional().default(''),
+  is_active: z.boolean().optional().default(true),
+});
+
 

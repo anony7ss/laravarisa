@@ -1,84 +1,107 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import QRCode from 'qrcode';
 import {
   Link2,
   Copy,
   Check,
-  QrCode as QrCodeIcon,
   Download,
   ExternalLink,
-  MessageCircle,
-  Sparkles,
-  Share2,
   Trash2,
   Plus,
-  Smartphone,
-  Palette,
-  Eye,
-  ShieldCheck,
-  TrendingUp,
-  Award,
-  Zap,
+  QrCode as QrCodeIcon,
+  Sparkles,
+  Shuffle,
+  BarChart3,
+  RotateCcw,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
-import { studio } from '@/lib/studio';
 
-export interface SavedWhatsAppLink {
+export interface ShortLinkItem {
   id: string;
+  slug: string;
   title: string;
-  phone: string;
-  countryCode: string;
-  message: string;
-  brandedSlug: string;
-  fullUrl: string;
-  createdAt: string;
-  clicksEstimate?: number;
+  target_url: string;
+  phone?: string | null;
+  message?: string | null;
+  clicks_count: number;
+  last_clicked_at?: string | null;
+  is_active: boolean;
+  created_at: string;
 }
 
-const STORAGE_LINKS_KEY = 'lv_whatsapp_generated_links';
-
 const COUNTRY_CODES = [
-  { code: '55', label: '🇧🇷 Brasil (+55)' },
-  { code: '1', label: '🇺🇸 Estados Unidos (+1)' },
-  { code: '351', label: '🇵🇹 Portugal (+351)' },
-  { code: '34', label: '🇪🇸 Espanha (+34)' },
-  { code: '44', label: '🇬🇧 Reino Unido (+44)' },
-  { code: '54', label: '🇦🇷 Argentina (+54)' },
-  { code: '598', label: '🇺🇾 Uruguai (+598)' },
+  { code: '55', name: 'Brasil (+55)' },
+  { code: '1', name: 'Estados Unidos (+1)' },
+  { code: '351', name: 'Portugal (+351)' },
+  { code: '34', name: 'Espanha (+34)' },
+  { code: '44', name: 'Reino Unido (+44)' },
+  { code: '54', name: 'Argentina (+54)' },
+  { code: '598', name: 'Uruguai (+598)' },
 ];
 
 const PRESET_MESSAGES = [
   {
-    title: '📅 Agendamento Geral',
+    label: 'Agendamento Geral',
+    slug: 'agendar',
+    title: 'Agendamento Geral WhatsApp',
     text: 'Olá, Lara! Gostaria de consultar os horários disponíveis para atendimento.',
   },
   {
-    title: '✨ Promoção 1ª Visita (R$ 80)',
-    text: 'Olá, Lara! Quero aproveitar a promoção de 1ª visita por R$ 80 para fazer minha extensão de cílios.',
+    label: 'Promoção 1ª Visita (R$ 80)',
+    slug: 'promo80',
+    title: 'Promoção 1ª Visita (R$ 80)',
+    text: 'Olá, Lara! Quero aproveitar a oferta especial de 1ª visita por R$ 80 para fazer minha extensão de cílios.',
   },
   {
-    title: '👁️ Volume Brasileiro',
-    text: 'Olá, Lara! Quero agendar um horário para fazer o Volume Brasileiro.',
+    label: 'Dúvidas sobre Cílios',
+    slug: 'duvidas',
+    title: 'Dúvidas sobre Procedimentos',
+    text: 'Olá, Lara! Gostaria de tirar algumas dúvidas sobre os procedimentos e cuidados.',
   },
   {
-    title: '🌿 Lash Lifting',
-    text: 'Olá, Lara! Tenho interesse em fazer Lash Lifting. Como funciona o procedimento?',
+    label: 'Bio do Instagram',
+    slug: 'bio',
+    title: 'Link Oficial Bio Instagram',
+    text: 'Olá, Lara! Vim pelo Instagram e quero agendar meu procedimento de cílios.',
   },
   {
-    title: '📋 Ficha de Anamnese',
-    text: 'Olá, Lara! Já preenchi minha ficha de anamnese no site e quero agendar meu horário.',
+    label: 'Ficha de Anamnese',
+    slug: 'anamnese',
+    title: 'Confirmação Ficha de Anamnese',
+    text: 'Olá, Lara! Já preenchi minha ficha de anamnese no site e quero confirmar meu horário.',
   },
 ];
 
-const COLOR_PALETTES = [
-  { label: 'Obsidian Black', dark: '#070607', light: '#ffffff' },
-  { label: 'Verde WhatsApp', dark: '#25D366', light: '#ffffff' },
-  { label: 'Ouro Boutique', dark: '#997328', light: '#ffffff' },
-  { label: 'Pumice Natural', dark: '#1e1e1c', light: '#f4f4f0' },
-  { label: 'Vinho Bordô', dark: '#6b172a', light: '#ffffff' },
+const QR_COLORS = [
+  { label: 'Preto Clássico', dark: '#11110f', light: '#ffffff' },
+  { label: 'Verde WhatsApp', dark: '#15803d', light: '#ffffff' },
+  { label: 'Dourado / Âmbar', dark: '#995c00', light: '#ffffff' },
 ];
+
+function formatPhoneDigits(val: string): string {
+  return val.replace(/\D/g, '');
+}
+
+function sanitizeSlug(val: string): string {
+  return val
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 50);
+}
+
+function generateRandomSlug(): string {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let res = 'w';
+  for (let i = 0; i < 4; i++) {
+    res += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return res;
+}
 
 export function WhatsAppLinkGenerator({
   defaultPhone = '51989601662',
@@ -90,748 +113,1101 @@ export function WhatsAppLinkGenerator({
     const raw = defaultPhone.replace(/\D/g, '');
     return raw.startsWith('55') ? raw.slice(2) : raw;
   });
-  const [message, setMessage] = useState('Olá, Lara! Quero agendar meu horário de extensão de cílios.');
-  const [brandedSlug, setBrandedSlug] = useState('laravarisa');
-  const [domainPrefix, setDomainPrefix] = useState<'w.app' | 'wa.me'>('w.app');
-  const [linkTitle, setLinkTitle] = useState('Link da Bio Instagram');
+  const [message, setMessage] = useState(
+    'Olá, Lara! Quero aproveitar a oferta especial de 1ª visita por R$ 80 para fazer minha extensão de cílios.'
+  );
+
+  // Shortlink states
+  const [linkTitle, setLinkTitle] = useState('Promoção 1ª Visita (R$ 80)');
+  const [slug, setSlug] = useState('promo80');
+  const [siteOrigin, setSiteOrigin] = useState('https://laravarisa.com.br');
 
   // Customização de QR Code
-  const [selectedColor, setSelectedColor] = useState(COLOR_PALETTES[0]);
+  const [qrTargetMode, setQrTargetMode] = useState<'shortlink' | 'direct'>('shortlink');
+  const [selectedColor, setSelectedColor] = useState(QR_COLORS[0]);
   const [includeLogo, setIncludeLogo] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   // Estados de feedback
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedBranded, setCopiedBranded] = useState(false);
-  const [savingFeedback, setSavingFeedback] = useState(false);
+  const [copiedType, setCopiedType] = useState<'short' | 'direct' | string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Canvas e QR Code
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [qrPngUrl, setQrPngUrl] = useState<string>('');
-  const [qrSvgString, setQrSvgString] = useState<string>('');
+  // Lista de Shortlinks carregados do banco de dados Supabase
+  const [shortLinks, setShortLinks] = useState<ShortLinkItem[]>([]);
+  const [isLoadingLinks, setIsLoadingLinks] = useState(true);
 
-  // Histórico salvo de links
-  const [savedLinks, setSavedLinks] = useState<SavedWhatsAppLink[]>([]);
-
-  // Carrega links salvos do localStorage
+  // Detectar origem atual no cliente
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_LINKS_KEY);
-      if (stored) {
-        setSavedLinks(JSON.parse(stored));
-      } else {
-        // Inicializa com links padrão úteis para a Lara
-        const initialDefaults: SavedWhatsAppLink[] = [
-          {
-            id: 'default-bio',
-            title: 'Bio do Instagram (@laravarisa.lashes)',
-            phone: '51989601662',
-            countryCode: '55',
-            message: 'Olá, Lara! Vim pelo Instagram e quero agendar meu procedimento.',
-            brandedSlug: 'laravarisa',
-            fullUrl: 'https://wa.me/5551989601662?text=Ol%C3%A1%2C%20Lara!%20Vim%20pelo%20Instagram%20e%20quero%20agendar%20meu%20procedimento.',
-            createdAt: '2026-09-01',
-            clicksEstimate: 142,
-          },
-          {
-            id: 'default-promo',
-            title: 'Campanha 1ª Visita (R$ 80,00)',
-            phone: '51989601662',
-            countryCode: '55',
-            message: 'Olá, Lara! Gostaria de aproveitar a oferta especial de 1ª visita a R$ 80,00.',
-            brandedSlug: 'promo-primeiravez',
-            fullUrl: 'https://wa.me/5551989601662?text=Ol%C3%A1%2C%20Lara!%20Gostaria%20de%20aproveitar%20a%20oferta%20especial%20de%201%C2%AA%20visita%20a%20R%24%2080%2C00.',
-            createdAt: '2026-09-05',
-            clicksEstimate: 89,
-          },
-        ];
-        setSavedLinks(initialDefaults);
-        localStorage.setItem(STORAGE_LINKS_KEY, JSON.stringify(initialDefaults));
-      }
-    } catch {}
+    if (typeof window !== 'undefined' && window.location.origin) {
+      setSiteOrigin(window.location.origin);
+    }
   }, []);
 
-  const saveLinksToStorage = (links: SavedWhatsAppLink[]) => {
-    setSavedLinks(links);
+  // Buscar links do banco de dados
+  const loadShortLinks = useCallback(async () => {
+    setIsLoadingLinks(true);
     try {
-      localStorage.setItem(STORAGE_LINKS_KEY, JSON.stringify(links));
-    } catch {}
-  };
-
-  // Formatação de telefone
-  const formatPhoneInput = (val: string) => {
-    let digits = val.replace(/\D/g, '');
-    if (digits.startsWith('55') && digits.length >= 12) {
-      digits = digits.slice(2);
+      const res = await fetch('/api/admin/short-links', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setShortLinks(data);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar shortlinks:', err);
+    } finally {
+      setIsLoadingLinks(false);
     }
-    digits = digits.slice(0, 11);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-  };
+  }, []);
 
-  const rawPhoneDigits = phone.replace(/\D/g, '');
-  const cleanFullNumber = `${countryCode}${rawPhoneDigits}`;
-  const encodedMsg = encodeURIComponent(message.trim());
-  const directWaUrl = `https://wa.me/${cleanFullNumber}${encodedMsg ? `?text=${encodedMsg}` : ''}`;
-  const cleanSlug = brandedSlug.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '');
-  const brandedUrl = `https://${domainPrefix}/${cleanSlug || 'laravarisa'}`;
+  useEffect(() => {
+    loadShortLinks();
+  }, [loadShortLinks]);
 
-  // Geração do QR Code no Canvas e em SVG
+  // Número completo normalizado
+  const fullPhone = `${countryCode}${formatPhoneDigits(phone)}`;
+
+  // Link Oficial direto wa.me
+  const directWaUrl =
+    fullPhone.length >= 8
+      ? `https://wa.me/${fullPhone}${message.trim() ? `?text=${encodeURIComponent(message.trim())}` : ''}`
+      : '';
+
+  // Shortlink final da marca
+  const cleanSlug = sanitizeSlug(slug);
+  const shortlinkUrl = cleanSlug ? `${siteOrigin}/w/${cleanSlug}` : '';
+
+  // URL ativa para o QR Code
+  const activeQrTargetUrl = qrTargetMode === 'shortlink' && shortlinkUrl ? shortlinkUrl : directWaUrl;
+
+  // Gerar QR Code
   useEffect(() => {
     let active = true;
-
-    async function generateQR() {
-      if (!canvasRef.current || !cleanFullNumber) return;
-
+    const generateQr = async () => {
+      if (!activeQrTargetUrl) return;
       try {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // Renderiza o QR Code no Canvas
-        await QRCode.toCanvas(canvas, directWaUrl, {
-          width: 320,
+        const qrCanvas = document.createElement('canvas');
+        await QRCode.toCanvas(qrCanvas, activeQrTargetUrl, {
+          width: 512,
           margin: 2,
           color: {
             dark: selectedColor.dark,
             light: selectedColor.light,
           },
-          errorCorrectionLevel: 'H',
+          errorCorrectionLevel: includeLogo ? 'H' : 'M',
         });
 
-        // Se includeLogo for true, desenha o monograma do estúdio no centro
-        if (includeLogo && active) {
-          const logo = new Image();
-          logo.crossOrigin = 'anonymous';
-          logo.src = '/logo-emblem.png';
-          logo.onload = () => {
-            if (!active) return;
-            const logoSize = 64;
-            const center = canvas.width / 2;
-            const start = center - logoSize / 2;
+        if (includeLogo) {
+          const ctx = qrCanvas.getContext('2d');
+          if (ctx) {
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            logoImg.src = '/logo-emblem.png';
+            await new Promise((resolve) => {
+              logoImg.onload = resolve;
+              logoImg.onerror = resolve;
+            });
 
-            // Fundo circular branco para destacar o logo
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(center, center, (logoSize / 2) + 4, 0, Math.PI * 2, false);
-            ctx.fillStyle = selectedColor.light;
-            ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#e2e2df';
-            ctx.stroke();
+            if (logoImg.complete && logoImg.naturalWidth > 0) {
+              const size = qrCanvas.width * 0.22;
+              const x = (qrCanvas.width - size) / 2;
+              const y = (qrCanvas.height - size) / 2;
 
-            // Desenha a imagem
-            ctx.drawImage(logo, start, start, logoSize, logoSize);
-            ctx.restore();
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(qrCanvas.width / 2, qrCanvas.height / 2, size / 1.7, 0, 2 * Math.PI);
+              ctx.fillStyle = '#ffffff';
+              ctx.fill();
+              ctx.lineWidth = 4;
+              ctx.strokeStyle = '#e2e2df';
+              ctx.stroke();
 
-            // Salva URL do PNG gerado
-            setQrPngUrl(canvas.toDataURL('image/png'));
-          };
-        } else {
-          setQrPngUrl(canvas.toDataURL('image/png'));
+              ctx.beginPath();
+              ctx.arc(qrCanvas.width / 2, qrCanvas.height / 2, size / 2, 0, 2 * Math.PI);
+              ctx.closePath();
+              ctx.clip();
+              ctx.drawImage(logoImg, x, y, size, size);
+              ctx.restore();
+            }
+          }
         }
 
-        // Gera SVG string
-        const svg = await QRCode.toString(directWaUrl, {
-          type: 'svg',
-          width: 500,
-          margin: 2,
-          color: {
-            dark: selectedColor.dark,
-            light: selectedColor.light,
-          },
-          errorCorrectionLevel: 'H',
-        });
-        if (active) setQrSvgString(svg);
+        if (active) {
+          setQrDataUrl(qrCanvas.toDataURL('image/png'));
+        }
       } catch (err) {
         console.error('Erro ao gerar QR Code:', err);
       }
-    }
+    };
 
-    generateQR();
-
+    generateQr();
     return () => {
       active = false;
     };
-  }, [directWaUrl, selectedColor, includeLogo, cleanFullNumber]);
+  }, [activeQrTargetUrl, selectedColor, includeLogo]);
 
-  // Download do PNG
-  const handleDownloadPng = () => {
-    if (!qrPngUrl) return;
-    triggerHaptic('success');
+  const copyToClipboard = async (text: string, identifier: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      triggerHaptic('success');
+      setCopiedType(identifier);
+      setTimeout(() => setCopiedType(null), 2000);
+    } catch {}
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrDataUrl) return;
+    triggerHaptic('medium');
     const a = document.createElement('a');
-    a.href = qrPngUrl;
-    a.download = `qrcode-whatsapp-${cleanSlug || 'laravarisa'}.png`;
+    a.href = qrDataUrl;
+    const nameSuffix = cleanSlug ? `-${cleanSlug}` : '';
+    a.download = `qrcode-whatsapp-lara-varisa${nameSuffix}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   };
 
-  // Download do SVG
-  const handleDownloadSvg = () => {
-    if (!qrSvgString) return;
-    triggerHaptic('success');
-    const blob = new Blob([qrSvgString], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qrcode-whatsapp-${cleanSlug || 'laravarisa'}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  // Salvar / Criar Shortlink no Banco de Dados
+  const handleSaveShortLink = async () => {
+    if (!directWaUrl) {
+      setSaveStatus({ type: 'error', message: 'Preencha o telefone para criar o link.' });
+      return;
+    }
+    if (!cleanSlug) {
+      setSaveStatus({ type: 'error', message: 'Defina um slug válido (ex: promo, agendar).' });
+      return;
+    }
 
-  // Copiar link direto
-  const handleCopyDirectLink = async () => {
+    setIsSaving(true);
+    setSaveStatus(null);
     try {
-      await navigator.clipboard.writeText(directWaUrl);
+      const payload = {
+        title: linkTitle.trim() || `Shortlink /w/${cleanSlug}`,
+        slug: cleanSlug,
+        target_url: directWaUrl,
+        phone: fullPhone,
+        message: message.trim(),
+        is_active: true,
+      };
+
+      const res = await fetch('/api/admin/short-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Falha ao salvar shortlink.');
+      }
+
       triggerHaptic('success');
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    } catch {}
+      setSaveStatus({ type: 'success', message: `Shortlink "/w/${cleanSlug}" criado e ativo!` });
+      await loadShortLinks();
+      setTimeout(() => setSaveStatus(null), 4000);
+    } catch (err: unknown) {
+      triggerHaptic('medium');
+      const msg = err instanceof Error ? err.message : 'Erro ao criar shortlink';
+      setSaveStatus({ type: 'error', message: msg });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Copiar branded link
-  const handleCopyBrandedLink = async () => {
+  // Excluir Shortlink
+  const handleDeleteShortLink = async (id: string, itemSlug: string) => {
+    if (!confirm(`Deseja realmente remover o shortlink "/w/${itemSlug}"?`)) return;
+    triggerHaptic('medium');
     try {
-      await navigator.clipboard.writeText(brandedUrl);
-      triggerHaptic('success');
-      setCopiedBranded(true);
-      setTimeout(() => setCopiedBranded(false), 2500);
-    } catch {}
+      const res = await fetch(`/api/admin/short-links/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setShortLinks((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Erro ao excluir.');
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  // Salvar no Dashboard
-  const handleSaveToDashboard = () => {
-    if (!cleanFullNumber) return;
-    triggerHaptic('success');
-    setSavingFeedback(true);
-
-    const newLink: SavedWhatsAppLink = {
-      id: `link-${Date.now()}`,
-      title: linkTitle.trim() || 'Link WhatsApp',
-      phone: cleanFullNumber,
-      countryCode,
-      message,
-      brandedSlug: cleanSlug || 'laravarisa',
-      fullUrl: directWaUrl,
-      createdAt: new Date().toISOString().split('T')[0],
-      clicksEstimate: 0,
-    };
-
-    saveLinksToStorage([newLink, ...savedLinks]);
-    setTimeout(() => setSavingFeedback(false), 2000);
-  };
-
-  const handleDeleteSavedLink = (id: string) => {
+  // Carregar dados de um preset
+  const applyPreset = (preset: (typeof PRESET_MESSAGES)[0]) => {
     triggerHaptic('light');
-    saveLinksToStorage(savedLinks.filter((l) => l.id !== id));
+    setMessage(preset.text);
+    setSlug(preset.slug);
+    setLinkTitle(preset.title);
   };
+
+  // Estatísticas agregadas
+  const totalClicks = shortLinks.reduce((acc, item) => acc + (item.clicks_count || 0), 0);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
-      
-      {/* Top Banner / Header */}
-      <div className="bg-gradient-to-r from-[#171715] via-[#21211e] to-[#121210] rounded-3xl p-6 sm:p-8 text-white border border-neutral-800 shadow-sm relative overflow-hidden">
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles size={13} />
-            <span>Generate Your WhatsApp Link</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Gerador de Link WhatsApp & QR Code Profissional
-          </h2>
-          <p className="text-neutral-300 text-xs sm:text-sm leading-relaxed">
-            Crie links personalizados no formato <strong>w.app/{cleanSlug || 'SeuNome'}</strong> ou direct links do WhatsApp com mensagens pré-configuradas. Baixe QR Codes em vetor SVG e imagem PNG de alta resolução para bio do Instagram, cartões de visita e campanhas.
-          </p>
-        </div>
+    <div className="wa-link-gen-container">
+      <style>{`
+        .wa-link-gen-container {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          min-width: 0;
+        }
+        .wa-link-gen-grid {
+          display: grid;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 20px;
+          align-items: start;
+        }
+        @media (max-width: 960px) {
+          .wa-link-gen-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
 
-        {/* Stats Pills no topo */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-white/10 relative z-10">
-          <div className="bg-white/5 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-            <span className="text-[10px] uppercase text-neutral-400 font-semibold block">Links Gerados</span>
-            <span className="text-base sm:text-lg font-bold text-white">1.5M+</span>
-          </div>
-          <div className="bg-white/5 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-            <span className="text-[10px] uppercase text-neutral-400 font-semibold block">Cliques Rastreáveis</span>
-            <span className="text-base sm:text-lg font-bold text-emerald-400">12M+</span>
-          </div>
-          <div className="bg-white/5 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-            <span className="text-[10px] uppercase text-neutral-400 font-semibold block">Branded Links</span>
-            <span className="text-base sm:text-lg font-bold text-white">1.3M+</span>
-          </div>
-          <div className="bg-white/5 backdrop-blur-sm p-3 rounded-2xl border border-white/10">
-            <span className="text-[10px] uppercase text-neutral-400 font-semibold block">Formatos QR</span>
-            <span className="text-base sm:text-lg font-bold text-white">SVG & PNG</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid Principal: Formulário + Preview em Tempo Real */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Coluna Esquerda: Formulário de Configuração (7 colunas) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-3xl border border-[#d6d6cf] p-6 sm:p-7 shadow-xs space-y-5">
-            
-            <div>
-              <h3 className="text-base font-bold text-[var(--color-obsidian)] flex items-center gap-2">
-                <Link2 size={18} className="text-emerald-600" />
-                <span>1. Dados do WhatsApp</span>
-              </h3>
-              <p className="text-xs text-[#707068]">
-                Informe o país e o número com DDD que irá receber as mensagens.
-              </p>
+      {/* GRADE PRINCIPAL: CRIADOR DE SHORTLINKS & WHATSAPP + QR CODE */}
+      <div className="wa-link-gen-grid">
+        {/* CARD 1: FORMULÁRIO DO SHORTLINK & WHATSAPP */}
+        <section className="admin-panel">
+          <div className="admin-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: '#25d366', display: 'flex' }}>
+                <Link2 size={20} />
+              </span>
+              <div>
+                <p className="admin-kicker">SHORTLINKS & WHATSAPP</p>
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-body), sans-serif',
+                    fontSize: '17px',
+                    fontWeight: 600,
+                    margin: 0,
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                  }}
+                >
+                  Criar Shortlink e Link WhatsApp
+                </h2>
+              </div>
             </div>
 
-            {/* Country Code & Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-              <div className="sm:col-span-5 space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
-                  Country code
+            {/* Badge de Métricas Rápidas */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                background: 'var(--admin-soft)',
+                border: '1px solid var(--admin-line)',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--admin-ink)',
+              }}
+            >
+              <BarChart3 size={13} style={{ color: '#25d366' }} />
+              <span>{totalClicks} cliques rastreados</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* 1. SELEÇÃO DE MODELOS RÁPIDOS */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <Sparkles size={13} style={{ color: '#cca352' }} />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)' }}>
+                  Modelos Prontos de Mensagem & Atalho:
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {PRESET_MESSAGES.map((preset) => {
+                  const isSelected = slug === preset.slug;
+                  return (
+                    <button
+                      key={preset.slug}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      className={isSelected ? 'admin-primary' : 'admin-secondary'}
+                      style={{
+                        height: '32px',
+                        minHeight: '32px',
+                        padding: '0 12px',
+                        fontSize: '12px',
+                        borderRadius: '999px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. SLUG PERSONALIZADO DO SHORTLINK */}
+            <div
+              style={{
+                padding: '14px',
+                borderRadius: '12px',
+                background: 'var(--admin-soft)',
+                border: '1px solid var(--admin-line)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+                  Shortlink Personalizado da Marca
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSlug(generateRandomSlug());
+                  }}
+                  className="admin-secondary"
+                  style={{
+                    height: '26px',
+                    minHeight: '26px',
+                    padding: '0 8px',
+                    fontSize: '11px',
+                    borderRadius: '6px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Gerar código curto aleatório"
+                >
+                  <Shuffle size={11} />
+                  <span>Gerar Aleatório</span>
+                </button>
+              </div>
+
+              {/* Input com prefixo de domínio */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'stretch',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line)',
+                  background: 'var(--admin-input-bg)',
+                  overflow: 'hidden',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 12px',
+                    background: 'var(--admin-soft)',
+                    borderRight: '1px solid var(--admin-line)',
+                    fontSize: '12px',
+                    color: 'var(--admin-muted)',
+                    fontFamily: 'monospace',
+                    userSelect: 'none',
+                  }}
+                >
+                  {siteOrigin.replace(/^https?:\/\//, '')}/w/
+                </span>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(sanitizeSlug(e.target.value))}
+                  placeholder="promo80"
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--admin-ink)',
+                    padding: '0 12px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    fontFamily: 'monospace',
+                  }}
+                />
+              </div>
+
+              <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>
+                Exemplo de uso: na Bio do Instagram, Stories, anúncios ou panfletos impressos.
+              </span>
+            </div>
+
+            {/* 3. NÚMERO DO WHATSAPP */}
+            <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                  País
                 </label>
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#f7f6f2] border border-[#d6d6cf] text-xs font-medium text-[var(--color-obsidian)] focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors cursor-pointer"
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--admin-line)',
+                    background: 'var(--admin-input-bg)',
+                    color: 'var(--admin-ink)',
+                    padding: '0 10px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
                 >
                   {COUNTRY_CODES.map((c) => (
                     <option key={c.code} value={c.code}>
-                      {c.label}
+                      {c.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="sm:col-span-7 space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
-                  Phone number
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                  Número com DDD
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#8c8c84]">
-                    +{countryCode}
-                  </span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
-                    placeholder="(51) 98960-1662"
-                    className="w-full pl-14 pr-3.5 py-2.5 rounded-xl bg-[#f7f6f2] border border-[#d6d6cf] text-xs sm:text-sm font-mono text-[var(--color-obsidian)] placeholder-[#8c8c84] focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
-                  />
-                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhoneDigits(e.target.value))}
+                  placeholder="51989601662"
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--admin-line)',
+                    background: 'var(--admin-input-bg)',
+                    color: 'var(--admin-ink)',
+                    padding: '0 14px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
               </div>
             </div>
 
-            {/* WhatsApp Message */}
-            <div className="space-y-2 pt-2 border-t border-[#f0f0ed]">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
-                  WhatsApp Message
+            {/* 4. MENSAGEM */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)' }}>
+                  Mensagem que a Cliente Enviará
                 </label>
-                <span className="text-[11px] text-[#8c8c84]">
+                <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>
                   {message.length} caracteres
                 </span>
               </div>
               <textarea
-                rows={3}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ex: Olá, Lara! Gostaria de agendar um horário para extensão de cílios."
-                className="w-full p-3.5 rounded-2xl bg-[#f7f6f2] border border-[#d6d6cf] text-xs sm:text-sm text-[var(--color-obsidian)] placeholder-[#8c8c84] focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors resize-none leading-relaxed"
+                rows={3}
+                placeholder="Escreva a mensagem pré-configurada..."
+                style={{
+                  width: '100%',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line)',
+                  background: 'var(--admin-input-bg)',
+                  color: 'var(--admin-ink)',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  lineHeight: 1.4,
+                }}
               />
-
-              {/* Mensagens Prontas Rápidas */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-[#8c8c84] uppercase tracking-wider block">
-                  Modelos rápidos de mensagem:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_MESSAGES.map((preset) => (
-                    <button
-                      key={preset.title}
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('light');
-                        setMessage(preset.text);
-                      }}
-                      className="px-2.5 py-1 rounded-full bg-[#f4f4f0] hover:bg-[#eaeaec] text-[var(--color-obsidian)] text-[11px] font-medium border border-[#dcdcd6] transition-colors cursor-pointer"
-                    >
-                      {preset.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
-            {/* Branded Link (opcional) */}
-            <div className="space-y-2 pt-2 border-t border-[#f0f0ed]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Award size={15} className="text-[var(--color-obsidian)]" />
-                  <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-obsidian)]">
-                    Branded Link (Opcional)
-                  </label>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                    Mais Cliques
-                  </span>
-                </div>
-                <p className="text-xs text-[#707068] mt-0.5">
-                  Links personalizados como <strong>w.app/{cleanSlug || 'YourBusinessName'}</strong> aumentam o reconhecimento e a taxa de conversão.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-2.5 rounded-xl bg-[#f4f4f0] border border-[#d6d6cf] text-xs font-mono font-bold text-[#595952] shrink-0">
-                  {domainPrefix}/
-                </div>
-                <input
-                  type="text"
-                  value={brandedSlug}
-                  onChange={(e) => setBrandedSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                  placeholder="YourBusinessName"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#f7f6f2] border border-[#d6d6cf] text-xs sm:text-sm font-mono font-bold text-[var(--color-obsidian)] placeholder-[#8c8c84] focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Customização do QR Code */}
-            <div className="space-y-3 pt-2 border-t border-[#f0f0ed]">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-[#595952] flex items-center gap-1.5">
-                  <Palette size={14} />
-                  <span>Estilo do QR Code</span>
-                </label>
-                <label className="flex items-center gap-2 text-xs text-[#595952] cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includeLogo}
-                    onChange={(e) => setIncludeLogo(e.target.checked)}
-                    className="rounded text-black accent-black cursor-pointer w-3.5 h-3.5"
-                  />
-                  <span>Logo no centro</span>
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {COLOR_PALETTES.map((palette) => (
-                  <button
-                    key={palette.label}
-                    type="button"
-                    onClick={() => {
-                      triggerHaptic('light');
-                      setSelectedColor(palette);
-                    }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
-                      selectedColor.label === palette.label
-                        ? 'border-[var(--color-obsidian)] bg-[var(--color-obsidian)] text-white shadow-xs'
-                        : 'border-[#d6d6cf] bg-white text-[var(--color-obsidian)] hover:bg-[#f4f4f0]'
-                    }`}
-                  >
-                    <span
-                      className="w-3 h-3 rounded-full border border-neutral-300"
-                      style={{ backgroundColor: palette.dark }}
-                    />
-                    <span>{palette.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Identificador para salvar */}
-            <div className="pt-2 border-t border-[#f0f0ed] flex flex-col sm:flex-row items-center gap-3">
+            {/* 5. IDENTIFICAÇÃO DO LINK */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                Nome / Identificação da Campanha
+              </label>
               <input
                 type="text"
                 value={linkTitle}
                 onChange={(e) => setLinkTitle(e.target.value)}
-                placeholder="Nome do link (ex: Bio do Instagram, Promoção de Outono)"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#f7f6f2] border border-[#d6d6cf] text-xs text-[var(--color-obsidian)] placeholder-[#8c8c84] focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
+                placeholder="Ex: Bio Instagram, Anúncio Promo R$ 80, Flyer Recepção"
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line)',
+                  background: 'var(--admin-input-bg)',
+                  color: 'var(--admin-ink)',
+                  padding: '0 14px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
               />
-              <button
-                type="button"
-                onClick={handleSaveToDashboard}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white text-xs font-semibold shrink-0 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                {savingFeedback ? (
-                  <>
-                    <Check size={14} className="text-emerald-400" />
-                    <span>Salvo no Dashboard!</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={14} />
-                    <span>Salvar Link</span>
-                  </>
-                )}
-              </button>
             </div>
 
-          </div>
-        </div>
-
-        {/* Coluna Direita: Live Preview, Links Gerados & Downloads (5 colunas) */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Card do QR Code & Downloads */}
-          <div className="bg-white rounded-3xl border border-[#d6d6cf] p-6 shadow-xs text-center space-y-4">
-            <div className="flex items-center justify-between border-b border-[#f0f0ed] pb-3 text-left">
-              <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8c8c84]">
-                  Visualização em tempo real
-                </span>
-                <h4 className="text-sm font-bold text-[var(--color-obsidian)] flex items-center gap-1.5">
-                  <QrCodeIcon size={16} className="text-emerald-600" />
-                  <span>Seu QR Code WhatsApp</span>
-                </h4>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#f4f4f0] text-[var(--color-obsidian)] font-bold">
-                Alta Resolução
-              </span>
-            </div>
-
-            {/* Renderizador do Canvas */}
-            <div className="flex justify-center py-2">
-              <div className="p-3 bg-white rounded-2xl border-2 border-[#e8e8e4] shadow-xs inline-block">
-                <canvas ref={canvasRef} width={320} height={320} className="w-52 h-52 sm:w-56 sm:h-56 mx-auto block" />
-              </div>
-            </div>
-
-            <p className="text-[11px] text-[#707068]">
-              Aponte a câmera do celular para testar a abertura instantânea do WhatsApp.
-            </p>
-
-            {/* Botões de Download SVG & PNG */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={handleDownloadPng}
-                className="py-2.5 px-3 rounded-xl bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <Download size={14} />
-                <span>Baixar PNG</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadSvg}
-                className="py-2.5 px-3 rounded-xl bg-[#f4f4f0] hover:bg-[#eaeaec] text-[var(--color-obsidian)] text-xs font-semibold border border-[#d6d6cf] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Download size={14} />
-                <span>Baixar SVG</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Card dos Links Gerados */}
-          <div className="bg-white rounded-3xl border border-[#d6d6cf] p-6 shadow-xs space-y-4">
-            <h4 className="text-sm font-bold text-[var(--color-obsidian)] flex items-center gap-2">
-              <Link2 size={16} className="text-emerald-600" />
-              <span>Links Prontos para Compartilhar</span>
-            </h4>
-
-            {/* Branded Link */}
-            <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[var(--color-obsidian)] flex items-center gap-1">
-                  <Award size={13} className="text-amber-600" />
-                  Branded Short Link
-                </span>
-                <span className="text-[10px] text-[#8c8c84]">Ideal para Instagram & Bio</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={brandedUrl}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-[#d6d6cf] text-xs font-mono font-bold text-[var(--color-obsidian)] truncate"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyBrandedLink}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--color-obsidian)] text-white text-xs font-medium hover:bg-neutral-800 transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
-                >
-                  {copiedBranded ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                  <span>{copiedBranded ? 'Copiado!' : 'Copiar'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Direct wa.me Link */}
-            <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-[var(--color-obsidian)] flex items-center gap-1">
-                  <Zap size={13} className="text-emerald-600" />
-                  Link Direto Oficial (wa.me)
-                </span>
-                <span className="text-[10px] text-[#8c8c84]">Com mensagem pronta</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={directWaUrl}
-                  className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-[#d6d6cf] text-xs font-mono text-[#595952] truncate"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyDirectLink}
-                  className="px-3 py-1.5 rounded-lg bg-white border border-[#d6d6cf] text-[var(--color-obsidian)] text-xs font-medium hover:bg-[#f4f4f0] transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
-                >
-                  {copiedLink ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                  <span>{copiedLink ? 'Copiado!' : 'Copiar'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Testar Link no WhatsApp */}
-            <a
-              href={directWaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+            {/* 6. LINKS GERADOS (SHORTLINK + LINK DIRETO) */}
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '14px',
+                background: 'var(--admin-soft)',
+                border: '1px solid var(--admin-line)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+              }}
             >
-              <MessageCircle size={15} />
-              <span>Testar Abertura no WhatsApp Web</span>
-              <ExternalLink size={13} />
-            </a>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Dashboard de Links Salvos (Keep track of all your links) */}
-      <div className="bg-white rounded-3xl border border-[#d6d6cf] p-6 sm:p-7 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#f0f0ed] pb-4">
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8c8c84]">
-              Dashboard de Links
-            </span>
-            <h3 className="text-base font-bold text-[var(--color-obsidian)] flex items-center gap-2">
-              <TrendingUp size={18} className="text-emerald-600" />
-              <span>Seus Links de WhatsApp Gerados</span>
-            </h3>
-          </div>
-          <span className="text-xs text-[#707068]">
-            {savedLinks.length} link{savedLinks.length === 1 ? '' : 's'} catalogado{savedLinks.length === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        {savedLinks.length === 0 ? (
-          <div className="text-center py-8 text-xs text-[#8c8c84]">
-            Nenhum link salvo ainda. Crie e clique em &quot;Salvar Link&quot; acima para organizar seus links de campanha.
-          </div>
-        ) : (
-          <div className="divide-y divide-[#f0f0ed] overflow-x-auto">
-            {savedLinks.map((link) => (
-              <div key={link.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="space-y-1 max-w-md">
-                  <div className="flex items-center gap-2">
-                    <strong className="text-[var(--color-obsidian)] font-bold text-sm">
-                      {link.title}
-                    </strong>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f4f4f0] text-[#595952] font-semibold">
-                      w.app/{link.brandedSlug}
-                    </span>
-                  </div>
-                  <p className="text-[#707068] text-xs line-clamp-1">
-                    &quot;{link.message}&quot;
-                  </p>
-                  <span className="text-[10px] text-[#8c8c84]">
-                    Criado em {link.createdAt} · Destino: +{link.phone}
+              {/* LINHA 1: SHORTLINK EXCLUSIVO */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--admin-ink)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={12} style={{ color: '#25d366' }} />
+                    Shortlink da Marca (Rastreia Cliques)
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#25d366', fontWeight: 600 }}>
+                    Redirecionamento Instantâneo
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={shortlinkUrl || 'Defina um atalho acima'}
+                    style={{
+                      flex: '1 1 240px',
+                      height: '38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--admin-line)',
+                      background: 'var(--admin-input-bg)',
+                      color: 'var(--admin-ink)',
+                      padding: '0 12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      fontFamily: 'monospace',
+                      outline: 'none',
+                    }}
+                  />
+
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(link.fullUrl);
-                        triggerHaptic('success');
-                        alert('Link direto copiado com sucesso!');
-                      } catch {}
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-[#f4f4f0] hover:bg-[#eaeaec] text-[var(--color-obsidian)] text-xs font-medium border border-[#d6d6cf] transition-colors flex items-center gap-1 cursor-pointer"
+                    onClick={() => copyToClipboard(shortlinkUrl, 'short')}
+                    disabled={!shortlinkUrl}
+                    className="admin-primary"
+                    style={{ height: '38px', minHeight: '38px', padding: '0 16px', fontSize: '12px' }}
                   >
-                    <Copy size={13} />
-                    <span>Copiar</span>
+                    {copiedType === 'short' ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedType === 'short' ? 'Copiado!' : 'Copiar Shortlink'}</span>
                   </button>
 
-                  <a
-                    href={link.fullUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg bg-[#f4f4f0] hover:bg-[#eaeaec] text-[var(--color-obsidian)] text-xs font-medium border border-[#d6d6cf] transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    <ExternalLink size={13} />
-                    <span>Abrir</span>
-                  </a>
+                  {shortlinkUrl && (
+                    <a
+                      href={shortlinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="admin-secondary"
+                      style={{
+                        height: '38px',
+                        minHeight: '38px',
+                        padding: '0 12px',
+                        fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                      title="Testar Shortlink"
+                    >
+                      <ExternalLink size={14} />
+                      <span>Testar</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* LINHA 2: LINK DIRETO WA.ME */}
+              <div style={{ borderTop: '1px solid var(--admin-line)', paddingTop: '12px' }}>
+                <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                  Link Direto Oficial (wa.me)
+                </span>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={directWaUrl || 'Preencha o número para gerar o link'}
+                    style={{
+                      flex: '1 1 240px',
+                      height: '34px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--admin-line)',
+                      background: 'var(--admin-input-bg)',
+                      color: 'var(--admin-muted)',
+                      padding: '0 12px',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                      outline: 'none',
+                    }}
+                  />
 
                   <button
                     type="button"
-                    onClick={() => handleDeleteSavedLink(link.id)}
-                    className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
-                    title="Excluir link"
+                    onClick={() => copyToClipboard(directWaUrl, 'direct')}
+                    disabled={!directWaUrl}
+                    className="admin-secondary"
+                    style={{ height: '34px', minHeight: '34px', padding: '0 12px', fontSize: '11px' }}
                   >
-                    <Trash2 size={15} />
+                    {copiedType === 'direct' ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{copiedType === 'direct' ? 'Copiado' : 'Copiar'}</span>
                   </button>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* BOTÃO DE SALVAR NO BANCO */}
+            <div>
+              <button
+                type="button"
+                onClick={handleSaveShortLink}
+                disabled={isSaving || !cleanSlug || !directWaUrl}
+                className="admin-primary"
+                style={{ width: '100%', height: '42px', minHeight: '42px', fontSize: '13px', justifyContent: 'center' }}
+              >
+                {isSaving ? (
+                  <>
+                    <RotateCcw size={15} className="animate-spin" />
+                    <span>Salvando Shortlink...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={15} />
+                    <span>Criar e Ativar Shortlink (/w/{cleanSlug || '...'})</span>
+                  </>
+                )}
+              </button>
+
+              {saveStatus && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    background: saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    color: saveStatus.type === 'success' ? '#15803d' : '#b91c1c',
+                    border: `1px solid ${saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {saveStatus.type === 'success' ? <Check size={14} /> : null}
+                  <span>{saveStatus.message}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* CARD 2: PREVIEW DO QR CODE */}
+        <section
+          className="admin-panel"
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+        >
+          <div className="admin-panel-head" style={{ width: '100%', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: '#25d366', display: 'flex' }}>
+                <QrCodeIcon size={20} />
+              </span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="admin-kicker">QR CODE PROFISSIONAL</p>
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-body), sans-serif',
+                    fontSize: '17px',
+                    fontWeight: 600,
+                    margin: 0,
+                    textTransform: 'none',
+                    letterSpacing: 'normal',
+                  }}
+                >
+                  QR Code da Campanha
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Seleção do Destino do QR Code */}
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              padding: '4px',
+              borderRadius: '10px',
+              background: 'var(--admin-soft)',
+              border: '1px solid var(--admin-line)',
+              marginBottom: '14px',
+              gap: '4px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setQrTargetMode('shortlink')}
+              style={{
+                flex: 1,
+                height: '32px',
+                borderRadius: '8px',
+                border: 'none',
+                background: qrTargetMode === 'shortlink' ? 'var(--admin-card)' : 'transparent',
+                color: 'var(--admin-ink)',
+                fontSize: '11px',
+                fontWeight: qrTargetMode === 'shortlink' ? 600 : 400,
+                boxShadow: qrTargetMode === 'shortlink' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Shortlink (Rastreado)
+            </button>
+            <button
+              type="button"
+              onClick={() => setQrTargetMode('direct')}
+              style={{
+                flex: 1,
+                height: '32px',
+                borderRadius: '8px',
+                border: 'none',
+                background: qrTargetMode === 'direct' ? 'var(--admin-card)' : 'transparent',
+                color: 'var(--admin-ink)',
+                fontSize: '11px',
+                fontWeight: qrTargetMode === 'direct' ? 600 : 400,
+                boxShadow: qrTargetMode === 'direct' ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Link Direto (wa.me)
+            </button>
+          </div>
+
+          {/* Canvas do QR Code */}
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: '16px',
+              background: '#ffffff',
+              border: '1px solid var(--admin-line)',
+              display: 'inline-block',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
+              marginBottom: '16px',
+            }}
+          >
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt="QR Code WhatsApp"
+                width={200}
+                height={200}
+                style={{ display: 'block', width: '200px', height: '200px' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: '#888',
+                  fontSize: '12px',
+                }}
+              >
+                Gerando QR Code...
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Seletor de Cores */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {QR_COLORS.map((color) => (
+                <button
+                  key={color.label}
+                  type="button"
+                  onClick={() => setSelectedColor(color)}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '11px',
+                    borderRadius: '999px',
+                    border: `1px solid ${selectedColor.label === color.label ? 'var(--admin-ink)' : 'var(--admin-line)'}`,
+                    background: selectedColor.label === color.label ? 'var(--admin-soft)' : 'transparent',
+                    color: 'var(--admin-ink)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: color.dark }} />
+                  <span>{color.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                fontSize: '12px',
+                color: 'var(--admin-ink)',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={includeLogo}
+                onChange={(e) => setIncludeLogo(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Incluir emblema Lara Varisa no centro</span>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleDownloadQr}
+              disabled={!qrDataUrl}
+              className="admin-secondary"
+              style={{ width: '100%', height: '38px', minHeight: '38px', fontSize: '12px', marginTop: '4px' }}
+            >
+              <Download size={14} />
+              <span>Baixar Imagem do QR Code (PNG)</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      {/* CARD 3: CATÁLOGO DE SHORTLINKS SALVOS NO BANCO DE DADOS */}
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <div>
+            <p className="admin-kicker">CATÁLOGO DE SHORTLINKS & CAMPANHAS</p>
+            <h2
+              style={{
+                fontFamily: 'var(--font-body), sans-serif',
+                fontSize: '17px',
+                fontWeight: 600,
+                margin: 0,
+                textTransform: 'none',
+                letterSpacing: 'normal',
+              }}
+            >
+              Shortlinks Criados do Estúdio ({shortLinks.length})
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => loadShortLinks()}
+            className="admin-secondary"
+            style={{ height: '32px', minHeight: '32px', padding: '0 12px', fontSize: '11px' }}
+            title="Atualizar métricas de cliques"
+          >
+            <RotateCcw size={12} className={isLoadingLinks ? 'animate-spin' : ''} />
+            <span>Atualizar Métricas</span>
+          </button>
+        </div>
+
+        {shortLinks.length === 0 ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--admin-muted)', fontSize: '13px' }}>
+            {isLoadingLinks
+              ? 'Carregando shortlinks...'
+              : 'Nenhum shortlink cadastrado ainda. Use o gerador acima para criar links como "/w/promo80" ou "/w/bio" para suas campanhas.'}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr
+                  style={{
+                    borderBottom: '1px solid var(--admin-line)',
+                    textAlign: 'left',
+                    color: 'var(--admin-muted)',
+                    fontSize: '11px',
+                  }}
+                >
+                  <th style={{ padding: '10px 14px' }}>CAMPANHA & SHORTLINK</th>
+                  <th style={{ padding: '10px 14px' }}>CLIQUES RASTREADOS</th>
+                  <th style={{ padding: '10px 14px' }}>MENSAGEM PREVISTA</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'right' }}>AÇÕES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shortLinks.map((item) => {
+                  const itemUrl = `${siteOrigin}/w/${item.slug}`;
+                  const isCopied = copiedType === item.id;
+                  return (
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--admin-line)' }}>
+                      {/* Campanha & Slug */}
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--admin-ink)' }}>{item.title}</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontSize: '12px',
+                                color: '#25d366',
+                                background: 'var(--admin-soft)',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                border: '1px solid var(--admin-line)',
+                              }}
+                            >
+                              /w/{item.slug}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(itemUrl, item.id)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                color: 'var(--admin-muted)',
+                                padding: '2px',
+                                display: 'flex',
+                              }}
+                              title="Copiar URL completa"
+                            >
+                              {isCopied ? <Check size={13} style={{ color: '#25d366' }} /> : <Copy size={13} />}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Cliques & Estatísticas */}
+                      <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              color: item.clicks_count > 0 ? 'var(--admin-ink)' : 'var(--admin-muted)',
+                            }}
+                          >
+                            {item.clicks_count > 0 ? `🔥 ${item.clicks_count} cliques` : '0 cliques'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>
+                            {item.last_clicked_at
+                              ? `Último: ${new Date(item.last_clicked_at).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}`
+                              : 'Aguardando cliques'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Mensagem / Destino */}
+                      <td
+                        style={{
+                          padding: '12px 14px',
+                          color: 'var(--admin-muted)',
+                          maxWidth: '260px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: '12px',
+                        }}
+                      >
+                        {item.message || '(Sem mensagem configurada)'}
+                      </td>
+
+                      {/* Ações */}
+                      <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(itemUrl, item.id)}
+                            className="admin-secondary"
+                            style={{ height: '30px', minHeight: '30px', padding: '0 10px', fontSize: '11px' }}
+                            title="Copiar shortlink completo"
+                          >
+                            {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                            <span>{isCopied ? 'Copiado!' : 'Copiar'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setSlug(item.slug);
+                              setLinkTitle(item.title);
+                              if (item.message) setMessage(item.message);
+                              if (item.phone) {
+                                const raw = item.phone.replace(/\D/g, '');
+                                setPhone(raw.startsWith('55') ? raw.slice(2) : raw);
+                              }
+                              setQrTargetMode('shortlink');
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="admin-secondary"
+                            style={{ height: '30px', minHeight: '30px', padding: '0 8px', fontSize: '11px' }}
+                            title="Carregar no Gerador de QR Code"
+                          >
+                            <QrCodeIcon size={12} />
+                          </button>
+
+                          <a
+                            href={itemUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="admin-secondary"
+                            style={{
+                              height: '30px',
+                              minHeight: '30px',
+                              padding: '0 8px',
+                              fontSize: '11px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                            }}
+                            title="Testar Shortlink no WhatsApp"
+                          >
+                            <ExternalLink size={12} />
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteShortLink(item.id, item.slug)}
+                            className="admin-secondary"
+                            style={{
+                              height: '30px',
+                              minHeight: '30px',
+                              padding: '0 8px',
+                              fontSize: '11px',
+                              color: '#b91c1c',
+                            }}
+                            title="Excluir Shortlink"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
-
-      {/* Guia Educativo: The Power of Branding (Key Benefits) */}
-      <div className="bg-[#fafaf8] rounded-3xl border border-[#e8e8e4] p-6 sm:p-8 space-y-5">
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8c8c84]">
-            Boas Práticas de Conversão
-          </span>
-          <h3 className="text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
-            The Power of Branding: Principais Vantagens do Link Personalizado
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-white border border-[#e2e2df] space-y-2">
-            <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
-              <Award size={16} />
-            </div>
-            <h4 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">
-              Enhanced Brand Recognition
-            </h4>
-            <p className="text-xs text-[#595952] leading-relaxed">
-              Cada vez que seu link é compartilhado, sua marca vai junto. Isso eleva a presença do estúdio e fixa seu nome na mente da cliente.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-[#e2e2df] space-y-2">
-            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs">
-              <ShieldCheck size={16} />
-            </div>
-            <h4 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">
-              Increased Trust & Segurança
-            </h4>
-            <p className="text-xs text-[#595952] leading-relaxed">
-              Clientes sentem total confiança ao clicar em links reconhecíveis e verificados, garantindo que estão conversando diretamente com a Lara.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-[#e2e2df] space-y-2">
-            <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs">
-              <TrendingUp size={16} />
-            </div>
-            <h4 className="text-xs sm:text-sm font-bold text-[var(--color-obsidian)]">
-              Higher Engagement Rates
-            </h4>
-            <p className="text-xs text-[#595952] leading-relaxed">
-              Com mensagens pré-preenchidas e claras, a barreira de envio cai em mais de 40%, convertendo visitantes em agendamentos reais.
-            </p>
-          </div>
-        </div>
-      </div>
-
+      </section>
     </div>
   );
 }
