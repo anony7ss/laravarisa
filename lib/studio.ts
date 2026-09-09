@@ -21,7 +21,7 @@ export const studio = {
   city: 'Porto Alegre, RS — Endereço completo enviado no agendamento',
   hours: 'Segunda a sábado · com agendamento',
   mapEmbedUrl:
-    'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS',
+    'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed',
   directionsUrl:
     'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS',
 };

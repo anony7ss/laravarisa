@@ -125,36 +125,23 @@ export function DateTimePicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between pb-0.5 px-1">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
-            Escolha o Dia & Horário
-          </h2>
-          <p className="text-xs text-[#707068]">
-            Selecione uma data para ver os horários disponíveis
-          </p>
-        </div>
-        <span className="text-[11px] text-[#8c8c84] font-medium bg-white px-2.5 py-1 rounded-full border border-[#d6d6cf] shrink-0">
-          Seg a Sáb · 09h às 19h
-        </span>
+      <div className="px-1">
+        <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
+          Data & Horário
+        </h2>
       </div>
 
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-4 sm:space-y-5">
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-4">
         {/* Month & Year header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
-            <CalendarDays size={16} className="text-[var(--color-ember)] shrink-0" />
-            <span className="capitalize">
-              {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
-            </span>
-          </div>
-          <span className="text-[11px] sm:text-xs text-[#7a7a72] text-right">
-            09h às 19h
+        <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
+          <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
+          <span className="capitalize">
+            {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
           </span>
         </div>
 
         {/* Horizontal Days Selector */}
-        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
             const disabled = item.isSunday;
@@ -173,63 +160,63 @@ export function DateTimePicker({
                   color: isSelected ? '#ffffff' : '#070607',
                   borderColor: isSelected ? '#070607' : '#e8e8e4',
                 }}
-                className={`flex-shrink-0 w-14 sm:w-16 py-3 rounded-2xl text-center transition-all cursor-pointer border flex flex-col items-center justify-between ${
+                className={`flex-shrink-0 w-13 sm:w-14 py-2.5 rounded-2xl text-center transition-all cursor-pointer border flex flex-col items-center justify-center gap-0.5 ${
                   disabled
-                    ? 'opacity-30 cursor-not-allowed border-transparent'
+                    ? 'opacity-25 cursor-not-allowed border-transparent'
                     : isSelected
                     ? 'shadow-sm scale-[1.02]'
                     : 'hover:bg-white hover:border-[#b5b5ac] active:scale-95'
                 }`}
               >
                 <span
-                  className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider"
-                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#7a7a72' }}
+                  className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#8c8c84' }}
                 >
                   {item.weekDayShort}
                 </span>
                 <span
-                  className="text-xl font-bold font-[family-name:var(--font-display)] my-0.5"
+                  className="text-lg sm:text-xl font-bold font-[family-name:var(--font-display)] leading-none"
                   style={{ color: isSelected ? '#ffffff' : '#070607' }}
                 >
                   {item.dayNum}
                 </span>
-                <span
-                  className="text-[10px]"
-                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#8c8c84' }}
-                >
-                  {item.isToday ? 'Hoje' : item.isSunday ? 'Fech.' : 'Livre'}
-                </span>
+                {item.isToday && (
+                  <span
+                    className="w-1 h-1 rounded-full mt-0.5"
+                    style={{ backgroundColor: isSelected ? '#ffffff' : 'var(--color-ember)' }}
+                  />
+                )}
               </button>
             );
           })}
         </div>
 
         {/* Time Slots Area */}
-        <div className="pt-4 border-t border-[#f0f0ed] space-y-3">
+        <div className="pt-3 border-t border-[#f0f0ed] space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#7a7a72]">
-              Horários Livres
+            <span className="text-xs font-semibold text-[#7a7a72]">
+              Horários disponíveis
             </span>
             {slots.length > 0 && (
-              <span className="text-xs text-[#7a7a72] whitespace-nowrap">
-                {slots.length} opções disponíveis
+              <span className="text-[11px] text-[#8c8c84]">
+                {slots.length} opções
               </span>
             )}
           </div>
 
           {loadingSlots ? (
-            <div className="py-8 flex items-center justify-center gap-2 text-xs text-[#7a7a72]">
-              <Loader2 size={16} className="animate-spin text-[var(--color-obsidian)]" />
-              <span>Verificando horários disponíveis...</span>
+            <div className="py-6 flex items-center justify-center gap-2 text-xs text-[#7a7a72]">
+              <Loader2 size={15} className="animate-spin text-[var(--color-obsidian)]" />
+              <span>Buscando horários...</span>
             </div>
           ) : slotError ? (
-            <div className="py-6 px-4 text-center rounded-2xl bg-[#f7f6f2] border border-[#e2e2df] text-xs text-[#595952] flex items-center justify-center gap-2">
-              <AlertCircle size={16} className="text-[var(--color-ember)] shrink-0" />
+            <div className="py-5 px-4 text-center rounded-2xl bg-[#f7f6f2] border border-[#e2e2df] text-xs text-[#595952] flex items-center justify-center gap-2">
+              <AlertCircle size={15} className="text-[var(--color-ember)] shrink-0" />
               <span>{slotError}</span>
             </div>
           ) : slots.length === 0 ? (
-            <p className="py-6 text-center text-xs text-[#7a7a72]">
-              Selecione um dia acima para visualizar os horários.
+            <p className="py-5 text-center text-xs text-[#7a7a72]">
+              Selecione uma data acima.
             </p>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">

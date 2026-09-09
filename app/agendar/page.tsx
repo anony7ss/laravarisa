@@ -738,7 +738,7 @@ export default function AgendarPage() {
                               }}
                               className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] cursor-pointer"
                             >
-                              <span>Continuar com horário {selectedSlot.time}</span>
+                              <span>Avançar · {selectedSlot.time}</span>
                               <ArrowRight size={16} />
                             </button>
                           </div>
@@ -764,7 +764,7 @@ export default function AgendarPage() {
                             onClick={() => setBookingStep(2)}
                             className="text-[11px] font-semibold text-[#8c8c84] hover:text-[var(--color-obsidian)] underline cursor-pointer"
                           >
-                            Alterar horário
+                            Alterar
                           </button>
                         </div>
 
@@ -784,23 +784,23 @@ export default function AgendarPage() {
                           type="button"
                           disabled={submitting}
                           onClick={handleSubmitBooking}
-                          className="w-full py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm sm:text-base tracking-wider flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer uppercase"
+                          className="w-full py-3.5 sm:py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
                         >
                           {submitting ? (
                             <>
-                              <Loader2 size={18} className="animate-spin text-white" />
-                              <span>Confirmando seu agendamento...</span>
+                              <Loader2 size={17} className="animate-spin text-white" />
+                              <span>Confirmando...</span>
                             </>
                           ) : (
                             <>
-                              <span>CONFIRMAR AGENDAMENTO · R$ 80</span>
-                              <ArrowUpRight size={18} />
+                              <span>Confirmar Agendamento · R$ 80</span>
+                              <ArrowUpRight size={17} />
                             </>
                           )}
                         </button>
 
-                        <p className="text-center text-[11px] text-[#8c8c84]">
-                          Valor de R$ 80 exclusivo para sua primeira aplicação. Pagamento no dia do atendimento.
+                        <p className="text-center text-[11px] text-[#8c8c84] m-0">
+                          R$ 80 exclusivo na 1ª sessão · Pagamento no local
                         </p>
                       </div>
                     )}
@@ -1141,31 +1141,69 @@ export default function AgendarPage() {
                 {siteSettings?.studio_city || 'Zona Norte de Porto Alegre, RS.'} O endereço exato com ponto de referência é enviado automaticamente na confirmação do agendamento por segurança e exclusividade.
               </p>
 
-              <div className="w-full h-44 rounded-2xl overflow-hidden border border-[#d6d6cf]">
+              <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-[#d6d6cf] bg-[#f0f0ec] shadow-inner">
                 <iframe
-                  src={siteSettings?.studio_map_url || 'https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'}
+                  src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
                   width="100%"
                   height="100%"
-                  style={{ border: 0 }}
+                  style={{
+                    border: 0,
+                    filter: 'grayscale(75%) contrast(1.08) brightness(0.97)',
+                  }}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                   title="Localização do Estúdio"
                 />
-              </div>
 
-              {siteSettings?.studio_directions_url && (
-                <div className="pt-1">
+                {/* MARCADOR DE LUXO DO ESTÚDIO */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="flex flex-col items-center -mt-4">
+                    <div className="relative flex items-center justify-center">
+                      <div className="absolute w-10 h-10 rounded-full bg-[var(--color-ember)]/30 animate-ping" />
+                      <div className="w-9 h-9 rounded-full bg-[var(--color-obsidian)] text-white shadow-xl border-2 border-white flex items-center justify-center relative z-10">
+                        <MapPin size={17} className="text-[var(--color-ember)]" />
+                      </div>
+                    </div>
+                    <div className="mt-1.5 px-3 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#d6d6cf] shadow-md text-center">
+                      <span className="text-[11px] font-bold text-[var(--color-obsidian)] block leading-none">
+                        Lara Varisa Studio
+                      </span>
+                      <span className="text-[9px] text-[#707068] block mt-0.5">
+                        Zona Norte · Porto Alegre
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOTÃO FLUTUANTE MAPS */}
+                <div className="absolute bottom-2.5 right-2.5 z-10">
                   <a
-                    href={siteSettings.studio_directions_url}
+                    href={siteSettings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-2.5 px-4 rounded-xl bg-[var(--color-limestone)] text-xs font-semibold text-[var(--color-obsidian)] flex items-center justify-center gap-1.5 border border-[#d6d6cf] hover:border-[var(--color-obsidian)] transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-[var(--color-obsidian)] border border-[#d6d6cf] shadow-sm text-xs font-semibold backdrop-blur-sm transition-all hover:shadow-md cursor-pointer"
                   >
-                    <span>Como chegar no Google Maps</span>
-                    <ExternalLink size={13} />
+                    <span>Abrir Google Maps</span>
+                    <ExternalLink size={12} className="text-[#8c8c84]" />
                   </a>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-[#707068]">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Região segura com fácil acesso e estacionamento
+                </span>
+                <a
+                  href={siteSettings?.studio_directions_url || 'https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[var(--color-obsidian)] hover:text-[var(--color-ember)] underline flex items-center gap-1 shrink-0"
+                >
+                  <span>Ver rota</span>
+                  <ExternalLink size={11} />
+                </a>
+              </div>
             </div>
 
             <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
