@@ -827,11 +827,11 @@ function AgendarContent() {
                       )}
                     </div>
 
-                    {/* DESKTOP VIEW (lg+): LAYOUT SPLIT PROFISSIONAL EM 2 COLUNAS */}
+                    {/* DESKTOP VIEW (lg+): LAYOUT SPLIT PROFISSIONAL EM 2 COLUNAS COESAS */}
                     <div className="hidden lg:grid lg:grid-cols-12 lg:gap-8 items-start">
-                      {/* COLUNA ESQUERDA: Procedimento e Seletor de Data & Horário */}
-                      <div className="lg:col-span-7 space-y-5">
-                        <div className="bg-white px-5 py-4 rounded-3xl border border-[#d6d6cf] shadow-sm flex items-center justify-between gap-4">
+                      {/* COLUNA ESQUERDA: Procedimento e Seletor de Data & Horário em Card Único */}
+                      <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-5">
+                        <div className="flex items-center justify-between gap-4 border-b border-[#f0f0ed] pb-4">
                           <div className="flex items-center gap-3.5 min-w-0">
                             <button
                               type="button"
@@ -887,14 +887,16 @@ function AgendarContent() {
                             setSelectedSlot(slot);
                           }}
                           durationMinutes={selectedService.durationMinutes || 120}
+                          hideHeader={true}
+                          plainContainer={true}
                         />
                       </div>
 
-                      {/* COLUNA DIREITA: Resumo Fixo e Formulário do Cliente */}
-                      <div className="lg:col-span-5 sticky top-20 space-y-4">
-                        <div className="bg-white p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-5">
-                          <div className="border-b border-[#f0f0ed] pb-3.5">
-                            <h3 className="text-base font-bold text-[var(--color-obsidian)]">
+                      {/* COLUNA DIREITA: Resumo Fixo e Formulário do Cliente em Card Único */}
+                      <div className="lg:col-span-5 sticky top-20">
+                        <div className="bg-white p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-4">
+                          <div className="border-b border-[#f0f0ed] pb-3">
+                            <h3 className="text-base font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-body)]">
                               Resumo do Agendamento
                             </h3>
                             <p className="text-xs text-[#707068] mt-0.5">
@@ -903,7 +905,7 @@ function AgendarContent() {
                           </div>
 
                           {/* Status de Data e Horário */}
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             <span className="text-xs font-semibold uppercase tracking-wider text-[#8c8c84] block">
                               Data & Horário
                             </span>
@@ -924,15 +926,15 @@ function AgendarContent() {
                                 </span>
                               </div>
                             ) : (
-                              <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center gap-2.5 text-xs text-amber-800">
-                                <Clock3 size={16} className="shrink-0 text-amber-600" />
+                              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center gap-2 text-xs text-amber-800">
+                                <Clock3 size={15} className="shrink-0 text-amber-600" />
                                 <span>Selecione uma data e horário ao lado para continuar.</span>
                               </div>
                             )}
                           </div>
 
                           {/* Destaque de Valor Promocional */}
-                          <div className="p-4 rounded-2xl bg-[var(--color-limestone)] border border-[#e2e2df] flex items-center justify-between">
+                          <div className="p-3.5 rounded-2xl bg-[var(--color-limestone)] border border-[#e2e2df] flex items-center justify-between">
                             <div>
                               <span className="text-[11px] text-[#8c8c84] uppercase tracking-wider block font-semibold">
                                 Total do Procedimento
@@ -945,22 +947,27 @@ function AgendarContent() {
                               <span className="text-xs text-[#a0a098] line-through block leading-none">
                                 {selectedService.price}
                               </span>
-                              <span className="text-2xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-1">
+                              <span className="text-xl font-bold text-[var(--color-obsidian)] font-[family-name:var(--font-display)] block leading-none mt-1">
                                 R$ 80,00
                               </span>
                             </div>
                           </div>
 
-                          {/* Formulário do Cliente */}
-                          <div className="border-t border-[#f0f0ed] pt-2">
+                          {/* Formulário do Cliente Integrado */}
+                          <div className="border-t border-[#f0f0ed] pt-3">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[#8c8c84] block mb-2">
+                              Seus Dados
+                            </span>
                             <ClientForm
                               formData={clientData}
                               onChange={setClientData}
+                              hideHeader={true}
+                              plainContainer={true}
                             />
                           </div>
 
                           {submitError && (
-                            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
                               <AlertCircle size={16} className="shrink-0 text-rose-500" />
                               <span>{submitError}</span>
                             </div>
@@ -971,11 +978,11 @@ function AgendarContent() {
                             type="button"
                             disabled={submitting || !selectedSlot}
                             onClick={handleSubmitBooking}
-                            className="w-full py-4 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            className="w-full py-3.5 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                           >
                             {submitting ? (
                               <>
-                                <Loader2 size={18} className="animate-spin text-white" />
+                                <Loader2 size={16} className="animate-spin text-white" />
                                 <span>Confirmando...</span>
                               </>
                             ) : !selectedSlot ? (
@@ -983,7 +990,7 @@ function AgendarContent() {
                             ) : (
                               <>
                                 <span>Confirmar Agendamento · R$ 80</span>
-                                <ArrowUpRight size={18} />
+                                <ArrowUpRight size={16} />
                               </>
                             )}
                           </button>

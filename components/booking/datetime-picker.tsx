@@ -37,12 +37,16 @@ export function DateTimePicker({
   selectedSlot,
   onSelectDate,
   onSelectSlot,
+  hideHeader = false,
+  plainContainer = false,
 }: {
   durationMinutes?: number;
   selectedDateStr: string;
   selectedSlot: TimeSlot | null;
   onSelectDate: (dateStr: string) => void;
   onSelectSlot: (slot: TimeSlot) => void;
+  hideHeader?: boolean;
+  plainContainer?: boolean;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -123,22 +127,15 @@ export function DateTimePicker({
     };
   }, [selectedDateStr, durationMinutes, availableDays]);
 
-  return (
-    <div className="space-y-3">
-      <div className="px-1">
-        <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
-          Data & Horário
-        </h2>
+  const pickerContent = (
+    <div className="space-y-4">
+      {/* Month & Year header */}
+      <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
+        <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
+        <span className="capitalize">
+          {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
+        </span>
       </div>
-
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-4">
-        {/* Month & Year header */}
-        <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-[var(--color-obsidian)]">
-          <CalendarDays size={15} className="text-[var(--color-ember)] shrink-0" />
-          <span className="capitalize">
-            {monthsPt[selectedDateObj.getMonth()]} {selectedDateObj.getFullYear()}
-          </span>
-        </div>
 
         {/* Horizontal Days Selector */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
@@ -248,7 +245,38 @@ export function DateTimePicker({
             </div>
           )}
         </div>
+    </div>
+  );
+
+  if (plainContainer) {
+    return (
+      <div className="space-y-3">
+        {!hideHeader && (
+          <div className="px-1">
+            <h3 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight font-[family-name:var(--font-body)]">
+              Data & Horário
+            </h3>
+          </div>
+        )}
+        {pickerContent}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {!hideHeader && (
+        <div className="px-1">
+          <h3 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight font-[family-name:var(--font-body)]">
+            Data & Horário
+          </h3>
+        </div>
+      )}
+
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm">
+        {pickerContent}
       </div>
     </div>
   );
 }
+

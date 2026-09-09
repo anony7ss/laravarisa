@@ -26,9 +26,13 @@ export function formatBrPhone(value: string): string {
 export function ClientForm({
   formData,
   onChange,
+  hideHeader = false,
+  plainContainer = false,
 }: {
   formData: ClientFormData;
   onChange: (data: ClientFormData) => void;
+  hideHeader?: boolean;
+  plainContainer?: boolean;
 }) {
   function handlePhoneChange(e: ChangeEvent<HTMLInputElement>) {
     const formatted = formatBrPhone(e.target.value);
@@ -37,16 +41,9 @@ export function ClientForm({
 
   const isAccepted = formData.termsAccepted ?? true;
 
-  return (
-    <div className="space-y-3 w-full max-w-full overflow-hidden">
-      <div className="px-1">
-        <h2 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight">
-          Seus Dados
-        </h2>
-      </div>
-
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3.5 w-full max-w-full overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
+  const content = (
+    <div className="space-y-3.5 w-full max-w-full overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
           {/* Name */}
           <div className="w-full min-w-0">
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952] mb-1.5">
@@ -115,7 +112,38 @@ export function ClientForm({
             </span>
           </label>
         </div>
+    </div>
+  );
+
+  if (plainContainer) {
+    return (
+      <div className="space-y-3 w-full max-w-full overflow-hidden">
+        {!hideHeader && (
+          <div className="px-1">
+            <h3 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight font-[family-name:var(--font-body)]">
+              Seus Dados
+            </h3>
+          </div>
+        )}
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 w-full max-w-full overflow-hidden">
+      {!hideHeader && (
+        <div className="px-1">
+          <h3 className="text-base sm:text-lg font-bold text-[var(--color-obsidian)] tracking-tight font-[family-name:var(--font-body)]">
+            Seus Dados
+          </h3>
+        </div>
+      )}
+
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#d6d6cf] shadow-sm w-full max-w-full overflow-hidden">
+        {content}
       </div>
     </div>
   );
 }
+
