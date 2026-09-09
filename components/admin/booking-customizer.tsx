@@ -35,6 +35,26 @@ import { triggerHaptic } from '@/lib/utils';
 import { services as defaultFallbackServices, type LashService } from '@/lib/services';
 import { galleryPhotos as fallbackGalleryPhotos } from '@/lib/gallery';
 
+function InstagramIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  );
+}
+
 export interface BookingCustomizerProps {
   settings: Record<string, any>;
   disabled?: boolean;
@@ -1438,24 +1458,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                         {/* PASSO 1: ESCOLHA DO SERVIÇO */}
                         {simStep === 1 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {/* Card de Garantia */}
-                            <div
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: '12px',
-                                background: cardBg,
-                                border: `1px solid ${borderColor}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                              }}
-                            >
-                              <ShieldCheck size={16} style={{ color: accentColor, flexShrink: 0 }} />
-                              <span style={{ fontSize: '11px', lineHeight: 1.35, color: textColor }}>
-                                {guaranteeText}
-                              </span>
-                            </div>
-
                             {/* Categorias */}
                             <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
                               {['all', 'alongamento', 'manutencao', 'natural'].map((cat) => {
@@ -1490,7 +1492,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                             </div>
 
                             {/* Lista de Serviços */}
-                            <div style={{ display: 'grid', gridTemplateColumns: previewMode === 'desktop' ? 'repeat(2, 1fr)' : '1fr', gap: '10px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: previewMode === 'desktop' ? 'repeat(2, 1fr)' : '1fr', gap: '10px', paddingBottom: '80px' }}>
                               {filteredServices.slice(0, 6).map((service) => {
                                 const isSelected = simSelectedService?.id === service.id;
                                 return (
@@ -1529,7 +1531,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
 
                                       <span
                                         style={{
-                                          fontFamily: `var(--font-heading, '${fontHeading}'), sans-serif`,
                                           fontSize: '15px',
                                           fontWeight: 700,
                                           color: primaryColor,
@@ -1573,51 +1574,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                                 );
                               })}
                             </div>
-
-                            {/* Barra Flutuante de Seleção */}
-                            {simSelectedService && (
-                              <div
-                                style={{
-                                  position: 'sticky',
-                                  bottom: '10px',
-                                  padding: '10px 14px',
-                                  borderRadius: '12px',
-                                  background: primaryColor,
-                                  color: '#ffffff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                                  marginTop: 'auto',
-                                }}
-                              >
-                                <div>
-                                  <span style={{ fontSize: '12px', fontWeight: 600, display: 'block' }}>
-                                    {simSelectedService.name}
-                                  </span>
-                                  <span style={{ fontSize: '11px', opacity: 0.85 }}>
-                                    {simSelectedService.price} • {simSelectedService.duration}
-                                  </span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setSimStep(2)}
-                                  style={{
-                                    padding: '7px 14px',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: accentColor,
-                                    color: '#ffffff',
-                                    fontWeight: 700,
-                                    fontSize: '11.5px',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Continuar ➜
-                                </button>
-                              </div>
-                            )}
                           </div>
                         )}
 
@@ -1664,12 +1620,18 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                               <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', display: 'block', color: primaryColor }}>
                                 1. Selecione a Data
                               </label>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
                                 {[
                                   { day: 'Hoje', date: 'Quarta', available: false },
                                   { day: 'Amanhã', date: 'Quinta', available: true },
                                   { day: '11/Set', date: 'Sexta', available: true },
                                   { day: '12/Set', date: 'Sábado', available: true },
+                                  { day: '14/Set', date: 'Segunda', available: true },
+                                  { day: '15/Set', date: 'Terça', available: true },
+                                  { day: '16/Set', date: 'Quarta', available: true },
+                                  { day: '17/Set', date: 'Quinta', available: true },
+                                  { day: '18/Set', date: 'Sexta', available: true },
+                                  { day: '19/Set', date: 'Sábado', available: true },
                                 ].map((d) => {
                                   const isSelected = simSelectedDate === d.day;
                                   return (
@@ -1677,6 +1639,8 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                                       key={d.day}
                                       onClick={() => d.available && setSimSelectedDate(d.day)}
                                       style={{
+                                        minWidth: '70px',
+                                        flexShrink: 0,
                                         padding: '8px 6px',
                                         borderRadius: '10px',
                                         textAlign: 'center',
@@ -2045,10 +2009,115 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                           <p style={{ margin: 0, opacity: 0.85 }}>Segunda a Sábado: 08:30 às 19:30</p>
                           <p style={{ margin: '2px 0 0 0', opacity: 0.85 }}>Domingos: Fechado</p>
                         </div>
+
+                        {/* 3º Card: Canais & Redes Sociais */}
+                        <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span style={{ fontWeight: 700, color: primaryColor, display: 'block' }}>Canais & Redes Sociais</span>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', border: `1px solid ${borderColor}`, background: `${borderColor}20`, color: primaryColor, fontSize: '10.5px' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ width: '20px', height: '20px', borderRadius: '6px', background: primaryColor, color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <InstagramIcon size={12} />
+                                </span>
+                                @laravarisa.lashes
+                              </span>
+                              <ExternalLink size={10} style={{ opacity: 0.6 }} />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 9px', borderRadius: '8px', border: `1px solid ${borderColor}`, background: `${borderColor}20`, color: primaryColor, fontSize: '10.5px' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ width: '20px', height: '20px', borderRadius: '6px', background: primaryColor, color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <MapPin size={11} />
+                                </span>
+                                Google Maps
+                              </span>
+                              <ExternalLink size={10} style={{ opacity: 0.6 }} />
+                            </div>
+                          </div>
+
+                          {/* Mapa Google Maps Moderno e Bonito no Simulador */}
+                          <div style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${borderColor}`, marginTop: '4px' }}>
+                            <iframe
+                              src="https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed"
+                              width="100%"
+                              height="100%"
+                              style={{
+                                border: 0,
+                                filter: 'grayscale(20%) contrast(1.04) brightness(0.98)',
+                              }}
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              title="Mapa do Estúdio"
+                            />
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', pointerEvents: 'none' }}>
+                              <div style={{ padding: '4px 8px', borderRadius: '8px', background: `${cardBg}f0`, border: `1px solid ${borderColor}`, color: primaryColor, fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                                <span style={{ width: '14px', height: '14px', borderRadius: '4px', background: primaryColor, color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <MapPin size={8} />
+                                </span>
+                                <span>Lara Varisa Studio</span>
+                              </div>
+                            </div>
+                            <div style={{ position: 'absolute', bottom: '8px', right: '8px', padding: '4px 8px', borderRadius: '8px', background: primaryColor, color: '#ffffff', fontSize: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
+                              <span>Abrir no Maps</span>
+                              <ExternalLink size={9} />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* BARRA FLUTUANTE FIXA NO DISPOSITIVO (visível sempre: lá em cima ou descendo) */}
+                {simTab === 'agendar' && simStep === 1 && simSelectedService && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      left: '12px',
+                      right: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '14px',
+                      background: primaryColor,
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+                      border: `1px solid ${borderColor}40`,
+                      zIndex: 50,
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '12.5px', fontWeight: 700, display: 'block', color: '#ffffff' }}>
+                        {simSelectedService.name}
+                      </span>
+                      <span style={{ fontSize: '11px', opacity: 0.85, color: '#d4d4cc' }}>
+                        {simSelectedService.price} • {simSelectedService.duration}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSimStep(2)}
+                      style={{
+                        padding: '7px 14px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        background: accentColor,
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '11.5px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>Continuar</span>
+                      <span>➔</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </section>

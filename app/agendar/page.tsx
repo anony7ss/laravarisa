@@ -220,8 +220,10 @@ function AgendarContent() {
         if (!mounted) return;
         if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
           setServices(data.data);
+          setSelectedService((prev) => prev || data.data[0]);
         } else {
           setServices(defaultFallbackServices as ServiceItem[]);
+          setSelectedService((prev) => prev || (defaultFallbackServices[0] as ServiceItem));
         }
       })
       .catch(() => {
@@ -833,19 +835,6 @@ function AgendarContent() {
                 {bookingStep === 1 && (
                   isModernApp ? (
                     <div className="space-y-3">
-                      {/* Card de Garantia & Biossegurança (Exatamente igual ao preview mobile) */}
-                      <div
-                        className="p-3 sm:p-3.5 rounded-2xl flex items-center gap-2.5 shadow-xs"
-                        style={{
-                          backgroundColor: customCardBg,
-                          border: `1px solid ${customBorder}`,
-                          color: customText,
-                        }}
-                      >
-                        <ShieldCheck size={16} className="shrink-0" style={{ color: customAccent }} />
-                        <span className="text-xs leading-relaxed opacity-90">{guaranteeText}</span>
-                      </div>
-
                       {/* Filtro de Categorias (Chips idênticos ao preview) */}
                       <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                         <button
@@ -890,7 +879,7 @@ function AgendarContent() {
                           <span>Carregando procedimentos...</span>
                         </div>
                       ) : (
-                        <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:space-y-0 md:gap-3.5">
+                        <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:space-y-0 md:gap-3.5 pb-24">
                           {filteredServices.map((service) => {
                             const isSelected = selectedService?.id === service.id;
                             return (
@@ -912,7 +901,6 @@ function AgendarContent() {
                                     <h3
                                       className="text-sm sm:text-base font-bold truncate"
                                       style={{
-                                        fontFamily: 'var(--booking-font-heading)',
                                         color: customPrimary,
                                       }}
                                     >
@@ -929,7 +917,6 @@ function AgendarContent() {
                                     <span
                                       className="text-base sm:text-lg font-bold"
                                       style={{
-                                        fontFamily: 'var(--booking-font-heading)',
                                         color: customPrimary,
                                       }}
                                     >
@@ -964,9 +951,12 @@ function AgendarContent() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       triggerHaptic('light');
-                                      setSelectedService(service);
-                                      setBookingStep(2);
-                                      window.scrollTo({ top: 180, behavior: 'smooth' });
+                                      if (isSelected) {
+                                        setBookingStep(2);
+                                        window.scrollTo({ top: 180, behavior: 'smooth' });
+                                      } else {
+                                        setSelectedService(service);
+                                      }
                                     }}
                                     className="px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs hover:opacity-90 transition-all cursor-pointer"
                                     style={{
@@ -983,37 +973,41 @@ function AgendarContent() {
                         </div>
                       )}
 
-                      {/* Barra Flutuante de Seleção no Rodapé (Exatamente como no preview) */}
+                      {/* Barra Flutuante Fixa no Rodapé (Acompanha o usuário lá em cima ou descendo) */}
                       {selectedService && (
-                        <div
-                          className="sticky bottom-4 z-20 p-3 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-2xl mt-3"
-                          style={{
-                            backgroundColor: customPrimary,
-                            color: '#ffffff',
-                          }}
-                        >
-                          <div className="min-w-0 pr-3">
-                            <span className="text-xs sm:text-sm font-semibold block truncate">
-                              {selectedService.name}
-                            </span>
-                            <span className="text-[11px] opacity-85">
-                              {selectedService.price} • {selectedService.duration}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic('light');
-                              setBookingStep(2);
-                              window.scrollTo({ top: 180, behavior: 'smooth' });
+                        <div className="fixed bottom-4 left-0 right-0 z-50 pointer-events-none px-3 sm:px-4">
+                          <div
+                            className="max-w-md sm:max-w-xl mx-auto p-3 sm:p-3.5 rounded-2xl flex items-center justify-between shadow-2xl pointer-events-auto border transition-all animate-in slide-in-from-bottom-3 duration-200"
+                            style={{
+                              backgroundColor: customPrimary,
+                              color: '#ffffff',
+                              borderColor: `${customBorder}40`,
+                              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
                             }}
-                            className="px-4 py-2 rounded-xl text-white font-bold text-xs shrink-0 flex items-center gap-1.5 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: customAccent }}
                           >
-                            <span>Continuar</span>
-                            <ArrowRight size={13} />
-                          </button>
+                            <div className="min-w-0 pr-3">
+                              <span className="text-xs sm:text-sm font-bold block truncate text-white">
+                                {selectedService.name}
+                              </span>
+                              <span className="text-[11px] sm:text-xs opacity-85 block mt-0.5" style={{ color: '#d4d4cc' }}>
+                                {selectedService.price} • {selectedService.duration}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setBookingStep(2);
+                                window.scrollTo({ top: 180, behavior: 'smooth' });
+                              }}
+                              className="px-4 py-2 rounded-xl text-white font-bold text-xs sm:text-sm shrink-0 flex items-center gap-1.5 shadow-md cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+                              style={{ backgroundColor: customAccent }}
+                            >
+                              <span>Continuar</span>
+                              <span>➔</span>
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1208,7 +1202,6 @@ function AgendarContent() {
                                 className="text-xs sm:text-sm font-bold block"
                                 style={{
                                   color: customPrimary,
-                                  fontFamily: 'var(--booking-font-heading)',
                                 }}
                               >
                                 {selectedService.name}
@@ -1220,7 +1213,6 @@ function AgendarContent() {
                             <span
                               className="text-base sm:text-lg font-bold"
                               style={{
-                                fontFamily: 'var(--booking-font-heading)',
                                 color: customPrimary,
                               }}
                             >
@@ -1719,26 +1711,27 @@ function AgendarContent() {
                   isModernApp ? (
                     <div className="text-center space-y-4 animate-in zoom-in-95 duration-200 py-4 max-w-md mx-auto">
                       <div
-                        className="w-14 h-14 mx-auto rounded-full flex items-center justify-center text-white shadow-lg"
+                        className="w-13 h-13 mx-auto rounded-full flex items-center justify-center shadow-sm"
                         style={{
-                          backgroundColor: '#10b981',
-                          boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+                          backgroundColor: customPrimary,
+                          color: customAccent,
+                          border: `2px solid ${customBorder}`,
                         }}
                       >
-                        <CheckCircle2 size={32} strokeWidth={2.5} />
+                        <Check size={26} strokeWidth={2.5} />
                       </div>
 
                       <div>
                         <h2
                           className="text-xl sm:text-2xl font-bold tracking-tight"
                           style={{
-                            fontFamily: 'var(--booking-font-heading)',
                             color: customPrimary,
+                            fontFamily: 'var(--booking-font-body), sans-serif',
                           }}
                         >
                           Agendamento Confirmado!
                         </h2>
-                        <p className="text-xs sm:text-sm mt-1" style={{ color: customText, opacity: 0.85 }}>
+                        <p className="text-xs sm:text-sm mt-1" style={{ color: customText, opacity: 0.8 }}>
                           Parabéns, {(successBooking.client_name || clientData.name || '').trim().split(' ')[0]}! Sua sessão foi reservada com sucesso.
                         </p>
                       </div>
@@ -1753,14 +1746,14 @@ function AgendarContent() {
                         }}
                       >
                         <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-75">Procedimento:</span>
+                          <span className="opacity-70 font-medium">Procedimento:</span>
                           <span className="font-bold" style={{ color: customPrimary }}>
                             {successBooking.service_name}
                           </span>
                         </div>
 
                         <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-75">Data e Horário:</span>
+                          <span className="opacity-70 font-medium">Data e Horário:</span>
                           <span className="font-bold capitalize" style={{ color: customPrimary }}>
                             {new Date(successBooking.starts_at).toLocaleDateString('pt-BR', {
                               weekday: 'short',
@@ -1771,21 +1764,21 @@ function AgendarContent() {
                         </div>
 
                         <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-75">Valor:</span>
+                          <span className="opacity-70 font-medium">Valor:</span>
                           <span className="font-bold" style={{ color: customAccent }}>
                             {selectedService?.price || 'R$ 80,00'}
                           </span>
                         </div>
 
                         <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-75">Local:</span>
+                          <span className="opacity-70 font-medium">Local:</span>
                           <span className="font-semibold" style={{ color: customPrimary }}>
                             {locationText}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between pt-0.5">
-                          <span className="opacity-75">Código de Reserva:</span>
+                          <span className="opacity-70 font-medium">Código de Reserva:</span>
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono font-bold" style={{ color: customPrimary }}>
                               #{((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}
@@ -1812,10 +1805,10 @@ function AgendarContent() {
                           href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} no dia ${new Date(successBooking.starts_at).toLocaleDateString('pt-BR')} às ${new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} (Reserva #${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}).`)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-opacity hover:opacity-90 cursor-pointer"
-                          style={{ backgroundColor: '#25d366' }}
+                          className="w-full py-3.5 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all hover:opacity-95 active:scale-[0.99] cursor-pointer"
+                          style={{ backgroundColor: customPrimary }}
                         >
-                          <MessageCircle size={16} />
+                          <MessageCircle size={16} style={{ color: customAccent }} />
                           <span>Notificar Lara no WhatsApp</span>
                         </a>
 
@@ -1827,7 +1820,7 @@ function AgendarContent() {
                             setSelectedSlot(null);
                             setSuccessBooking(null);
                           }}
-                          className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs border transition-colors cursor-pointer hover:opacity-90"
+                          className="w-full py-3 px-4 rounded-xl font-semibold text-xs sm:text-sm border transition-all cursor-pointer hover:opacity-90 active:scale-[0.99]"
                           style={{
                             backgroundColor: customCardBg,
                             borderColor: customBorder,
@@ -2239,6 +2232,105 @@ function AgendarContent() {
                 </span>
                 <p className="m-0 opacity-85">Segunda a Sábado: 08:30 às 19:30</p>
                 <p className="m-0 opacity-85">Domingos: Fechado</p>
+              </div>
+
+              {/* Canais & Redes Sociais */}
+              <div
+                className="p-3.5 sm:p-4 rounded-xl border shadow-xs space-y-2.5"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                }}
+              >
+                <span className="font-bold text-xs sm:text-sm block" style={{ color: customPrimary }}>
+                  Canais & Redes Sociais
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <a
+                    href="https://instagram.com/laravarisa.lashes"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs font-medium transition-all hover:opacity-90 active:scale-[0.99]"
+                    style={{
+                      borderColor: customBorder,
+                      backgroundColor: `${customBorder}20`,
+                      color: customPrimary,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs" style={{ backgroundColor: customPrimary }}>
+                        <InstagramIcon size={13} />
+                      </div>
+                      <span>@laravarisa.lashes</span>
+                    </div>
+                    <ExternalLink size={13} className="opacity-60" />
+                  </a>
+
+                  <a
+                    href="https://maps.google.com/?q=Lara+Varisa+Lashes"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs font-medium transition-all hover:opacity-90 active:scale-[0.99]"
+                    style={{
+                      borderColor: customBorder,
+                      backgroundColor: `${customBorder}20`,
+                      color: customPrimary,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs" style={{ backgroundColor: customPrimary }}>
+                        <MapPin size={13} />
+                      </div>
+                      <span>Ver no Google Maps</span>
+                    </div>
+                    <ExternalLink size={13} className="opacity-60" />
+                  </a>
+                </div>
+
+                {/* Mapa Google Maps Moderno e Bonito */}
+                <div className="relative w-full h-48 sm:h-56 rounded-2xl overflow-hidden border shadow-inner mt-1" style={{ borderColor: customBorder, backgroundColor: '#f0f0ed' }}>
+                  <iframe
+                    src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
+                    width="100%"
+                    height="100%"
+                    style={{
+                      border: 0,
+                      filter: 'grayscale(20%) contrast(1.04) brightness(0.98)',
+                    }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Localização do Estúdio no Google Maps"
+                  />
+
+                  {/* Badge Elegante Flutuante no Topo */}
+                  <div className="absolute top-2.5 left-2.5 pointer-events-none">
+                    <div
+                      className="px-2.5 py-1 rounded-xl shadow-md backdrop-blur-md border flex items-center gap-1.5 text-[11px] font-semibold"
+                      style={{
+                        backgroundColor: `${customCardBg}f0`,
+                        borderColor: customBorder,
+                        color: customPrimary,
+                      }}
+                    >
+                      <div className="w-4 h-4 rounded-md flex items-center justify-center text-white shrink-0" style={{ backgroundColor: customPrimary }}>
+                        <MapPin size={10} />
+                      </div>
+                      <span>Lara Varisa Studio</span>
+                    </div>
+                  </div>
+
+                  {/* Botão Flutuante para Traçar Rota no Google Maps */}
+                  <a
+                    href="https://maps.google.com/?q=Lara+Varisa+Lashes"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white shadow-lg flex items-center gap-1.5 transition-all hover:opacity-95 active:scale-95 cursor-pointer"
+                    style={{ backgroundColor: customPrimary }}
+                  >
+                    <span>Abrir no Maps</span>
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
               </div>
 
               {/* Botão de Contato WhatsApp */}
