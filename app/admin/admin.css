@@ -263,6 +263,7 @@ body:has(.admin-shell) {
 .admin-shell {
   min-height: 100dvh;
   display: flex;
+  width: 100%;
   position: relative;
   z-index: 0;
 }
@@ -519,15 +520,21 @@ body:has(.admin-shell) {
   color: #fff;
 }
 .admin-main {
+  flex: 1 1 0%;
+  width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .admin-mobile-head {
   display: none;
 }
 .admin-page {
-  width: min(100% - 54px, 1500px);
+  width: 100%;
+  max-width: 1560px;
   margin: 0 auto;
-  padding: 42px 0 80px;
+  padding: 40px clamp(20px, 3.5vw, 56px) 80px;
+  box-sizing: border-box;
 }
 .admin-page-title {
   display: flex;
