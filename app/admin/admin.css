@@ -875,8 +875,13 @@ body:has(.admin-shell) {
   border-radius: 18px;
   padding: 17px 18px;
 }
+.admin-agenda-list .admin-appointment time {
+  font: 400 24px/1 var(--font-display);
+}
 .admin-appointment time {
-  font: 400 27px/1 var(--font-display);
+  font-family: var(--font-body), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
 }
 .admin-appointment p {
   margin: 4px 0 0;
@@ -1861,12 +1866,26 @@ a.admin-stat-card:hover {
 }
 
 .admin-appointment-time {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
   color: var(--admin-ink);
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body), sans-serif;
+}
+
+.admin-appointment-time time {
+  font-family: var(--font-body), sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  color: var(--admin-ink) !important;
+}
+
+.admin-appointment-time svg {
+  color: var(--admin-muted);
+  flex-shrink: 0;
 }
 
 .admin-day-empty {
@@ -2303,14 +2322,14 @@ a.admin-stat-card:hover {
 }
 
 .admin-icon-btn-mini {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--admin-muted);
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -2318,11 +2337,13 @@ a.admin-stat-card:hover {
 .admin-icon-btn-mini:hover {
   color: var(--admin-ink);
   background: var(--admin-soft);
+  border-color: var(--admin-line);
 }
 
 .admin-icon-btn-mini.danger:hover {
-  color: #dc2626;
-  background: #fee2e2;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 /* Visão Diária (Linha do Tempo Hora a Hora) */
@@ -2784,51 +2805,51 @@ a.admin-stat-card:hover {
 .admin-origin-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4.5px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 7.5px;
+  gap: 3.5px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 500;
+  padding: 1.5px 5.5px;
   line-height: 1.2;
   white-space: nowrap;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
 .admin-origin-badge.whatsapp {
-  background: #ecfdf5;
+  background: rgba(16, 185, 129, 0.1);
   color: #047857;
-  border: 1px solid #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .admin-origin-badge.web {
-  background: #eff6ff;
+  background: rgba(59, 130, 246, 0.1);
   color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .admin-origin-badge.manual {
-  background: #f4f4f5;
-  color: #52525b;
-  border: 1px solid #e4e4e7;
+  background: rgba(255, 255, 255, 0.06);
+  color: #71717a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* Visualização na lista do dia (tema escuro do card) */
 .admin-day-list .admin-origin-badge.whatsapp {
-  background: rgba(16, 185, 129, 0.16);
+  background: rgba(16, 185, 129, 0.12);
   color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 .admin-day-list .admin-origin-badge.web {
-  background: rgba(59, 130, 246, 0.16);
+  background: rgba(59, 130, 246, 0.12);
   color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .admin-day-list .admin-origin-badge.manual {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: #d4d4d8;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .admin-origin-banner {

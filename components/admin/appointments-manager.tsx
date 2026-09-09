@@ -1626,10 +1626,10 @@ export function AppointmentsManager({
                     <article className={`admin-appointment ${item.status}`} key={item.id}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                         <div className="admin-appointment-time">
-                          <Clock3 size={14} />
+                          <Clock3 size={13} />
                           <time>{timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}</time>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           {renderOriginBadge(item.origin)}
                           <span className={`admin-week-status-pill ${item.status}`}>
                             {statusLabels[item.status]}
@@ -1637,9 +1637,9 @@ export function AppointmentsManager({
                         </div>
                       </div>
 
-                      <div>
-                        <strong style={{ fontSize: '13.5px' }}>{item.client_name}</strong>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <strong style={{ fontSize: '14px', fontWeight: 600, color: 'var(--admin-ink)', letterSpacing: '-0.01em' }}>{item.client_name}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           {service && (
                             <span className="admin-week-service-tag">{service.name}</span>
                           )}
@@ -1648,7 +1648,7 @@ export function AppointmentsManager({
                           )}
                         </div>
                         {item.client_phone && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                             <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>{item.client_phone}</span>
                             {waLink && (
                               <a
@@ -1658,7 +1658,7 @@ export function AppointmentsManager({
                                 className="admin-week-wa-btn"
                                 title="Enviar confirmação no WhatsApp"
                               >
-                                <MessageCircle size={11} />
+                                <MessageCircle size={10} />
                                 <span>WhatsApp</span>
                               </a>
                             )}
@@ -1666,7 +1666,7 @@ export function AppointmentsManager({
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '8px', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '8px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {item.status === 'scheduled' && (
                             <button
@@ -1687,7 +1687,7 @@ export function AppointmentsManager({
                             </button>
                           )}
                         </div>
-                        <div className="admin-row-actions">
+                        <div className="admin-row-actions" style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: 'auto' }}>
                           {role !== 'viewer' && (
                             <button
                               type="button"
@@ -1696,7 +1696,7 @@ export function AppointmentsManager({
                               aria-label="Editar horário"
                               title="Editar"
                             >
-                              <Edit3 size={14} />
+                              <Edit3 size={13} />
                             </button>
                           )}
                           {role === 'admin' && (
@@ -1707,7 +1707,7 @@ export function AppointmentsManager({
                               aria-label="Excluir horário"
                               title="Excluir"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           )}
                         </div>
