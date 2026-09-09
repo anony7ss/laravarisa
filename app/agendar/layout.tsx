@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Agendamento VIP ︱ Lara Varisa · Lash Designer',
+  title: 'Agendamento ︱ Lara Varisa · Lash Designer',
   description:
     'Reserve seu horário online em poucos toques com a Lash Designer Lara Varisa na Zona Norte de Porto Alegre. Procedimentos personalizados e acabamento impecável.',
   metadataBase: new URL('https://laravarisa.com.br'),
   openGraph: {
-    title: 'Agendamento VIP ︱ Lara Varisa · Lash Designer',
+    title: 'Agendamento ︱ Lara Varisa · Lash Designer',
     description:
       'Escolha seu procedimento de cílios e garanta seu horário online com confirmação instantânea na Zona Norte de Porto Alegre.',
     url: 'https://laravarisa.com.br/agendar',
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Agendamento VIP ︱ Lara Varisa · Lash Designer',
+    title: 'Agendamento ︱ Lara Varisa · Lash Designer',
     description:
       'Escolha seu procedimento e reserve seu horário online em poucos toques.',
     images: ['/lara-lashes-optimized.webp'],

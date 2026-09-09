@@ -567,7 +567,7 @@ export function SettingsManager({
           </label>
 
           <label className="wide">
-            Aviso VIP em Destaque na Página de Agendamento (Opcional)
+            Aviso em Destaque na Página de Agendamento (Opcional)
             <input
               name="booking_alert"
               defaultValue={settings?.booking_alert || ''}

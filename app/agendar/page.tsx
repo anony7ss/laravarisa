@@ -233,7 +233,7 @@ export default function AgendarPage() {
     const startDate = new Date(b.starts_at);
     const toGCalIso = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const gcalDates = `${toGCalIso(startDate)}/${toGCalIso(new Date(b.ends_at))}`;
-    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'VIP';
+    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'LV';
     const gcalTitle = encodeURIComponent(`Lara Varisa · ${b.service_name}`);
     const gcalDetails = encodeURIComponent(`Agendamento de Cílios com Lara Varisa (Reserva #${code}).`);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${encodeURIComponent('Zona Norte, Porto Alegre - RS')}`;
@@ -247,7 +247,7 @@ export default function AgendarPage() {
       return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
 
-    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'VIP';
+    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'LV';
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -698,12 +698,12 @@ export default function AgendarPage() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-[#8c8c84] text-[11px]">Reserva:</span>
                   <span className="font-mono font-bold text-[var(--color-obsidian)]">
-                    #{((successBooking.id || 'VIP').slice(0, 8)).toUpperCase()}
+                    #{((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(`#${((successBooking.id || 'VIP').slice(0, 8)).toUpperCase()}`);
+                      navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`);
                       setCopiedCode(true);
                       setTimeout(() => setCopiedCode(false), 2000);
                     }}
@@ -790,7 +790,7 @@ export default function AgendarPage() {
 
               <div>
                 <a
-                  href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} (Reserva #${((successBooking.id || 'VIP').slice(0, 8)).toUpperCase()}).`)}
+                  href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} (Reserva #${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}).`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-[11px] text-[#8c8c84] hover:text-[var(--color-ember)] transition-colors cursor-pointer"

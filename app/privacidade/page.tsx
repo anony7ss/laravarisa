@@ -171,7 +171,7 @@ export default function PrivacyPolicyPage() {
                 </li>
                 <li>
                   <strong>Consentimento Expresso do Titular (Art. 7º, I e Art. 11, I):</strong>{' '}
-                  fornecido ao preencher o formulário de contato, ativar o perfil VIP de descontos e
+                  fornecido ao preencher o formulário de contato, solicitar agendamento e
                   responder à ficha de anamnese com dados de saúde ocular.
                 </li>
                 <li>

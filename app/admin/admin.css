@@ -1318,13 +1318,13 @@ a.admin-stat-card:hover {
 .admin-today-button {
   min-height: 34px;
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--admin-soft);
   color: var(--admin-ink);
-  padding: 0 14px;
+  padding: 0 12px;
   cursor: pointer;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.15s ease;
 }
 
@@ -1346,13 +1346,21 @@ a.admin-stat-card:hover {
   gap: 8px;
 }
 
+.admin-block-button {
+  color: var(--admin-ink);
+}
+
+.admin-block-button svg {
+  color: #f59e0b;
+}
+
 .admin-mode-toggle {
   display: inline-flex;
   align-items: center;
   background: var(--admin-soft);
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
-  padding: 3px;
+  border-radius: 9px;
+  padding: 2px;
   gap: 2px;
 }
 
@@ -1361,11 +1369,11 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 5px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 7px;
   background: transparent;
-  padding: 6px 12px;
+  padding: 5px 11px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--admin-muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1380,6 +1388,7 @@ a.admin-stat-card:hover {
 .admin-mode-toggle button.active {
   background: var(--admin-card);
   color: var(--admin-ink);
+  font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -1393,15 +1402,15 @@ a.admin-stat-card:hover {
 
 .admin-calendar-summary > span,
 .admin-filter-pill {
-  min-height: 32px;
+  min-height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   border: 1px solid var(--admin-line, #dcdcd4);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--admin-card);
-  padding: 0 13px;
+  padding: 0 11px;
   color: var(--admin-ink, #222);
   font-size: 11.5px;
   font-weight: 500;
@@ -1422,11 +1431,24 @@ a.admin-stat-card:hover {
   background: var(--admin-ink) !important;
   color: var(--admin-bg, #ffffff) !important;
   border-color: var(--admin-ink) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .admin-filter-pill.active strong {
   color: var(--admin-bg, #ffffff) !important;
+}
+
+.admin-filter-pill.danger {
+  margin-left: auto;
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.admin-filter-pill.danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #b91c1c;
 }
 
 .admin-calendar-summary strong {
@@ -1587,8 +1609,8 @@ a.admin-stat-card:hover {
 }
 
 .admin-calendar-day.selected {
-  background: rgba(252, 80, 0, 0.025);
-  box-shadow: inset 0 0 0 2px var(--admin-orange);
+  background: rgba(252, 80, 0, 0.03);
+  box-shadow: inset 0 0 0 1.5px var(--admin-orange);
 }
 
 .admin-calendar-day-header {
@@ -1620,7 +1642,7 @@ a.admin-stat-card:hover {
   font-weight: 600;
   color: var(--admin-muted);
   background: var(--admin-soft);
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 1px 5px;
 }
 
@@ -1664,7 +1686,7 @@ a.admin-stat-card:hover {
   overflow: hidden;
   border: 1px solid var(--admin-line);
   border-radius: 5px;
-  background: #f9f9f8;
+  background: var(--admin-soft);
   padding: 0 5px;
   cursor: pointer;
   text-align: left;
@@ -1679,35 +1701,35 @@ a.admin-stat-card:hover {
 }
 
 .admin-calendar-event.scheduled {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.25);
   color: #92400e;
 }
 
 .admin-calendar-event.confirmed {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
   color: #065f46;
 }
 
 .admin-calendar-event.completed {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.2);
   color: #475569;
 }
 
 .admin-calendar-event.cancelled,
 .admin-calendar-event.no_show {
-  background: #f4f4f5;
-  border-color: #e4e4e7;
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.18);
   color: #a1a1aa;
   text-decoration: line-through;
   opacity: 0.75;
 }
 
 .admin-calendar-event.blocked {
-  background: #fefce8;
-  border-color: #fef08a;
+  background: rgba(234, 179, 8, 0.1);
+  border-color: rgba(234, 179, 8, 0.25);
   color: #854d0e;
 }
 
@@ -1715,16 +1737,17 @@ a.admin-stat-card:hover {
   font-weight: 700;
   font-size: 9px;
   flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .admin-cal-pill-name {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .admin-cal-pill-service {
-  opacity: 0.75;
+  opacity: 0.7;
   font-size: 8.5px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1779,12 +1802,12 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 7px;
   border: 1px solid var(--admin-line);
   background: var(--admin-soft);
   color: var(--admin-ink);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1880,7 +1903,7 @@ a.admin-stat-card:hover {
 
 .admin-day-empty-add-btn {
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--admin-card);
   color: var(--admin-orange);
   padding: 6px 14px;
@@ -2106,18 +2129,18 @@ a.admin-stat-card:hover {
   font-size: 8.5px;
   font-weight: 600;
   padding: 1px 5px;
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--admin-soft);
   color: var(--admin-muted);
 }
 
 .admin-week-status-pill.confirmed {
-  background: #ecfdf5;
+  background: rgba(16, 185, 129, 0.1);
   color: #047857;
 }
 
 .admin-week-status-pill.scheduled {
-  background: #fffbeb;
+  background: rgba(245, 158, 11, 0.1);
   color: #b45309;
 }
 
@@ -2166,17 +2189,17 @@ a.admin-stat-card:hover {
   font-size: 9.5px;
   font-weight: 600;
   color: #047857;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
   padding: 1px 6px;
   text-decoration: none;
   transition: all 0.15s ease;
 }
 
 .admin-week-wa-btn:hover {
-  background: #25d366;
-  color: #ffffff;
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
 }
 
 .admin-week-notes {
@@ -2204,9 +2227,9 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 3px;
   font-size: 9.5px;
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 2px 7px;
   background: var(--admin-soft);
   color: var(--admin-ink);
@@ -2214,34 +2237,62 @@ a.admin-stat-card:hover {
   transition: all 0.15s ease;
 }
 
+.admin-quick-btn:hover {
+  background: var(--admin-card);
+  border-color: var(--admin-muted);
+}
+
 .admin-quick-btn.confirm {
-  background: #ecfdf5;
+  background: rgba(16, 185, 129, 0.08);
   color: #047857;
-  border-color: #a7f3d0;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.admin-quick-btn.confirm:hover {
+  background: rgba(16, 185, 129, 0.16);
 }
 
 .admin-quick-btn.complete {
+  background: var(--admin-soft);
+  color: var(--admin-ink);
+  border-color: var(--admin-line);
+}
+
+.admin-quick-btn.complete:hover {
   background: var(--admin-ink);
   color: #ffffff;
   border-color: var(--admin-ink);
 }
 
 .admin-quick-btn.cancel {
-  background: #fef2f2;
+  background: rgba(239, 68, 68, 0.08);
   color: #b91c1c;
-  border-color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+.admin-quick-btn.cancel:hover {
+  background: rgba(239, 68, 68, 0.16);
 }
 
 .admin-quick-btn.no-show {
-  background: #fffbeb;
+  background: rgba(245, 158, 11, 0.08);
   color: #b45309;
-  border-color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.admin-quick-btn.no-show:hover {
+  background: rgba(245, 158, 11, 0.16);
 }
 
 .admin-quick-btn.reopen {
   background: var(--admin-soft);
   color: var(--admin-muted);
   border-color: var(--admin-line);
+}
+
+.admin-quick-btn.reopen:hover {
+  color: var(--admin-ink);
+  border-color: var(--admin-muted);
 }
 
 .admin-week-card-icons {
@@ -2453,23 +2504,23 @@ a.admin-stat-card:hover {
   font-size: 9.5px;
   font-weight: 600;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--admin-soft);
   color: var(--admin-muted);
 }
 
 .admin-timeline-status-pill.confirmed {
-  background: #ecfdf5;
+  background: rgba(16, 185, 129, 0.1);
   color: #047857;
 }
 
 .admin-timeline-status-pill.scheduled {
-  background: #fffbeb;
+  background: rgba(245, 158, 11, 0.1);
   color: #b45309;
 }
 
 .admin-timeline-status-pill.blocked {
-  background: #fefce8;
+  background: rgba(234, 179, 8, 0.12);
   color: #854d0e;
 }
 
@@ -2487,17 +2538,17 @@ a.admin-stat-card:hover {
   font-size: 10.5px;
   font-weight: 600;
   color: #047857;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
   padding: 2px 8px;
   text-decoration: none;
   transition: all 0.15s ease;
 }
 
 .admin-timeline-wa-btn:hover {
-  background: #25d366;
-  color: #ffffff;
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
 }
 
 .admin-timeline-card-client-name {
@@ -2784,12 +2835,41 @@ a.admin-stat-card:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
-  background: #fbfbfa;
-  border: 1px solid #e5e5e4;
+  padding: 10px 14px;
+  background: var(--admin-soft);
+  border: 1px solid var(--admin-line);
   border-radius: 12px;
   margin-bottom: 16px;
   grid-column: 1 / -1;
+  color: var(--admin-ink);
+}
+
+.admin-root.dark .admin-origin-banner,
+html.dark .admin-origin-banner {
+  background: #181815;
+  border-color: #2a2a26;
+  color: #f7f7f2;
+}
+
+.admin-root.dark .admin-origin-badge.whatsapp,
+html.dark .admin-origin-badge.whatsapp {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.admin-root.dark .admin-origin-badge.web,
+html.dark .admin-origin-badge.web {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.admin-root.dark .admin-origin-badge.manual,
+html.dark .admin-origin-badge.manual {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .admin-kanban-card-body {
@@ -2817,10 +2897,11 @@ a.admin-stat-card:hover {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(37, 211, 102, 0.12);
-  color: #128c7e;
-  border-radius: 999px;
-  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
+  padding: 2px 7px;
   font-size: 10.5px;
   font-weight: 600;
   text-decoration: none;
@@ -2828,8 +2909,8 @@ a.admin-stat-card:hover {
 }
 
 .admin-kanban-wa-link:hover {
-  background: #25d366;
-  color: #ffffff;
+  background: rgba(16, 185, 129, 0.2);
+  color: #065f46;
 }
 
 .admin-kanban-notes {
@@ -2864,68 +2945,66 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 4px;
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--admin-soft);
   color: var(--admin-ink);
   font-size: 10.5px;
-  font-weight: 600;
-  padding: 4px 10px;
+  font-weight: 500;
+  padding: 3px 8px;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
 }
 
 .admin-kanban-btn:hover {
-  background: var(--admin-soft);
+  background: var(--admin-card);
   color: var(--admin-ink);
   border-color: var(--admin-muted);
 }
 
 .admin-kanban-btn.confirm {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.08);
   color: #047857;
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .admin-kanban-btn.confirm:hover {
-  background: #10b981;
-  color: #ffffff;
-  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.16);
+  color: #065f46;
 }
 
 .admin-kanban-btn.complete {
-  background: rgba(28, 25, 23, 0.08);
+  background: var(--admin-soft);
   color: var(--admin-ink);
-  border-color: rgba(28, 25, 23, 0.25);
+  border-color: var(--admin-line);
 }
 
 .admin-kanban-btn.complete:hover {
   background: var(--admin-ink);
   color: #ffffff;
+  border-color: var(--admin-ink);
 }
 
 .admin-kanban-btn.cancel {
   background: rgba(239, 68, 68, 0.08);
   color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.22);
 }
 
 .admin-kanban-btn.cancel:hover {
-  background: #ef4444;
-  color: #ffffff;
-  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.16);
+  color: #991b1b;
 }
 
 .admin-kanban-btn.no-show {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(245, 158, 11, 0.08);
   color: #b45309;
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.25);
 }
 
 .admin-kanban-btn.no-show:hover {
-  background: #f59e0b;
-  color: #ffffff;
-  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
 }
 
 .admin-kanban-btn.reopen {
@@ -3445,21 +3524,48 @@ a.admin-stat-card:hover {
 .admin-root.dark .admin-calendar-day-hit > i {
   background: #2a2a26;
 }
-.admin-root.dark .admin-calendar-event {
-  background: #2a1f1a;
+.admin-root.dark .admin-calendar-day.selected,
+html.dark .admin-calendar-day.selected {
+  background: rgba(252, 80, 0, 0.05);
+  box-shadow: inset 0 0 0 1.5px rgba(252, 80, 0, 0.65), 0 0 12px rgba(252, 80, 0, 0.06);
+}
+.admin-root.dark .admin-calendar-event,
+html.dark .admin-calendar-event {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e5e5e0;
+}
+.admin-root.dark .admin-calendar-event.scheduled {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
 }
 .admin-root.dark .admin-calendar-event.confirmed {
-  background: #1a2a1a;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #34d399;
 }
 .admin-root.dark .admin-calendar-event.completed {
-  background: #1a2a26;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
 }
 .admin-root.dark .admin-calendar-event.cancelled,
 .admin-root.dark .admin-calendar-event.no_show {
-  background: #20201d;
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: #71717a;
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+.admin-root.dark .admin-calendar-event.blocked {
+  background: rgba(234, 179, 8, 0.1);
+  border-color: rgba(234, 179, 8, 0.25);
+  color: #facc15;
 }
 .admin-root.dark .admin-day-panel {
-  background: #0e0e0c;
+  background: #141412;
+  border-color: #242420;
 }
 
 .admin-root.dark .admin-stat-card > span {
@@ -3490,45 +3596,182 @@ a.admin-stat-card:hover {
 
 .admin-root.dark .admin-calendar-summary > span,
 .admin-root.dark .admin-calendar-summary > .admin-filter-pill {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
 }
 
 .admin-root.dark .admin-filter-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .admin-root.dark .admin-filter-pill.active {
-  background: var(--admin-orange, #ff6622) !important;
-  border-color: var(--admin-orange, #ff6622) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
   color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
 .admin-root.dark .admin-filter-pill.active strong {
   color: #ffffff !important;
 }
 
-/* Dark mode Kanban & Toolbar Toggle */
-.admin-root.dark .admin-mode-toggle {
+.admin-root.dark .admin-filter-pill.danger {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.admin-root.dark .admin-filter-pill.danger:hover {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+/* Dark mode Toolbar & Subview Toggles */
+.admin-root.dark .admin-mode-toggle,
+html.dark .admin-calendar-subview-toggle {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+}
+
+.admin-root.dark .admin-mode-toggle button,
+html.dark .admin-calendar-subview-toggle button {
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 7px;
+}
+
+.admin-root.dark .admin-mode-toggle button:hover,
+html.dark .admin-calendar-subview-toggle button:hover {
+  color: #ffffff;
+}
+
+.admin-root.dark .admin-mode-toggle button.active,
+html.dark .admin-calendar-subview-toggle button.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode Status Pills (Week & Day view) */
+.admin-root.dark .admin-week-status-pill,
+.admin-root.dark .admin-timeline-status-pill {
+  border-radius: 5px;
+}
+
+.admin-root.dark .admin-week-status-pill.scheduled,
+.admin-root.dark .admin-timeline-status-pill.scheduled {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.admin-root.dark .admin-week-status-pill.confirmed,
+.admin-root.dark .admin-timeline-status-pill.confirmed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.admin-root.dark .admin-timeline-status-pill.blocked {
+  background: rgba(234, 179, 8, 0.12);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.25);
+}
+
+/* Dark mode Quick Action Buttons (Week & Day Timeline) */
+.admin-root.dark .admin-quick-btn {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
+  color: #d1d1cc;
+  border-radius: 6px;
 }
 
-.admin-root.dark .admin-mode-toggle button {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.admin-root.dark .admin-mode-toggle button:hover {
+.admin-root.dark .admin-quick-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-.admin-root.dark .admin-mode-toggle button.active {
+.admin-root.dark .admin-quick-btn.confirm {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.admin-root.dark .admin-quick-btn.confirm:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.admin-root.dark .admin-quick-btn.complete {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f7f2;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.admin-root.dark .admin-quick-btn.complete:hover {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.admin-root.dark .admin-quick-btn.cancel {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.admin-root.dark .admin-quick-btn.cancel:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.admin-root.dark .admin-quick-btn.no-show {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.admin-root.dark .admin-quick-btn.no-show:hover {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.admin-root.dark .admin-quick-btn.reopen {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a8a89f;
+}
+
+.admin-root.dark .admin-quick-btn.reopen:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark mode WhatsApp buttons */
+.admin-root.dark .admin-week-wa-btn,
+.admin-root.dark .admin-timeline-wa-btn,
+.admin-root.dark .admin-kanban-wa-link {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 6px;
+}
+
+.admin-root.dark .admin-week-wa-btn:hover,
+.admin-root.dark .admin-timeline-wa-btn:hover,
+.admin-root.dark .admin-kanban-wa-link:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .admin-root.dark .admin-kanban-column {
@@ -3561,69 +3804,75 @@ a.admin-stat-card:hover {
 }
 
 .admin-root.dark .admin-kanban-btn {
-  background: #242420;
-  border-color: #33332e;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
   color: #d1d1cc;
+  border-radius: 6px;
 }
 
 .admin-root.dark .admin-kanban-btn:hover {
-  background: #2e2e28;
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .admin-root.dark .admin-kanban-btn.confirm {
-  background: rgba(16, 185, 129, 0.18);
+  background: rgba(16, 185, 129, 0.12);
   color: #34d399;
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.28);
 }
 
 .admin-root.dark .admin-kanban-btn.confirm:hover {
-  background: #059669;
-  color: #ffffff;
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.45);
 }
 
 .admin-root.dark .admin-kanban-btn.complete {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #f7f7f2;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .admin-root.dark .admin-kanban-btn.complete:hover {
-  background: #ffffff;
-  color: #000000;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
 }
 
 .admin-root.dark .admin-kanban-btn.cancel {
-  background: rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.1);
   color: #f87171;
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: rgba(239, 68, 68, 0.25);
 }
 
 .admin-root.dark .admin-kanban-btn.cancel:hover {
-  background: #dc2626;
-  color: #ffffff;
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .admin-root.dark .admin-kanban-btn.no-show {
-  background: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.1);
   color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(245, 158, 11, 0.25);
 }
 
 .admin-root.dark .admin-kanban-btn.no-show:hover {
-  background: #d97706;
-  color: #ffffff;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .admin-root.dark .admin-kanban-btn.reopen {
-  background: #242420;
-  border-color: #33332e;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
   color: #a8a89f;
 }
 
 .admin-root.dark .admin-kanban-btn.reopen:hover {
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
-  border-color: #4a4a42;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .admin-root.dark .admin-kanban-wa-link {
@@ -3686,7 +3935,7 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-head {
-  padding: 20px 20px 16px;
+  padding: 18px 20px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3698,27 +3947,29 @@ a.admin-stat-card:hover {
   position: relative;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: rgba(226, 137, 168, 0.12);
-  color: #e289a8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--admin-orange, #fc5000);
   display: grid;
   place-items: center;
-  border: 1px solid rgba(226, 137, 168, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .admin-notification-dot {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 7px;
+  right: 7px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #e289a8;
+  background: var(--admin-orange, #fc5000);
+  box-shadow: 0 0 6px rgba(252, 80, 0, 0.6);
 }
 
 .admin-notification-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--admin-ink, #fff);
@@ -3727,7 +3978,8 @@ a.admin-stat-card:hover {
 .admin-notification-head small {
   display: block;
   margin-top: 2px;
-  font-size: 11.5px;
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 11px;
   color: var(--admin-muted, #888);
 }
 
@@ -3736,9 +3988,9 @@ a.admin-stat-card:hover {
   align-items: center;
   gap: 5px;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: 7px;
   border: 1px solid var(--admin-line, rgba(255, 255, 255, 0.1));
-  background: transparent;
+  background: rgba(255, 255, 255, 0.04);
   color: var(--admin-muted, #888);
   font-size: 11px;
   font-weight: 500;
@@ -3747,17 +3999,17 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-read-all-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--admin-ink, #fff);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
 .admin-notification-close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 0;
-  background: rgba(255, 255, 255, 0.05);
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--admin-line, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.04);
   color: var(--admin-muted, #888);
   cursor: pointer;
   display: grid;
@@ -3766,14 +4018,15 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--admin-ink, #fff);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .admin-notification-tabs {
   display: flex;
-  gap: 6px;
-  padding: 10px 20px;
+  gap: 4px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--admin-line, rgba(255, 255, 255, 0.08));
   overflow-x: auto;
   scrollbar-width: none;
@@ -3785,8 +4038,8 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-tabs button {
-  padding: 5px 12px;
-  border-radius: 999px;
+  padding: 5px 11px;
+  border-radius: 7px;
   font-size: 11.5px;
   font-weight: 500;
   background: transparent;
@@ -3803,10 +4056,10 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-tabs button.active {
-  background: var(--admin-soft, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.1);
   color: var(--admin-ink, #fff);
   font-weight: 600;
-  border-color: var(--admin-line, rgba(255, 255, 255, 0.1));
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .admin-notification-body {
@@ -4089,8 +4342,8 @@ html.dark .admin-day-list .admin-appointment.blocked {
   align-items: center;
   background: var(--admin-card);
   border: 1px solid var(--admin-line);
-  border-radius: 999px;
-  padding: 3px;
+  border-radius: 9px;
+  padding: 2px;
   gap: 2px;
 }
 
@@ -4098,8 +4351,8 @@ html.dark .admin-day-list .admin-appointment.blocked {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 12px;
-  border-radius: 999px;
+  padding: 5px 11px;
+  border-radius: 7px;
   font-size: 12px;
   font-weight: 500;
   color: var(--admin-muted);
@@ -4122,12 +4375,22 @@ html.dark .admin-day-list .admin-appointment.blocked {
 }
 
 html.dark .admin-calendar-subview-toggle {
-  background: var(--admin-card);
-  border-color: var(--admin-line);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+}
+
+html.dark .admin-calendar-subview-toggle button {
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+html.dark .admin-calendar-subview-toggle button:hover {
+  color: #ffffff;
 }
 
 html.dark .admin-calendar-subview-toggle button.active {
-  background: var(--admin-soft);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }

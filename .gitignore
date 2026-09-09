@@ -33,6 +33,7 @@ bot-whatsapp/.env*
 !bot-whatsapp/.env.example
 bot-whatsapp/auth_info_baileys/
 bot-whatsapp/node_modules/
+bot-whatsapp/*.log
 
 
 # deployment and generated files

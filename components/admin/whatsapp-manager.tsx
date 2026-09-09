@@ -575,7 +575,7 @@ export function WhatsAppManager({
       {/* Título da Página com Badge de Status */}
       <div className="admin-page-title wa-header">
         <div>
-          <p className="admin-kicker">AUTOMAÇÃO & ATENDIMENTO VIP</p>
+          <p className="admin-kicker">AUTOMAÇÃO & ATENDIMENTO</p>
           <h1 style={{ margin: 0 }}>WhatsApp Bot</h1>
         </div>
 
@@ -684,7 +684,7 @@ export function WhatsAppManager({
           }}
         >
           <SendHorizontal size={16} />
-          <span>Campanhas VIP</span>
+          <span>Campanhas</span>
         </button>
       </div>
 

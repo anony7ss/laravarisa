@@ -35,12 +35,12 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://laravarisa.com.br'),
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.png', type: 'image/png' },
-      { url: '/logo-emblem.png', type: 'image/png' },
+      { url: '/logo-emblem.png?v=4', type: 'image/png' },
+      { url: '/favicon.png?v=4', type: 'image/png' },
+      { url: '/favicon.svg?v=4', type: 'image/svg+xml' },
     ],
-    shortcut: '/favicon.svg',
-    apple: '/logo-emblem.png',
+    shortcut: '/logo-emblem.png?v=4',
+    apple: '/logo-emblem.png?v=4',
   },
   openGraph: {
     title: 'Lara Varisa ︱ Lash Designer',
@@ -71,6 +71,9 @@ export default async function RootLayout({
       style={isDark ? { backgroundColor: '#11110f', color: '#f7f7f2', colorScheme: 'dark' } : undefined}
     >
       <head>
+        <link rel="icon" type="image/png" href="/logo-emblem.png?v=4" sizes="any" />
+        <link rel="shortcut icon" href="/logo-emblem.png?v=4" />
+        <link rel="apple-touch-icon" href="/logo-emblem.png?v=4" />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(p.indexOf('/admin')!==-1&&s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}catch(e){}})();`,

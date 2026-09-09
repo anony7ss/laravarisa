@@ -202,7 +202,7 @@ export default function TermsPage() {
                 sessão. Aceitamos Pix, cartões de crédito e débito.
               </p>
               <p>
-                Condições promocionais (ex: 20% OFF na primeira visita ou 10% OFF no perfil VIP) são
+                Condições promocionais (ex: 20% OFF na primeira visita ou promoções especiais) são
                 válidas para 1 procedimento por CPF/telefone, aplicadas diretamente no valor final e
                 não são cumulativas entre si ou com outros vouchers de desconto.
               </p>

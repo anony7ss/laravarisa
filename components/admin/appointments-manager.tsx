@@ -1049,10 +1049,9 @@ export function AppointmentsManager({
                 type="button"
                 className="admin-secondary admin-block-button"
                 onClick={() => openBlockModal()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#eab308', borderColor: 'rgba(234, 179, 8, 0.35)' }}
                 title="Bloquear período para almoço, consulta ou compromisso pessoal"
               >
-                <Lock size={15} /> Bloquear horário
+                <Lock size={14} /> Bloquear horário
               </button>
               <button className="admin-primary" onClick={() => openCreate()}>
                 <Plus size={17} /> Novo horário
@@ -1095,17 +1094,8 @@ export function AppointmentsManager({
           {totalCancelledCount > 0 && role !== 'viewer' && (
             <button
               type="button"
-              className="admin-filter-pill"
+              className="admin-filter-pill danger"
               onClick={() => setClearCancelledModalOpen(true)}
-              style={{
-                marginLeft: 'auto',
-                color: '#ef4444',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                background: 'rgba(239, 68, 68, 0.06)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
               title="Excluir permanentemente todos os cancelados e faltas"
             >
               <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
@@ -1140,17 +1130,8 @@ export function AppointmentsManager({
           {totalCancelledCount > 0 && role !== 'viewer' && (
             <button
               type="button"
-              className="admin-filter-pill"
+              className="admin-filter-pill danger"
               onClick={() => setClearCancelledModalOpen(true)}
-              style={{
-                marginLeft: 'auto',
-                color: '#ef4444',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                background: 'rgba(239, 68, 68, 0.06)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
               title="Excluir permanentemente todos os cancelados e faltas"
             >
               <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
@@ -1185,17 +1166,8 @@ export function AppointmentsManager({
           {totalCancelledCount > 0 && role !== 'viewer' && (
             <button
               type="button"
-              className="admin-filter-pill"
+              className="admin-filter-pill danger"
               onClick={() => setClearCancelledModalOpen(true)}
-              style={{
-                marginLeft: 'auto',
-                color: '#ef4444',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                background: 'rgba(239, 68, 68, 0.06)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
               title="Excluir permanentemente todos os cancelados e faltas"
             >
               <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
@@ -1244,17 +1216,8 @@ export function AppointmentsManager({
           {totalCancelledCount > 0 && role !== 'viewer' && (
             <button
               type="button"
-              className="admin-filter-pill"
+              className="admin-filter-pill danger"
               onClick={() => setClearCancelledModalOpen(true)}
-              style={{
-                marginLeft: 'auto',
-                color: '#ef4444',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                background: 'rgba(239, 68, 68, 0.06)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
               title="Excluir permanentemente todos os cancelados e faltas"
             >
               <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
@@ -2474,14 +2437,14 @@ export function AppointmentsManager({
             <div className="admin-dialog-actions">
               <button
                 className="admin-icon-button"
-                style={{ width: 'auto', padding: '0 16px', borderRadius: '99px' }}
+                style={{ width: 'auto', padding: '0 16px', borderRadius: '8px' }}
                 onClick={() => setDeletingAppointment(null)}
               >
                 Cancelar
               </button>
               <button
                 className="admin-icon-button admin-danger"
-                style={{ width: 'auto', padding: '0 16px', borderRadius: '99px', background: 'var(--admin-orange)', color: '#fff', border: 'none' }}
+                style={{ width: 'auto', padding: '0 16px', borderRadius: '8px', background: 'var(--admin-orange)', color: '#fff', border: 'none' }}
                 onClick={() => remove(deletingAppointment)}
               >
                 Excluir permanentemente
@@ -2505,7 +2468,7 @@ export function AppointmentsManager({
               <button
                 type="button"
                 className="admin-icon-button"
-                style={{ width: 'auto', padding: '0 16px', borderRadius: '99px' }}
+                style={{ width: 'auto', padding: '0 16px', borderRadius: '8px' }}
                 onClick={() => setClearCancelledModalOpen(false)}
                 disabled={clearingCancelled}
               >
@@ -2517,7 +2480,7 @@ export function AppointmentsManager({
                 style={{
                   width: 'auto',
                   padding: '0 16px',
-                  borderRadius: '99px',
+                  borderRadius: '8px',
                   background: '#dc2626',
                   color: '#fff',
                   border: 'none',

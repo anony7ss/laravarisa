@@ -35,7 +35,7 @@ export function BookingSuccessModal({
     minute: '2-digit',
   });
 
-  const code = booking.id ? booking.id.slice(0, 8).toUpperCase() : 'VIP';
+  const code = booking.id ? booking.id.slice(0, 8).toUpperCase() : 'LV';
 
   const waMsg = `Olá, Lara! Acabei de agendar meu horário para ${booking.service_name} no dia ${formattedDate} às ${formattedTime} (Reserva #${code}). Pode me enviar o endereço completo?`;
   const waLink = whatsappUrl(waMsg);
