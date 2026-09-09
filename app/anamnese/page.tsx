@@ -3,7 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck, CheckCircle, AlertCircle, FileText, Lock } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, Loader2, ArrowUpRight } from 'lucide-react';
+import { triggerHaptic } from '@/lib/utils';
 
 function AnamneseForm() {
   const searchParams = useSearchParams();
@@ -17,15 +18,16 @@ function AnamneseForm() {
     }
     digits = digits.slice(0, 11);
     if (digits.length <= 2) return digits;
-    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
   };
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Controlled form fields (inicia com query params se presentes)
+  // Controlled form fields
   const [clientName, setClientName] = useState(queryName);
   const [clientPhone, setClientPhone] = useState(queryPhone ? formatPhone(queryPhone) : '');
   const [hasAllergies, setHasAllergies] = useState(false);
@@ -33,16 +35,11 @@ function AnamneseForm() {
   const [pregnant, setPregnant] = useState(false);
   const [eyeSurgery, setEyeSurgery] = useState(false);
   const [thyroidIssues, setThyroidIssues] = useState(false);
-  const [signature, setSignature] = useState(queryName);
-  const [consentLgpd, setConsentLgpd] = useState(true);
+  const [consentTerms, setConsentTerms] = useState(true);
 
-  // Sincroniza caso searchParams mudem
   useEffect(() => {
     if (queryName && !clientName) {
       setClientName(queryName);
-    }
-    if (queryName && !signature) {
-      setSignature(queryName);
     }
     if (queryPhone && !clientPhone) {
       setClientPhone(formatPhone(queryPhone));
@@ -55,12 +52,12 @@ function AnamneseForm() {
 
     const rawDigits = clientPhone.replace(/\D/g, '');
     if (rawDigits.length < 10 || rawDigits.length > 11) {
-      setErrorMessage('Por favor, informe um WhatsApp válido com DDD (ex: 51 99999-9999).');
+      setErrorMessage('Informe um WhatsApp válido com DDD.');
       return;
     }
 
-    if (!consentLgpd) {
-      setErrorMessage('É necessário consentir com o termo para enviar sua ficha.');
+    if (!consentTerms) {
+      setErrorMessage('É necessário confirmar as informações.');
       return;
     }
 
@@ -75,7 +72,7 @@ function AnamneseForm() {
         pregnant,
         eye_surgery: eyeSurgery,
         thyroid_issues: thyroidIssues,
-        signature: signature.trim() || clientName.trim(),
+        signature: clientName.trim(),
       };
 
       const res = await fetch('/api/anamnese', {
@@ -87,12 +84,14 @@ function AnamneseForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.ok) {
+        triggerHaptic('success');
         setSubmitted(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setErrorMessage(data.error || 'Erro ao enviar ficha. Revise os dados e tente novamente.');
+        setErrorMessage(data.error || 'Não foi possível enviar a ficha. Revise os dados.');
       }
     } catch {
-      setErrorMessage('Erro de conexão ao enviar a ficha. Verifique sua internet.');
+      setErrorMessage('Erro de conexão ao enviar a ficha. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -100,289 +99,268 @@ function AnamneseForm() {
 
   if (submitted) {
     return (
-      <main className="wrap section" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '520px', width: '100%', background: '#ffffff', border: '1px solid #d8d8d3', borderRadius: '28px', padding: '40px 32px', boxShadow: '0 10px 30px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: '68px', height: '68px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.12)', border: '2px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#15803d', marginBottom: '20px' }}>
-            <CheckCircle size={36} />
+      <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between py-12 px-4">
+        <div className="max-w-md mx-auto w-full text-center space-y-5 my-auto">
+          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shadow-sm">
+            <Check size={26} strokeWidth={2.5} />
           </div>
-          
-          <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '2px', color: 'var(--color-ember, #a02c00)', textTransform: 'uppercase', fontFamily: 'monospace' }}>
-            LARA VARISA LASH
-          </span>
-          
-          <h1 style={{ fontSize: '2.2rem', fontFamily: 'var(--font-heading, inherit)', textTransform: 'uppercase', color: '#070607', marginTop: '6px', marginBottom: '12px' }}>
-            Ficha Confirmada! ✨
-          </h1>
-          
-          <p style={{ color: '#52524e', fontSize: '15px', lineHeight: '1.6', margin: '0 0 28px' }}>
-            Obrigada, <strong>{clientName}</strong>! Suas informações de saúde ocular foram salvas com segurança no estúdio da Lara Varisa. Te esperamos para realçar seu olhar!
-          </p>
-          
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-            <Link
-              href="/"
-              style={{
-                flex: 1,
-                minWidth: '160px',
-                padding: '14px 20px',
-                borderRadius: '99px',
-                border: '1px solid #d4d4ce',
-                background: '#f4f4f2',
-                color: '#070607',
-                fontWeight: 600,
-                textAlign: 'center',
-                textDecoration: 'none',
-                fontSize: '14px',
-              }}
-            >
-              Página Inicial
-            </Link>
+
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84]">
+              Lara Varisa Studio
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+              Ficha Registrada
+            </h1>
+            <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-sm mx-auto">
+              Obrigada, <strong>{clientName}</strong>! Suas informações de saúde ocular foram salvas com segurança no estúdio.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3 pt-4">
             <Link
               href="/agendar"
-              style={{
-                flex: 1,
-                minWidth: '160px',
-                padding: '14px 20px',
-                borderRadius: '99px',
-                border: 'none',
-                background: '#070607',
-                color: '#ffffff',
-                fontWeight: 600,
-                textAlign: 'center',
-                textDecoration: 'none',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              }}
+              className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-sm"
             >
-              Agendar Horário
+              <span>Agendar Procedimento</span>
+              <ArrowUpRight size={15} />
+            </Link>
+
+            <Link
+              href="/"
+              className="w-full py-3 px-5 rounded-full bg-[#f4f4f0] text-[var(--color-obsidian)] text-xs font-semibold flex items-center justify-center hover:bg-[#eaeaec] transition-colors border border-[#d6d6cf]"
+            >
+              Voltar ao Início
             </Link>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="wrap section" style={{ maxWidth: '640px', margin: '0 auto', paddingBlock: '40px 80px', paddingInline: '16px' }}>
-      {/* Header do Formulário */}
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px', color: 'var(--color-ember, #a02c00)', textTransform: 'uppercase', fontFamily: 'monospace' }}>
-          ESTÚDIO DE BELEZA & OLHAR
-        </span>
-        <h1 style={{ fontSize: '2.4rem', fontFamily: 'var(--font-heading, inherit)', textTransform: 'uppercase', letterSpacing: '1px', color: '#070607', marginTop: '6px' }}>
-          Ficha de Anamnese
-        </h1>
-        <p style={{ color: '#5a5a54', marginTop: '8px', fontSize: '15px', lineHeight: '1.5' }}>
-          Preencha com atenção antes do seu procedimento. Sua segurança e a saúde dos seus olhos vêm em primeiro lugar.
-        </p>
-      </div>
+    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between">
+      {/* Top Header */}
+      <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <Link
+            href="/agendar"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-[var(--color-obsidian)] border border-[#d6d6cf] text-xs font-medium transition-colors"
+          >
+            <ArrowLeft size={13} />
+            <span>Voltar</span>
+          </Link>
 
-      {errorMessage && (
-        <div style={{ padding: '14px 18px', background: '#fef2f2', border: '1px solid #f87171', borderRadius: '12px', color: '#b91c1c', marginBottom: '24px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 500 }}>
-          <AlertCircle size={20} style={{ flexShrink: 0 }} />
-          <span>{errorMessage}</span>
+          <span className="text-xs font-semibold tracking-wider uppercase font-[family-name:var(--font-display)] text-[var(--color-obsidian)]">
+            Lara Varisa
+          </span>
+
+          <Link
+            href="/"
+            className="text-xs text-[#707068] hover:text-[var(--color-obsidian)] transition-colors"
+          >
+            Início
+          </Link>
         </div>
-      )}
+      </header>
 
-      {/* Cartão Principal de Fundo Branco com Alto Contraste */}
-      <div style={{ background: '#ffffff', border: '1px solid #d8d8d3', borderRadius: '24px', padding: '32px 24px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          
-          {/* Nome */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3f3f3a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Nome Completo *
-            </span>
-            <input
-              type="text"
-              required
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Digite seu nome e sobrenome"
-              style={{
-                padding: '14px 16px',
-                borderRadius: '12px',
-                border: '1px solid #d4d4ce',
-                background: '#fbfbf9',
-                color: '#070607',
-                fontSize: '15px',
-                outline: 'none',
-                transition: 'border 0.2s',
-              }}
-            />
-          </label>
-          
-          {/* WhatsApp */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3f3f3a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              WhatsApp com DDD *
-            </span>
-            <input
-              type="tel"
-              required
-              value={clientPhone}
-              onChange={(e) => setClientPhone(formatPhone(e.target.value))}
-              placeholder="(51) 99999-9999"
-              style={{
-                padding: '14px 16px',
-                borderRadius: '12px',
-                border: '1px solid #d4d4ce',
-                background: '#fbfbf9',
-                color: '#070607',
-                fontSize: '15px',
-                outline: 'none',
-                transition: 'border 0.2s',
-              }}
-            />
-          </label>
+      {/* Main Content */}
+      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6 sm:py-8 space-y-5">
+        <div className="text-center space-y-1">
+          <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84]">
+            Pré-atendimento
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+            Ficha de Anamnese
+          </h1>
+          <p className="text-xs sm:text-sm text-[#595952] max-w-sm mx-auto">
+            Questionário rápido para personalizarmos seu atendimento com total segurança.
+          </p>
+        </div>
 
-          {/* Seção Histórico de Saúde */}
-          <div style={{ padding: '20px', background: '#f8f8f6', border: '1px solid #e5e5df', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e5e5df', paddingBottom: '10px' }}>
-              <ShieldCheck size={18} style={{ color: 'var(--color-ember, #a02c00)' }} />
-              <h3 style={{ fontSize: '14px', color: '#070607', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
-                Histórico de Saúde & Olhos
-              </h3>
-            </div>
+        {errorMessage && (
+          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0 text-rose-500" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Card Principal do Formulário */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Alergias */}
-            <div>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={hasAllergies}
-                  onChange={(e) => setHasAllergies(e.target.checked)}
-                  style={{ width: '20px', height: '20px', accentColor: '#070607', cursor: 'pointer', marginTop: '2px' }}
-                />
-                <span style={{ fontSize: '14px', color: '#272724', fontWeight: 500, lineHeight: '1.4' }}>
-                  Possui alguma alergia conhecida? (Esmaltes, colas, cosméticos, látex)
-                </span>
-              </label>
-              {hasAllergies && (
+            {/* Dados Pessoais */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
+                  Nome
+                </label>
                 <input
                   type="text"
-                  required={hasAllergies}
-                  value={allergiesDetail}
-                  onChange={(e) => setAllergiesDetail(e.target.value)}
-                  placeholder="Quais alergias você possui? Descreva aqui..."
-                  style={{
-                    marginTop: '10px',
-                    width: '100%',
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#070607',
-                    fontSize: '14px',
-                  }}
+                  required
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Nome completo"
+                  className="w-full px-3.5 py-2.5 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors"
                 />
-              )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#595952]">
+                  WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(formatPhone(e.target.value))}
+                  placeholder="(51) 99999-9999"
+                  className="w-full px-3.5 py-2.5 rounded-full bg-[#f7f6f2] border border-[#e2e2df] text-[var(--color-obsidian)] placeholder-[#8c8c84] text-sm focus:outline-none focus:bg-white focus:border-[var(--color-obsidian)] transition-colors font-mono"
+                />
+              </div>
             </div>
 
-            {/* Gestante */}
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={pregnant}
-                onChange={(e) => setPregnant(e.target.checked)}
-                style={{ width: '20px', height: '20px', accentColor: '#070607', cursor: 'pointer', marginTop: '2px' }}
-              />
-              <span style={{ fontSize: '14px', color: '#272724', fontWeight: 500, lineHeight: '1.4' }}>
-                Está gestante ou em período de amamentação?
+            {/* Questionário de Saúde */}
+            <div className="pt-2 border-t border-[#f0f0ed] space-y-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84] block pb-1">
+                Histórico de Saúde
               </span>
-            </label>
-            
-            {/* Cirurgia Ocular */}
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={eyeSurgery}
-                onChange={(e) => setEyeSurgery(e.target.checked)}
-                style={{ width: '20px', height: '20px', accentColor: '#070607', cursor: 'pointer', marginTop: '2px' }}
-              />
-              <span style={{ fontSize: '14px', color: '#272724', fontWeight: 500, lineHeight: '1.4' }}>
-                Fez cirurgia ocular recente (últimos 6 meses), LASIK ou blefaroplastia?
-              </span>
-            </label>
-            
-            {/* Tireoide */}
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={thyroidIssues}
-                onChange={(e) => setThyroidIssues(e.target.checked)}
-                style={{ width: '20px', height: '20px', accentColor: '#070607', cursor: 'pointer', marginTop: '2px' }}
-              />
-              <span style={{ fontSize: '14px', color: '#272724', fontWeight: 500, lineHeight: '1.4' }}>
-                Possui alteração de tireoide? (Hipo ou hipertireoidismo podem influenciar na retenção)
-              </span>
-            </label>
+
+              {/* Alergias */}
+              <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] space-y-2 transition-colors">
+                <label className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                  <span className="text-xs sm:text-sm font-medium text-[var(--color-obsidian)]">
+                    Possui alergia a colas, cosméticos ou esmaltes?
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={hasAllergies}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setHasAllergies(e.target.checked);
+                    }}
+                    className="w-4 h-4 rounded text-black accent-black cursor-pointer shrink-0"
+                  />
+                </label>
+                {hasAllergies && (
+                  <input
+                    type="text"
+                    required={hasAllergies}
+                    value={allergiesDetail}
+                    onChange={(e) => setAllergiesDetail(e.target.value)}
+                    placeholder="Quais alergias você possui?"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-[#d6d6cf] text-xs text-[var(--color-obsidian)] placeholder-[#8c8c84] focus:outline-none focus:border-[var(--color-obsidian)] transition-colors"
+                  />
+                )}
+              </div>
+
+              {/* Gestante */}
+              <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] transition-colors">
+                <label className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                  <span className="text-xs sm:text-sm font-medium text-[var(--color-obsidian)]">
+                    Está gestante ou em período de amamentação?
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={pregnant}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setPregnant(e.target.checked);
+                    }}
+                    className="w-4 h-4 rounded text-black accent-black cursor-pointer shrink-0"
+                  />
+                </label>
+              </div>
+
+              {/* Cirurgia Ocular */}
+              <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] transition-colors">
+                <label className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                  <span className="text-xs sm:text-sm font-medium text-[var(--color-obsidian)]">
+                    Cirurgia ocular recente (LASIK, blefaroplastia)?
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={eyeSurgery}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setEyeSurgery(e.target.checked);
+                    }}
+                    className="w-4 h-4 rounded text-black accent-black cursor-pointer shrink-0"
+                  />
+                </label>
+              </div>
+
+              {/* Tireoide */}
+              <div className="p-3 rounded-2xl bg-[#fafaf8] border border-[#e8e8e4] transition-colors">
+                <label className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                  <span className="text-xs sm:text-sm font-medium text-[var(--color-obsidian)]">
+                    Possui alteração de tireoide (hipo ou hiper)?
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={thyroidIssues}
+                    onChange={(e) => {
+                      triggerHaptic('light');
+                      setThyroidIssues(e.target.checked);
+                    }}
+                    className="w-4 h-4 rounded text-black accent-black cursor-pointer shrink-0"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Termo e Consentimento */}
+            <div className="pt-2 border-t border-[#f0f0ed]">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={consentTerms}
+                  onChange={(e) => {
+                    triggerHaptic('light');
+                    setConsentTerms(e.target.checked);
+                  }}
+                  className="w-3.5 h-3.5 rounded text-black accent-black cursor-pointer shrink-0"
+                />
+                <span className="text-[11px] text-[#707068] leading-tight">
+                  Declaro que as informações são verdadeiras e autorizo o procedimento.
+                </span>
+              </label>
+            </div>
+
+            {/* Botão de Envio */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-white" />
+                  <span>Enviando ficha...</span>
+                </>
+              ) : (
+                <>
+                  <span>Enviar Ficha de Anamnese</span>
+                  <ArrowUpRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
+        <div className="max-w-lg mx-auto px-4 flex items-center justify-between">
+          <span>Lara Varisa Studio</span>
+          <div className="flex items-center gap-3 text-[11px]">
+            <Link href="/termos" className="hover:text-[var(--color-obsidian)] transition-colors">Termos</Link>
+            <span>·</span>
+            <Link href="/privacidade" className="hover:text-[var(--color-obsidian)] transition-colors">Privacidade</Link>
           </div>
-
-          {/* Assinatura */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3f3f3a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Assinatura Digital (Digite seu nome completo) *
-            </span>
-            <input
-              type="text"
-              required
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-              placeholder="Declaro que as informações acima são verdadeiras"
-              style={{
-                padding: '14px 16px',
-                borderRadius: '12px',
-                border: '1px solid #d4d4ce',
-                background: '#fbfbf9',
-                color: '#070607',
-                fontSize: '15px',
-                outline: 'none',
-              }}
-            />
-          </label>
-
-          {/* Termo LGPD */}
-          <div style={{ padding: '14px 16px', background: '#f8f8f6', borderRadius: '12px', border: '1px solid #e5e5df' }}>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={consentLgpd}
-                onChange={(e) => setConsentLgpd(e.target.checked)}
-                style={{ marginTop: '3px', width: '18px', height: '18px', accentColor: '#070607', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '12px', color: '#52524e', lineHeight: '1.5' }}>
-                Consinto expressamente com o tratamento dos meus dados pessoais e sensíveis de saúde ocular nos termos do Art. 11 da <strong>LGPD (Lei nº 13.709/2018)</strong>, com a finalidade exclusiva de avaliação pré-procedimento. Conheça nossa{' '}
-                <Link href="/privacidade" target="_blank" style={{ textDecoration: 'underline', color: '#070607', fontWeight: 600 }}>Política de Privacidade</Link>.
-              </span>
-            </label>
-          </div>
-
-          {/* Botão de Envio */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: '8px',
-              padding: '16px',
-              fontSize: '15px',
-              fontWeight: 700,
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              color: '#ffffff',
-              background: '#070607',
-              border: 'none',
-              borderRadius: '99px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
-              transition: 'background 0.2s',
-            }}
-          >
-            {loading ? 'Gravando ficha com segurança...' : 'Concluir e Enviar Ficha ✨'}
-          </button>
-        </form>
-      </div>
-    </main>
+        </div>
+      </footer>
+    </div>
   );
 }
 
@@ -390,8 +368,8 @@ export default function AnamnesePage() {
   return (
     <Suspense
       fallback={
-        <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', color: '#8b8b83' }}>
-          Carregando formulário de anamnese...
+        <div className="min-h-screen bg-[var(--color-pumice)] flex items-center justify-center text-xs text-[#8c8c84]">
+          Carregando formulário...
         </div>
       }
     >
