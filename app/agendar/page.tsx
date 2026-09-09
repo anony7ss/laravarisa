@@ -389,7 +389,8 @@ function AgendarContent() {
   const customText = siteSettings?.booking_text_color || '#121211';
   const customBorder = siteSettings?.booking_border_color || '#cfcfc9';
 
-  const fontHeading = siteSettings?.booking_font_heading || 'Anton';
+  const rawFontHeading = siteSettings?.booking_font_heading;
+  const fontHeading = (!rawFontHeading || rawFontHeading.toLowerCase() === 'anton') ? 'DM Sans' : rawFontHeading;
   const fontBody = siteSettings?.booking_font_body || 'DM Sans';
 
   const coverUrl = siteSettings?.booking_cover_url || '/lara-lashes-optimized.webp';
@@ -430,7 +431,7 @@ function AgendarContent() {
           --booking-accent: ${customAccent};
           --booking-text: ${customText};
           --booking-border: ${customBorder};
-          --booking-font-heading: '${fontHeading}', var(--font-anton), serif, sans-serif;
+          --booking-font-heading: '${fontHeading}', var(--font-dm-sans), sans-serif;
           --booking-font-body: '${fontBody}', var(--font-dm-sans), sans-serif;
         }
         .booking-custom-root h1,
@@ -560,7 +561,7 @@ function AgendarContent() {
                 className="text-2xl sm:text-3xl font-bold tracking-tight m-0"
                 style={{
                   color: customPrimary,
-                  fontFamily: 'var(--booking-font-heading)',
+                  fontFamily: 'var(--booking-font-body)',
                 }}
               >
                 {studioTitle}
@@ -685,10 +686,10 @@ function AgendarContent() {
 
             <div className="mt-2 space-y-0.5">
               <h1
-                className="text-2xl sm:text-3xl lg:text-4xl uppercase tracking-tight m-0"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight m-0"
                 style={{
                   color: customText,
-                  fontFamily: `var(--booking-font-heading)`,
+                  fontFamily: `var(--booking-font-body)`,
                 }}
               >
                 {studioTitle}
