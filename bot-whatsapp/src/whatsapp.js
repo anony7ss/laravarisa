@@ -1,7 +1,9 @@
+import NodeCache from '@cacheable/node-cache';
 import baileysPkg, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
   isJidBroadcast,
   isJidStatusBroadcast,
   isJidNewsletter,
@@ -19,15 +21,17 @@ const authPath = path.resolve(__dirname, '../auth_info_baileys');
 import { logInfo, logSuccess, logWarn, logError } from './terminal.js';
 import { publicarStatusBot } from './web-sync.js';
 import { isLid, registrarMapeamentoLid, resolverLidParaTelefone } from './phone-utils.js';
+import { supabase } from './supabase.js';
 
 const makeWASocket = typeof baileysPkg === 'function' ? baileysPkg : (baileysPkg?.default || baileysPkg);
 
 let activeSocket = null;
+let preKeyInterval = null;
 
 // Armazena as mensagens recentes (enviadas e recebidas) para responder a pedidos de retransmissão/retry do WhatsApp
 // Isso impede o erro "Aguardando mensagem. Essa ação pode levar alguns instantes. Saiba mais"
 const messageStore = new Map();
-const MAX_MESSAGE_STORE = 3000;
+const MAX_MESSAGE_STORE = 5000;
 
 function saveToMessageStore(id, message) {
   if (!id || !message) return;
@@ -38,7 +42,11 @@ function saveToMessageStore(id, message) {
   }
 }
 
-const msgRetryCounterCache = new Map();
+// Cache de contadores de retry conforme especificação do Baileys (usa NodeCache para del e flushAll)
+const msgRetryCounterCache = new NodeCache({
+  stdTTL: 3600, // 1 hora
+  useClones: false,
+});
 
 // Cache anti-duplicação de mensagens recebidas (evita repetição em retries ou retransmissões do WhatsApp)
 const mensagensProcessadas = new Map();
@@ -156,7 +164,10 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     version,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false,
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+    },
     browser: ['Lara WhatsApp Bot', 'Chrome', '1.0.0'],
     generateHighQualityLinkPreview: true,
     syncFullHistory: false,
@@ -168,9 +179,31 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     connectTimeoutMs: 30000,
     defaultQueryTimeoutMs: 25000,
     getMessage: async (key) => {
-      if (key?.id && messageStore.has(key.id)) {
+      if (!key?.id) return undefined;
+
+      // 1. Tenta recuperar do cache recente em memória
+      if (messageStore.has(key.id)) {
         return messageStore.get(key.id);
       }
+
+      // 2. Consulta no Supabase whatsapp_messages para responder ao retry e resolver "Aguardando mensagem"
+      if (supabase) {
+        try {
+          const { data } = await supabase
+            .from('whatsapp_messages')
+            .select('content')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (data?.content) {
+            return {
+              conversation: data.content,
+            };
+          }
+        } catch {}
+      }
+
       return undefined;
     },
   });
@@ -231,6 +264,19 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
         logSuccess('WhatsApp', 'Conectado com sucesso!');
       }
 
+      // Garante pré-chaves atualizadas no servidor do WhatsApp para evitar "Aguardando mensagem"
+      if (typeof sock.uploadPreKeysToServerIfRequired === 'function') {
+        sock.uploadPreKeysToServerIfRequired().catch(() => {});
+      }
+
+      if (preKeyInterval) clearInterval(preKeyInterval);
+      preKeyInterval = setInterval(() => {
+        if (activeSocket && typeof activeSocket.uploadPreKeysToServerIfRequired === 'function') {
+          activeSocket.uploadPreKeysToServerIfRequired().catch(() => {});
+        }
+      }, 2 * 3600 * 1000);
+      if (preKeyInterval.unref) preKeyInterval.unref();
+
       publicarStatusBot({
         status: 'connected',
         qr_code: null,
@@ -248,6 +294,10 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     }
 
     if (connection === 'close') {
+      if (preKeyInterval) {
+        clearInterval(preKeyInterval);
+        preKeyInterval = null;
+      }
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const errorMsg = String(lastDisconnect?.error?.message || lastDisconnect?.error || '');
 
@@ -355,11 +405,8 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     for (const msg of messages) {
       const jid = msg.key?.remoteJid;
 
-      // Se a mensagem chegou sem corpo decriptado (erro de cifra / Bad MAC / chave desincronizada)
+      // Se a mensagem chegou sem corpo decriptado (stanzas de protocolo, recibos ou negociação em andamento)
       if (!msg.message) {
-        if (jid && !jid.endsWith('@g.us') && !jid.includes('@broadcast')) {
-          limparSessaoDesincronizada(jid);
-        }
         continue;
       }
 

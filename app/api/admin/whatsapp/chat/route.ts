@@ -249,12 +249,21 @@ export async function POST(request: Request) {
 
     const clientName = body.client_name ? sanitizeText(body.client_name).slice(0, 100) : null;
 
+    // Se o contato possui um LID ativo mapeado, preserva o remote_jid como @lid
+    const { data: lidRow } = await supabase
+      .from('whatsapp_lid_mapping')
+      .select('lid')
+      .in('phone', getPhoneSearchVariants(cleanPhone))
+      .maybeSingle();
+
+    const targetRemoteJid = lidRow?.lid ? `${cleanPhoneDigits(lidRow.lid)}@lid` : `${cleanPhone}@s.whatsapp.net`;
+
     // 1. Registra no whatsapp_messages imediatamente
     const { data: insertedMsg, error: errMsg } = await supabase
       .from('whatsapp_messages')
       .insert({
         phone: cleanPhone,
-        remote_jid: `${cleanPhone}@s.whatsapp.net`,
+        remote_jid: targetRemoteJid,
         sender_name: 'Lara Varisa',
         from_me: true,
         sender_type: 'admin_manual',

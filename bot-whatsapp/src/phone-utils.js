@@ -163,6 +163,34 @@ export async function resolverNomeCliente(jid, phone, rawPushName = '') {
   return 'Cliente';
 }
 
+export function obterVariacoesTelefone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits || digits.length < 8) return digits ? [digits] : [];
+
+  const variants = new Set();
+  variants.add(digits);
+
+  let with55 = digits.startsWith('55') ? digits : `55${digits}`;
+  let sem55 = digits.startsWith('55') ? digits.slice(2) : digits;
+
+  variants.add(with55);
+  variants.add(sem55);
+
+  if (with55.length === 13 && with55[4] === '9') {
+    // 55 51 9 89741970 -> 555189741970
+    const sem9 = `${with55.slice(0, 4)}${with55.slice(5)}`;
+    variants.add(sem9);
+    variants.add(sem9.slice(2));
+  } else if (with55.length === 12) {
+    // 55 51 89741970 -> 5551989741970
+    const com9 = `${with55.slice(0, 4)}9${with55.slice(4)}`;
+    variants.add(com9);
+    variants.add(com9.slice(2));
+  }
+
+  return Array.from(variants);
+}
+
 /**
  * Carrega todos os mapeamentos existentes no banco de dados Supabase na inicialização
  */
@@ -178,7 +206,10 @@ export async function carregarMapeamentosBanco() {
         const cleanP = String(row.phone || '').replace(/\D/g, '');
         if (cleanL && cleanP) {
           lidToPhoneMap.set(cleanL, cleanP);
-          phoneToLidMap.set(cleanP, cleanL);
+          const vars = obterVariacoesTelefone(cleanP);
+          for (const v of vars) {
+            phoneToLidMap.set(v, cleanL);
+          }
         }
       }
     }
@@ -210,7 +241,10 @@ export function registrarMapeamentoLid({ lid, phone, name = null }) {
   if (!cleanLid || !cleanPhone || cleanLid === cleanPhone) return;
 
   lidToPhoneMap.set(cleanLid, cleanPhone);
-  phoneToLidMap.set(cleanPhone, cleanLid);
+  const vars = obterVariacoesTelefone(cleanPhone);
+  for (const v of vars) {
+    phoneToLidMap.set(v, cleanLid);
+  }
 
   if (supabase) {
     supabase
@@ -241,7 +275,70 @@ export function resolverLidParaTelefone(lidOrJid) {
 export function resolverTelefoneParaLid(phoneOrJid) {
   if (!phoneOrJid) return null;
   const clean = String(phoneOrJid).replace(/\D/g, '');
-  return phoneToLidMap.get(clean) || null;
+  if (!clean) return null;
+  const vars = obterVariacoesTelefone(clean);
+  for (const v of vars) {
+    if (phoneToLidMap.has(v)) return phoneToLidMap.get(v);
+  }
+  return null;
+}
+
+/**
+ * Resolução assíncrona inteligente do LID para telefone com Supabase
+ */
+export async function resolverTelefoneParaLidAsync(phoneOrJid) {
+  if (!phoneOrJid) return null;
+  const clean = String(phoneOrJid).replace(/\D/g, '');
+  if (!clean) return null;
+
+  // 1. Procura em memória
+  const cached = resolverTelefoneParaLid(clean);
+  if (cached) return cached;
+
+  // 2. Consulta no Supabase na tabela whatsapp_lid_mapping
+  if (supabase) {
+    try {
+      const variants = obterVariacoesTelefone(clean);
+      const { data: lidRow } = await supabase
+        .from('whatsapp_lid_mapping')
+        .select('lid, phone')
+        .in('phone', variants)
+        .maybeSingle();
+
+      if (lidRow?.lid) {
+        const foundLid = String(lidRow.lid).replace(/\D/g, '');
+        for (const v of variants) {
+          phoneToLidMap.set(v, foundLid);
+        }
+        lidToPhoneMap.set(foundLid, clean);
+        return foundLid;
+      }
+
+      // 3. Consulta mensagens recentes em whatsapp_messages onde remote_jid é LID
+      const { data: msgRow } = await supabase
+        .from('whatsapp_messages')
+        .select('remote_jid')
+        .in('phone', variants)
+        .ilike('remote_jid', '%@lid%')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (msgRow?.remote_jid) {
+        const lidFromMsg = String(msgRow.remote_jid).split('@')[0].replace(/\D/g, '');
+        if (lidFromMsg && isLid(lidFromMsg)) {
+          for (const v of variants) {
+            phoneToLidMap.set(v, lidFromMsg);
+          }
+          lidToPhoneMap.set(lidFromMsg, clean);
+          registrarMapeamentoLid({ lid: lidFromMsg, phone: clean });
+          return lidFromMsg;
+        }
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 /**
@@ -308,7 +405,8 @@ export async function resolverLidParaTelefoneAsync(lidOrJid, pushName = '') {
   return null;
 }
 
-function hasExistingSession(cleanDigits) {
+export function hasExistingSession(cleanDigits) {
+  if (!cleanDigits) return false;
   try {
     if (!fs.existsSync(authPath)) return false;
     const files = fs.readdirSync(authPath);
@@ -320,7 +418,7 @@ function hasExistingSession(cleanDigits) {
 
 /**
  * Resolve o JID real do WhatsApp verificando na API do Baileys (sock.onWhatsApp)
- * Lida de forma robusta com LIDs e com o 9º dígito brasileiro
+ * e priorizando a sessão criptográfica ativa (LID ou Telefone)
  * 
  * @param {any} sock Socket ativo do Baileys
  * @param {string} telefoneRaw Número de telefone ou LID em qualquer formato
@@ -335,23 +433,37 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
     return rawStr;
   }
 
-  // 2. Se for um LID identificado (14+ dígitos sem 55)
+  // Se já for JID @s.whatsapp.net, verifica se este contato na verdade usa LID ativo
+  if (rawStr.endsWith('@s.whatsapp.net')) {
+    const pDigits = rawStr.split('@')[0].replace(/\D/g, '');
+    const mappedLid = resolverTelefoneParaLid(pDigits) || await resolverTelefoneParaLidAsync(pDigits);
+    if (mappedLid && hasExistingSession(mappedLid)) {
+      return `${mappedLid}@lid`;
+    }
+    return rawStr;
+  }
+
   const digits = rawStr.replace(/\D/g, '');
   if (!digits || digits.length < 8) return null;
 
+  // 2. Se for um LID puro identificado (14+ dígitos sem 55)
   if (isLid(digits)) {
-    // Tenta resolver para o telefone real se mapeado (síncrono ou assíncrono)
-    let mappedPhone = resolverLidParaTelefone(digits);
-    if (!mappedPhone) {
-      mappedPhone = await resolverLidParaTelefoneAsync(digits);
-    }
-    if (mappedPhone) {
-      return resolverJidWhatsApp(sock, mappedPhone);
-    }
-    // Se for LID puro não mapeado, usa @lid (NUNCA adicionar 55 na frente de um LID!)
     return `${digits}@lid`;
   }
 
+  // 3. Se for telefone, verifica PRIMEIRO se possui um LID mapeado com sessão ativa
+  let mappedLid = resolverTelefoneParaLid(digits);
+  if (!mappedLid) {
+    mappedLid = await resolverTelefoneParaLidAsync(digits);
+  }
+
+  if (mappedLid) {
+    if (hasExistingSession(mappedLid)) {
+      return `${mappedLid}@lid`;
+    }
+  }
+
+  // 4. Tratamento para números de telefone brasileiro (@s.whatsapp.net)
   const withCountry = digits.startsWith('55') ? digits : `55${digits}`;
   const ddi = withCountry.slice(0, 2);
   const rest = withCountry.slice(2);
@@ -361,11 +473,11 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
     let com9Digits = '';
 
     if (rest.length === 11 && rest[2] === '9') {
-      // Ex: 51 9 8974-1970
+      // Ex: 51 9 8974-1970 -> 555189741970
       sem9Digits = `55${rest.slice(0, 2)}${rest.slice(3)}`;
       com9Digits = `55${rest}`;
     } else if (rest.length === 10) {
-      // Ex: 51 8974-1970
+      // Ex: 51 8974-1970 -> 5551989741970
       sem9Digits = `55${rest}`;
       com9Digits = `55${rest.slice(0, 2)}9${rest.slice(2)}`;
     }
@@ -374,12 +486,17 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
       const sem9 = `${sem9Digits}@s.whatsapp.net`;
       const com9 = `${com9Digits}@s.whatsapp.net`;
 
-      // 1. REGRA CRÍTICA: Se já existe sessão criptográfica salva no disco, USE-A IMEDIATAMENTE!
+      // 1. REGRA CRÍTICA: Se já existe sessão criptográfica salva no disco para o número, USE-A!
       if (hasExistingSession(sem9Digits)) {
         return sem9;
       }
       if (hasExistingSession(com9Digits)) {
         return com9;
+      }
+
+      // Se há um LID mapeado (mesmo que sem arquivo nomeado com prefixo exato), usa o LID
+      if (mappedLid) {
+        return `${mappedLid}@lid`;
       }
 
       // Se não há sessão prévia no disco, consulta a API do Baileys
@@ -398,6 +515,10 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
 
       return sem9;
     }
+  }
+
+  if (mappedLid) {
+    return `${mappedLid}@lid`;
   }
 
   return `${withCountry}@s.whatsapp.net`;
