@@ -21,6 +21,9 @@ import {
   Eye,
   Check,
   AlertTriangle,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { ClientRow } from '@/lib/admin-types';
 
@@ -200,6 +203,18 @@ export function DisparosManager({
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 
+  // Paginação e Limpeza da Fila de Disparos
+  const [outboxPage, setOutboxPage] = useState(1);
+  const outboxPerPage = 8;
+  const totalOutboxPages = Math.max(1, Math.ceil(recent.length / outboxPerPage));
+  const paginatedRecent = useMemo(() => {
+    const start = (outboxPage - 1) * outboxPerPage;
+    return recent.slice(start, start + outboxPerPage);
+  }, [recent, outboxPage]);
+
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [clearingOutbox, setClearingOutbox] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const filteredClients = useMemo(() => {
@@ -375,68 +390,220 @@ export function DisparosManager({
     }
   };
 
+  const handleClearOutbox = async () => {
+    setClearingOutbox(true);
+    setClearConfirmOpen(false);
+    try {
+      const res = await fetch('/api/admin/broadcast', { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setRecent([]);
+        setStats((prev) => ({ ...prev, pending: 0, failed: 0 }));
+        setOutboxPage(1);
+        setFeedback({ type: 'success', text: 'Fila de disparos limpa com sucesso.' });
+      } else {
+        setFeedback({ type: 'error', text: data.error || 'Não foi possível limpar a fila.' });
+      }
+    } catch {
+      setFeedback({ type: 'error', text: 'Erro de comunicação ao limpar fila.' });
+    } finally {
+      setClearingOutbox(false);
+    }
+  };
+
+
   return (
     <div className="disparos-container">
       <style>{`
         .disparos-container {
           display: grid;
-          gap: 24px;
+          gap: 20px;
           width: 100%;
           max-width: 100%;
           box-sizing: border-box;
           padding-bottom: calc(110px + env(safe-area-inset-bottom));
+          min-width: 0;
         }
         .disparos-stats-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
+          gap: 12px;
           width: 100%;
+          min-width: 0;
         }
         .disparos-stat-card {
           background: var(--admin-card);
           border: 1px solid var(--admin-line);
-          border-radius: 20px;
-          padding: 18px 20px;
+          border-radius: 18px;
+          padding: 16px 18px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          gap: 14px;
+          gap: 12px;
+          min-width: 0;
+          box-sizing: border-box;
           transition: transform 0.2s ease, border-color 0.2s ease;
         }
-        .disparos-stat-number {
-          font-size: 32px;
+        .disparos-stat-label {
+          font-size: 11px;
           font-weight: 700;
-          font-family: var(--font-display);
-          line-height: 1;
+          letter-spacing: 0.05em;
+          color: var(--admin-muted);
+          text-transform: uppercase;
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .disparos-stat-icon {
+          width: 30px;
+          height: 30px;
+          border-radius: 9px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+        .disparos-stat-number {
+          font-size: 24px;
+          font-weight: 700;
+          font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.1;
+          color: var(--admin-ink);
+          letter-spacing: -0.02em;
         }
         .disparos-stat-sub {
-          margin: 6px 0 0;
-          font-size: 12px;
+          margin: 4px 0 0;
+          font-size: 11.5px;
           color: var(--admin-muted);
+          line-height: 1.2;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .disparos-main-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-          gap: 24px;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
           width: 100%;
+          min-width: 0;
+        }
+        .disparos-panel {
+          border-radius: 22px;
+          background: var(--admin-card);
+          border: 1px solid var(--admin-line);
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+        .disparos-panel-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 18px;
+          min-width: 0;
+        }
+        .disparos-panel-head h2 {
+          margin: 2px 0 0;
+          font-family: var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          font-size: 16px !important;
+          font-weight: 600 !important;
+          letter-spacing: -0.01em !important;
+          color: var(--admin-ink) !important;
+          line-height: 1.25 !important;
+          text-transform: none !important;
+        }
+        .disparos-panel-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+        .disparos-selection-badge {
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(252, 80, 0, 0.08);
+          color: var(--admin-orange);
+          border: 1px solid rgba(252, 80, 0, 0.2);
+          white-space: nowrap;
+        }
+        .disparos-filter-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+        }
+        .disparos-select {
+          width: 100%;
+          min-height: 38px;
+          font-size: 12px;
+          padding: 6px 12px;
+          border-radius: 12px;
+          border: 1px solid var(--admin-line);
+          background: var(--admin-bg);
+          color: var(--admin-ink);
+          outline: none;
+          min-width: 0;
+          cursor: pointer;
+        }
+        .disparos-batch-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          flex-wrap: wrap;
+          width: 100%;
+          min-width: 0;
+        }
+        .disparos-batch-buttons {
+          display: flex;
+          gap: 6px;
         }
         .disparos-templates-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 8px;
+          width: 100%;
+          min-width: 0;
         }
+        .disparos-mobile-recent {
+          display: none;
+          grid-template-columns: 1fr;
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+        }
+        .disparos-recent-card {
+          background: var(--admin-bg);
+          border: 1px solid var(--admin-line);
+          border-radius: 14px;
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-width: 0;
+        }
+
         @media (max-width: 1024px) {
           .disparos-stats-grid {
             grid-template-columns: repeat(2, 1fr) !important;
-            gap: 12px !important;
+            gap: 10px !important;
           }
-        }
-        @media (max-width: 860px) {
           .disparos-main-grid {
             grid-template-columns: 1fr !important;
             gap: 16px !important;
           }
         }
+
         @media (max-width: 640px) {
           .disparos-container {
             gap: 16px !important;
@@ -447,35 +614,48 @@ export function DisparosManager({
             gap: 8px !important;
           }
           .disparos-stat-card {
-            padding: 12px 14px !important;
-            border-radius: 16px !important;
+            padding: 12px 12px !important;
+            border-radius: 14px !important;
             gap: 8px !important;
           }
+          .disparos-stat-label {
+            font-size: 10px !important;
+          }
+          .disparos-stat-icon {
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 7px !important;
+          }
+          .disparos-stat-icon svg {
+            width: 13px !important;
+            height: 13px !important;
+          }
           .disparos-stat-number {
-            font-size: 24px !important;
+            font-size: 22px !important;
           }
           .disparos-stat-sub {
-            font-size: 11px !important;
-            margin-top: 3px !important;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 10.5px !important;
+            margin-top: 2px !important;
           }
-          .disparos-templates-grid {
-            grid-template-columns: 1fr !important;
+          .disparos-panel {
+            padding: 16px 14px !important;
+            border-radius: 18px !important;
+          }
+          .disparos-panel-head {
+            margin-bottom: 14px !important;
+          }
+          .disparos-panel-head h2 {
+            font-size: 16px !important;
           }
           .disparos-filter-row {
-            flex-direction: column !important;
-          }
-          .disparos-filter-row select {
-            width: 100% !important;
-            min-width: 100% !important;
+            grid-template-columns: 1fr !important;
+            gap: 6px !important;
           }
           .disparos-batch-actions {
             flex-direction: column !important;
             align-items: stretch !important;
           }
-          .disparos-batch-actions button {
+          .disparos-select-all-btn {
             width: 100% !important;
             justify-content: center !important;
           }
@@ -484,29 +664,39 @@ export function DisparosManager({
             grid-template-columns: repeat(3, 1fr) !important;
             width: 100% !important;
           }
+          .disparos-batch-buttons button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .disparos-templates-grid {
+            grid-template-columns: 1fr !important;
+            gap: 6px !important;
+          }
+          .disparos-desktop-table {
+            display: none !important;
+          }
+          .disparos-mobile-recent {
+            display: grid !important;
+          }
         }
       `}</style>
 
       <div className="disparos-stats-grid">
         {/* Total de Clientes */}
         <div className="disparos-stat-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span className="disparos-stat-label">
               Total de Clientes
             </span>
             <div
+              className="disparos-stat-icon"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                display: 'grid',
-                placeItems: 'center',
                 background: 'rgba(255, 255, 255, 0.06)',
                 color: 'var(--admin-ink)',
                 border: '1px solid var(--admin-line)',
               }}
             >
-              <Users size={16} />
+              <Users size={15} />
             </div>
           </div>
           <div>
@@ -521,23 +711,19 @@ export function DisparosManager({
 
         {/* Disparos Enviados */}
         <div className="disparos-stat-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span className="disparos-stat-label">
               Disparos Enviados
             </span>
             <div
+              className="disparos-stat-icon"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                display: 'grid',
-                placeItems: 'center',
                 background: stats.sent > 0 ? 'rgba(34, 197, 94, 0.14)' : 'rgba(255, 255, 255, 0.06)',
                 color: stats.sent > 0 ? '#22c55e' : 'var(--admin-muted)',
                 border: stats.sent > 0 ? '1px solid rgba(34, 197, 94, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <Check size={16} strokeWidth={2.5} />
+              <Check size={15} strokeWidth={2.5} />
             </div>
           </div>
           <div>
@@ -552,23 +738,19 @@ export function DisparosManager({
 
         {/* Pendentes na Fila */}
         <div className="disparos-stat-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span className="disparos-stat-label">
               Pendentes na Fila
             </span>
             <div
+              className="disparos-stat-icon"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                display: 'grid',
-                placeItems: 'center',
                 background: stats.pending > 0 ? 'rgba(255, 102, 34, 0.14)' : 'rgba(255, 255, 255, 0.06)',
                 color: stats.pending > 0 ? 'var(--admin-orange)' : 'var(--admin-muted)',
                 border: stats.pending > 0 ? '1px solid rgba(255, 102, 34, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <Clock size={16} />
+              <Clock size={15} />
             </div>
           </div>
           <div>
@@ -583,23 +765,19 @@ export function DisparosManager({
 
         {/* Falhas no Envio */}
         <div className="disparos-stat-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--admin-muted)', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span className="disparos-stat-label">
               Falhas no Envio
             </span>
             <div
+              className="disparos-stat-icon"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                display: 'grid',
-                placeItems: 'center',
                 background: stats.failed > 0 ? 'rgba(239, 68, 68, 0.14)' : 'rgba(255, 255, 255, 0.06)',
                 color: stats.failed > 0 ? '#ef4444' : 'var(--admin-muted)',
                 border: stats.failed > 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--admin-line)',
               }}
             >
-              <AlertTriangle size={16} />
+              <AlertTriangle size={15} />
             </div>
           </div>
           <div>
@@ -633,52 +811,46 @@ export function DisparosManager({
       )}
 
       <div className="disparos-main-grid">
-        <section className="admin-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="admin-panel-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ color: 'var(--admin-orange)' }}>
-                <Filter size={20} />
-              </span>
-              <div>
-                <p className="admin-kicker">DESTINATÁRIOS</p>
+        <section className="disparos-panel">
+          <div className="disparos-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <div
+                className="disparos-panel-icon"
+                style={{
+                  background: 'rgba(252, 80, 0, 0.1)',
+                  color: 'var(--admin-orange)',
+                  border: '1px solid rgba(252, 80, 0, 0.2)',
+                }}
+              >
+                <Filter size={18} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p className="admin-kicker" style={{ margin: 0, fontSize: '10px' }}>DESTINATÁRIOS</p>
                 <h2>1. Selecionar Clientes</h2>
               </div>
             </div>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: selectedClients.length > 0 ? 'var(--admin-orange)' : 'var(--admin-muted)',
-              }}
-            >
+            <span className="disparos-selection-badge">
               {selectedClients.length} de {filteredClients.length} selecionadas
             </span>
           </div>
 
-          <div style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
-            <div className="admin-search-wrap">
+          <div style={{ display: 'grid', gap: '10px', marginBottom: '14px', width: '100%', minWidth: 0 }}>
+            <div className="admin-search-wrap" style={{ width: '100%', minWidth: 0 }}>
               <Search size={16} />
               <input
                 className="admin-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por nome ou WhatsApp..."
+                style={{ width: '100%' }}
               />
             </div>
 
-            <div className="disparos-filter-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="disparos-filter-row">
               <select
                 value={filterInactivity}
                 onChange={(e) => setFilterInactivity(e.target.value as any)}
-                style={{
-                  fontSize: '12px',
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  border: '1px solid var(--admin-line)',
-                  background: 'var(--admin-bg)',
-                  flex: 1,
-                  minWidth: '170px',
-                }}
+                className="disparos-select"
               >
                 <option value="all">Todas as clientes cadastradas</option>
                 <option value="inativo_30">Inativas (+30 dias)</option>
@@ -691,28 +863,21 @@ export function DisparosManager({
               <select
                 value={filterOrigin}
                 onChange={(e) => setFilterOrigin(e.target.value as any)}
-                style={{
-                  fontSize: '12px',
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  border: '1px solid var(--admin-line)',
-                  background: 'var(--admin-bg)',
-                  minWidth: '130px',
-                }}
+                className="disparos-select"
               >
-                <option value="all">Todas origens</option>
+                <option value="all">Todas as origens</option>
                 <option value="whatsapp">WhatsApp Bot</option>
                 <option value="web">Site Oficial</option>
                 <option value="manual">Balcão / Manual</option>
               </select>
             </div>
 
-            <div className="disparos-batch-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="disparos-batch-actions">
               <button
                 type="button"
-                className="admin-secondary"
+                className="admin-secondary disparos-select-all-btn"
                 onClick={toggleSelectAll}
-                style={{ fontSize: '11px', minHeight: '30px', padding: '0 12px' }}
+                style={{ fontSize: '11.5px', minHeight: '32px', padding: '0 12px' }}
               >
                 {selectedIds.size >= filteredClients.length && filteredClients.length > 0 ? (
                   <>
@@ -725,12 +890,13 @@ export function DisparosManager({
                 )}
               </button>
 
-              <div className="disparos-batch-buttons" style={{ display: 'flex', gap: '6px' }}>
+              <div className="disparos-batch-buttons">
                 <button
                   type="button"
                   className="admin-secondary"
                   onClick={() => selectFirstN(10)}
-                  style={{ fontSize: '11px', minHeight: '30px', padding: '0 10px' }}
+                  style={{ fontSize: '11px', minHeight: '32px', padding: '0 10px' }}
+                  title="Selecionar primeiras 10 clientes"
                 >
                   +10
                 </button>
@@ -738,7 +904,8 @@ export function DisparosManager({
                   type="button"
                   className="admin-secondary"
                   onClick={() => selectFirstN(25)}
-                  style={{ fontSize: '11px', minHeight: '30px', padding: '0 10px' }}
+                  style={{ fontSize: '11px', minHeight: '32px', padding: '0 10px' }}
+                  title="Selecionar primeiras 25 clientes"
                 >
                   +25
                 </button>
@@ -746,7 +913,8 @@ export function DisparosManager({
                   type="button"
                   className="admin-secondary"
                   onClick={() => selectFirstN(50)}
-                  style={{ fontSize: '11px', minHeight: '30px', padding: '0 10px' }}
+                  style={{ fontSize: '11px', minHeight: '32px', padding: '0 10px' }}
+                  title="Selecionar primeiras 50 clientes"
                 >
                   +50
                 </button>
@@ -756,11 +924,13 @@ export function DisparosManager({
 
           <div
             style={{
-              maxHeight: '440px',
+              maxHeight: '380px',
               overflowY: 'auto',
               border: '1px solid var(--admin-line)',
               borderRadius: '16px',
               background: 'var(--admin-bg)',
+              width: '100%',
+              minWidth: 0,
             }}
           >
             {filteredClients.length === 0 ? (
@@ -779,13 +949,14 @@ export function DisparosManager({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      padding: '11px 14px',
+                      gap: '10px',
+                      padding: '10px 12px',
                       borderBottom: '1px solid var(--admin-line)',
                       cursor: hasValidPhone ? 'pointer' : 'not-allowed',
                       opacity: hasValidPhone ? 1 : 0.45,
                       background: isSelected ? 'rgba(252, 80, 0, 0.08)' : 'transparent',
                       transition: 'background 0.15s ease',
+                      minWidth: 0,
                     }}
                   >
                     {/* Custom Checkbox */}
@@ -809,14 +980,14 @@ export function DisparosManager({
                     {/* Avatar com inicial */}
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '30px',
+                        height: '30px',
                         borderRadius: '50%',
                         background: isSelected ? 'rgba(252, 80, 0, 0.15)' : 'rgba(255, 255, 255, 0.05)',
                         border: `1px solid ${isSelected ? 'rgba(252, 80, 0, 0.35)' : 'var(--admin-line)'}`,
                         display: 'grid',
                         placeItems: 'center',
-                        fontSize: '12px',
+                        fontSize: '11.5px',
                         fontWeight: 600,
                         color: isSelected ? 'var(--admin-orange)' : 'var(--admin-ink)',
                         flexShrink: 0,
@@ -826,13 +997,33 @@ export function DisparosManager({
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                        <strong
+                          style={{
+                            fontSize: '13px',
+                            color: 'var(--admin-ink)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {client.name}
                         </strong>
                         {renderOriginBadge(client.origin)}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--admin-muted)', marginTop: '2px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '11px',
+                          color: 'var(--admin-muted)',
+                          marginTop: '2px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         <span>{formatPhoneBR(client.phone)}</span>
                         <span>•</span>
                         <span>{getInactivityText(client)}</span>
@@ -845,21 +1036,28 @@ export function DisparosManager({
           </div>
         </section>
 
-        <section className="admin-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="admin-panel-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ color: '#25d366' }}>
-                <MessageCircle size={20} />
-              </span>
-              <div>
-                <p className="admin-kicker">PERSONALIZAÇÃO</p>
+        <section className="disparos-panel">
+          <div className="disparos-panel-head">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <div
+                className="disparos-panel-icon"
+                style={{
+                  background: 'rgba(37, 211, 102, 0.1)',
+                  color: '#25d366',
+                  border: '1px solid rgba(37, 211, 102, 0.25)',
+                }}
+              >
+                <MessageCircle size={18} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p className="admin-kicker" style={{ margin: 0, fontSize: '10px' }}>PERSONALIZAÇÃO</p>
                 <h2>2. Mensagem & Disparo</h2>
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: '14px' }}>
-            <label style={{ display: 'grid', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--admin-ink)' }}>
+          <div style={{ display: 'grid', gap: '14px', width: '100%', minWidth: 0 }}>
+            <label style={{ display: 'grid', gap: '6px', fontSize: '12.5px', fontWeight: 600, color: 'var(--admin-ink)' }}>
               Identificação da Campanha
               <input
                 value={campaignName}
@@ -868,15 +1066,16 @@ export function DisparosManager({
                 maxLength={80}
                 style={{
                   width: '100%',
-                  minHeight: '44px',
-                  borderRadius: '13px',
+                  minHeight: '42px',
+                  borderRadius: '12px',
                   border: '1px solid var(--admin-line)',
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   fontSize: '13px',
                   background: 'var(--admin-bg)',
                   color: 'var(--admin-ink)',
                   fontWeight: 400,
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </label>
@@ -897,18 +1096,20 @@ export function DisparosManager({
                         setMessageTemplate(t.text);
                       }}
                       style={{
-                        padding: '8px 10px',
+                        padding: '9px 12px',
                         borderRadius: '12px',
                         border: `1px solid ${isActive ? 'var(--admin-orange)' : 'var(--admin-line)'}`,
                         background: isActive ? 'rgba(252, 80, 0, 0.08)' : 'var(--admin-bg)',
                         textAlign: 'left',
                         cursor: 'pointer',
+                        width: '100%',
+                        boxSizing: 'border-box',
                       }}
                     >
-                      <strong style={{ fontSize: '12px', display: 'block', color: isActive ? 'var(--admin-orange)' : 'var(--admin-ink)' }}>
+                      <strong style={{ fontSize: '12.5px', display: 'block', color: isActive ? 'var(--admin-orange)' : 'var(--admin-ink)' }}>
                         {t.title}
                       </strong>
-                      <small style={{ fontSize: '10px', color: 'var(--admin-muted)', display: 'block' }}>
+                      <small style={{ fontSize: '10.5px', color: 'var(--admin-muted)', display: 'block', marginTop: '2px', lineHeight: 1.3 }}>
                         {t.desc}
                       </small>
                     </button>
@@ -918,16 +1119,16 @@ export function DisparosManager({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ margin: 0, fontSize: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+                <label style={{ margin: 0, fontSize: '12px', fontWeight: 600 }}>
                   Texto da Mensagem no WhatsApp:
                 </label>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     type="button"
                     onClick={() => insertVariable('{primeiro_nome}')}
                     className="admin-secondary"
-                    style={{ fontSize: '10px', padding: '2px 8px', minHeight: '22px' }}
+                    style={{ fontSize: '10.5px', padding: '3px 8px', minHeight: '26px' }}
                     title="Insere o primeiro nome da cliente"
                   >
                     + {'{primeiro_nome}'}
@@ -936,7 +1137,7 @@ export function DisparosManager({
                     type="button"
                     onClick={() => insertVariable('{nome}')}
                     className="admin-secondary"
-                    style={{ fontSize: '10px', padding: '2px 8px', minHeight: '22px' }}
+                    style={{ fontSize: '10.5px', padding: '3px 8px', minHeight: '26px' }}
                     title="Insere o nome completo da cliente"
                   >
                     + {'{nome}'}
@@ -953,15 +1154,16 @@ export function DisparosManager({
                 style={{
                   width: '100%',
                   minHeight: '110px',
-                  borderRadius: '13px',
+                  borderRadius: '12px',
                   border: '1px solid var(--admin-line)',
-                  padding: '12px 14px',
+                  padding: '10px 12px',
                   fontSize: '13px',
                   lineHeight: 1.5,
                   background: 'var(--admin-bg)',
                   color: 'var(--admin-ink)',
                   resize: 'vertical',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
                 placeholder="Escreva a mensagem..."
               />
@@ -976,9 +1178,11 @@ export function DisparosManager({
                   background: '#e5ddd5',
                   backgroundImage: 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0)',
                   backgroundSize: '16px 16px',
-                  borderRadius: '16px',
-                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
                   border: '1px solid #d1d7db',
+                  width: '100%',
+                  boxSizing: 'border-box',
                 }}
               >
                 <div
@@ -987,7 +1191,7 @@ export function DisparosManager({
                     borderRadius: '12px 12px 12px 2px',
                     padding: '10px 12px',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
-                    maxWidth: '92%',
+                    maxWidth: '96%',
                     fontSize: '13px',
                     color: '#111b21',
                     lineHeight: 1.45,
@@ -1003,7 +1207,7 @@ export function DisparosManager({
               </div>
             </div>
 
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ marginTop: '6px' }}>
               <button
                 type="button"
                 className="admin-primary"
@@ -1016,7 +1220,8 @@ export function DisparosManager({
                   color: selectedClients.length > 0 ? '#ffffff' : 'var(--admin-muted)',
                   fontSize: '14px',
                   fontWeight: 600,
-                  gap: '10px',
+                  minHeight: '46px',
+                  gap: '8px',
                 }}
               >
                 <SendHorizontal size={18} />
@@ -1083,25 +1288,51 @@ export function DisparosManager({
         </div>
       )}
 
-      <section className="admin-panel">
-        <div className="admin-panel-head">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: 'var(--admin-orange)' }}>
-              <Clock size={20} />
-            </span>
-            <div>
-              <p className="admin-kicker">MONITORAMENTO EM TEMPO REAL</p>
+      <section className="disparos-panel">
+        <div className="disparos-panel-head">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            <div
+              className="disparos-panel-icon"
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'var(--admin-ink)',
+                border: '1px solid var(--admin-line)',
+              }}
+            >
+              <Clock size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p className="admin-kicker" style={{ margin: 0, fontSize: '10px' }}>MONITORAMENTO EM TEMPO REAL</p>
               <h2>Fila de Disparos Recentes</h2>
             </div>
           </div>
-          <button
-            type="button"
-            className="admin-secondary"
-            onClick={fetchStats}
-            style={{ fontSize: '12px', padding: '0 12px', minHeight: '32px' }}
-          >
-            <RefreshCw size={13} /> Atualizar
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="admin-secondary"
+              onClick={() => setClearConfirmOpen(true)}
+              disabled={recent.length === 0 || clearingOutbox}
+              style={{
+                fontSize: '12px',
+                padding: '0 12px',
+                minHeight: '32px',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.05)',
+              }}
+              title="Limpar toda a fila e histórico recente"
+            >
+              <Trash2 size={13} /> Limpar Fila
+            </button>
+            <button
+              type="button"
+              className="admin-secondary"
+              onClick={fetchStats}
+              style={{ fontSize: '12px', padding: '0 12px', minHeight: '32px' }}
+            >
+              <RefreshCw size={13} /> Atualizar
+            </button>
+          </div>
         </div>
 
         {recent.length === 0 ? (
@@ -1109,79 +1340,236 @@ export function DisparosManager({
             Nenhum disparo registrado recentemente na fila.
           </div>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Destinatária</th>
-                  <th>Mensagem</th>
-                  <th>Campanha</th>
-                  <th>Status</th>
-                  <th>Horário</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <strong>{item.client_name || 'Cliente'}</strong>
-                      <br />
-                      <small style={{ color: 'var(--admin-muted)' }}>{item.phone}</small>
-                    </td>
-                    <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {item.message}
-                    </td>
-                    <td>
-                      <small>{item.campaign_name || item.message_type}</small>
-                    </td>
-                    <td>
-                      <span
-                        className="admin-status"
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          background:
-                            item.status === 'sent'
-                              ? '#dcfce7'
-                              : item.status === 'processing'
-                              ? '#dbeafe'
-                              : item.status === 'failed'
-                              ? '#fee2e2'
-                              : '#fef9c3',
-                          color:
-                            item.status === 'sent'
-                              ? '#15803d'
-                              : item.status === 'processing'
-                              ? '#1d4ed8'
-                              : item.status === 'failed'
-                              ? '#b91c1c'
-                              : '#854d0e',
-                        }}
-                      >
-                        {item.status === 'sent'
-                          ? '✓ Enviado'
-                          : item.status === 'processing'
-                          ? 'Enviando...'
-                          : item.status === 'failed'
-                          ? 'Falhou'
-                          : 'Na fila'}
-                      </span>
-                    </td>
-                    <td>
-                      <small style={{ color: 'var(--admin-muted)' }}>
-                        {new Date(item.created_at).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </small>
-                    </td>
+          <>
+            {/* Desktop Table */}
+            <div className="admin-table-wrap disparos-desktop-table">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Destinatária</th>
+                    <th>Mensagem</th>
+                    <th>Campanha</th>
+                    <th>Status</th>
+                    <th>Horário</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginatedRecent.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.client_name || 'Cliente'}</strong>
+                        <br />
+                        <small style={{ color: 'var(--admin-muted)' }}>{formatPhoneBR(item.phone)}</small>
+                      </td>
+                      <td style={{ maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.message}
+                      </td>
+                      <td>
+                        <small>{item.campaign_name || item.message_type}</small>
+                      </td>
+                      <td>
+                        <span
+                          className="admin-status"
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            background:
+                              item.status === 'sent'
+                                ? '#dcfce7'
+                                : item.status === 'processing'
+                                ? '#dbeafe'
+                                : item.status === 'failed'
+                                ? '#fee2e2'
+                                : '#fef9c3',
+                            color:
+                              item.status === 'sent'
+                                ? '#15803d'
+                                : item.status === 'processing'
+                                ? '#1d4ed8'
+                                : item.status === 'failed'
+                                ? '#b91c1c'
+                                : '#854d0e',
+                          }}
+                        >
+                          {item.status === 'sent'
+                            ? '✓ Enviado'
+                            : item.status === 'processing'
+                            ? 'Enviando...'
+                            : item.status === 'failed'
+                            ? 'Falhou'
+                            : 'Na fila'}
+                        </span>
+                      </td>
+                      <td>
+                        <small style={{ color: 'var(--admin-muted)' }}>
+                          {new Date(item.created_at).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </small>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="disparos-mobile-recent">
+              {paginatedRecent.map((item) => (
+                <div key={item.id} className="disparos-recent-card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '13px', color: 'var(--admin-ink)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.client_name || 'Cliente'}
+                      </strong>
+                      <small style={{ color: 'var(--admin-muted)', fontSize: '11px' }}>
+                        {formatPhoneBR(item.phone)}
+                      </small>
+                    </div>
+                    <span
+                      className="admin-status"
+                      style={{
+                        fontSize: '10.5px',
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        background:
+                          item.status === 'sent'
+                            ? '#dcfce7'
+                            : item.status === 'processing'
+                            ? '#dbeafe'
+                            : item.status === 'failed'
+                            ? '#fee2e2'
+                            : '#fef9c3',
+                        color:
+                          item.status === 'sent'
+                            ? '#15803d'
+                            : item.status === 'processing'
+                            ? '#1d4ed8'
+                            : item.status === 'failed'
+                            ? '#b91c1c'
+                            : '#854d0e',
+                      }}
+                    >
+                      {item.status === 'sent'
+                        ? '✓ Enviado'
+                        : item.status === 'processing'
+                        ? 'Enviando...'
+                        : item.status === 'failed'
+                        ? 'Falhou'
+                        : 'Na fila'}
+                    </span>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: '6px 0 0',
+                      fontSize: '12px',
+                      color: 'var(--admin-ink)',
+                      lineHeight: 1.4,
+                      wordBreak: 'break-word',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--admin-line)',
+                    }}
+                  >
+                    {item.message}
+                  </p>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px', fontSize: '10.5px', color: 'var(--admin-muted)' }}>
+                    <span>{item.campaign_name || item.message_type}</span>
+                    <span>
+                      {new Date(item.created_at).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination Footer */}
+            {totalOutboxPages > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 4px 0',
+                  marginTop: '12px',
+                  borderTop: '1px solid var(--admin-line)',
+                  fontSize: '12px',
+                  color: 'var(--admin-muted)',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                <span>
+                  Mostrando {(outboxPage - 1) * outboxPerPage + 1}–{Math.min(outboxPage * outboxPerPage, recent.length)} de {recent.length} disparos
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => setOutboxPage((p) => Math.max(1, p - 1))}
+                    disabled={outboxPage === 1}
+                    style={{ padding: '4px 10px', fontSize: '11px', minHeight: '28px', gap: '4px' }}
+                  >
+                    <ChevronLeft size={13} /> Anterior
+                  </button>
+                  <span style={{ fontWeight: 600, color: 'var(--admin-ink)', margin: '0 4px', fontSize: '11px' }}>
+                    {outboxPage} / {totalOutboxPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    onClick={() => setOutboxPage((p) => Math.min(totalOutboxPages, p + 1))}
+                    disabled={outboxPage === totalOutboxPages}
+                    style={{ padding: '4px 10px', fontSize: '11px', minHeight: '28px', gap: '4px' }}
+                  >
+                    Próxima <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </section>
+
+      {/* Modal Confirmar Limpeza da Fila */}
+      {clearConfirmOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '420px' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444' }}>
+              <AlertTriangle size={20} /> Limpar Fila de Disparos?
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
+              Esta ação removerá permanentemente todos os <strong>{recent.length}</strong> registros da fila de envio do WhatsApp, incluindo mensagens pendentes e histórico recente.
+            </p>
+            <div className="admin-dialog-actions" style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                className="admin-secondary"
+                onClick={() => setClearConfirmOpen(false)}
+                disabled={clearingOutbox}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-primary"
+                onClick={handleClearOutbox}
+                disabled={clearingOutbox}
+                style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
+              >
+                {clearingOutbox ? 'Limpando...' : 'Sim, Limpar Fila'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

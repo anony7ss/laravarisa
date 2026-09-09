@@ -91,6 +91,7 @@ export async function registrarMensagemChat({
   senderType,
   content,
   mediaType = 'text',
+  mediaUrl = null,
   status = 'delivered',
 }) {
   try {
@@ -112,6 +113,7 @@ export async function registrarMensagemChat({
       sender_type: senderType || (fromMe ? 'bot_ai' : 'client'),
       content: String(content),
       media_type: mediaType,
+      media_url: mediaUrl || null,
       status: status,
     });
   } catch {}

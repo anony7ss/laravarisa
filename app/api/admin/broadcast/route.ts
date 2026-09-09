@@ -108,3 +108,25 @@ export async function POST(request: Request) {
     { headers: NO_STORE_HEADERS }
   );
 }
+
+export async function DELETE(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
+  const staff = await requireStaff();
+  if (staff.profile.role === 'viewer') return jsonError('Sem permissão.', 403);
+
+  // Exclui todos os registros da fila de outbox
+  const { error } = await staff.supabase
+    .from('whatsapp_outbox')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
+
+  if (error) {
+    return jsonError(`Erro ao limpar fila de disparos: ${error.message}`, 500);
+  }
+
+  return Response.json(
+    { ok: true, message: 'Fila de disparos limpa com sucesso.' },
+    { headers: NO_STORE_HEADERS }
+  );
+}
+

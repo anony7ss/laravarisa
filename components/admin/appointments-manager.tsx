@@ -467,9 +467,39 @@ export function AppointmentsManager({
   }
 
   const [deletingAppointment, setDeletingAppointment] = useState<string | null>(null);
+  const [clearCancelledModalOpen, setClearCancelledModalOpen] = useState(false);
+  const [clearingCancelled, setClearingCancelled] = useState(false);
   const [viewMode, setViewMode] = useState<'calendar' | 'kanban'>('calendar');
   const [kanbanScope, setKanbanScope] = useState<'today' | 'next7' | 'month' | 'all'>('next7');
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColId | null>(null);
+
+  const totalCancelledCount = useMemo(() => {
+    return items.filter((item) => item.status === 'cancelled' || item.status === 'no_show').length;
+  }, [items]);
+
+  async function handleClearCancelledAndNoShow() {
+    if (role === 'viewer') return;
+    setClearingCancelled(true);
+    setError('');
+    isUpdatingRef.current = true;
+    try {
+      const res = await fetch('/api/admin/appointments?status=cancelled,no_show', {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setItems((list) => list.filter((item) => item.status !== 'cancelled' && item.status !== 'no_show'));
+        setClearCancelledModalOpen(false);
+      } else {
+        setError(data.error || 'Não foi possível limpar os agendamentos cancelados.');
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Erro ao limpar agendamentos cancelados.');
+    } finally {
+      setClearingCancelled(false);
+      isUpdatingRef.current = false;
+    }
+  }
 
   // Estados para Bloqueio de Horário / Compromisso Pessoal
   const [blockingModal, setBlockingModal] = useState(false);
@@ -816,6 +846,25 @@ export function AppointmentsManager({
           >
             Todos ({items.length})
           </button>
+          {totalCancelledCount > 0 && role !== 'viewer' && (
+            <button
+              type="button"
+              className="admin-filter-pill"
+              onClick={() => setClearCancelledModalOpen(true)}
+              style={{
+                marginLeft: 'auto',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.06)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+              title="Excluir permanentemente todos os cancelados e faltas"
+            >
+              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
+            </button>
+          )}
         </div>
       ) : (
         <div className="admin-calendar-summary" aria-label="Filtros rápidos e resumo">
@@ -856,6 +905,25 @@ export function AppointmentsManager({
             <i className="confirmed" />
             <strong>{confirmed}</strong> confirmados
           </button>
+          {totalCancelledCount > 0 && role !== 'viewer' && (
+            <button
+              type="button"
+              className="admin-filter-pill"
+              onClick={() => setClearCancelledModalOpen(true)}
+              style={{
+                marginLeft: 'auto',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.06)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+              title="Excluir permanentemente todos os cancelados e faltas"
+            >
+              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
+            </button>
+          )}
         </div>
       )}
 
@@ -894,10 +962,36 @@ export function AppointmentsManager({
                 }}
               >
                 <header className="admin-kanban-column-header">
-                  <div className="admin-kanban-column-title">
-                    <span className={`admin-kanban-dot ${col.dotClass}`} />
-                    <h3>{col.title}</h3>
-                    <span className="admin-kanban-badge">{colItems.length}</span>
+                  <div className="admin-kanban-column-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span className={`admin-kanban-dot ${col.dotClass}`} />
+                      <h3 style={{ margin: 0 }}>{col.title}</h3>
+                      <span className="admin-kanban-badge">{colItems.length}</span>
+                    </div>
+                    {col.id === 'cancelled' && colItems.length > 0 && role !== 'viewer' && (
+                      <button
+                        type="button"
+                        onClick={() => setClearCancelledModalOpen(true)}
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          height: '24px',
+                          borderRadius: '999px',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          flexShrink: 0,
+                        }}
+                        title="Excluir permanentemente todos os cancelados e faltas"
+                      >
+                        <Trash2 size={11} /> Limpar
+                      </button>
+                    )}
                   </div>
                   <p>{col.subtitle}</p>
                 </header>
@@ -1579,6 +1673,46 @@ export function AppointmentsManager({
                 onClick={() => remove(deletingAppointment)}
               >
                 Excluir permanentemente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {clearCancelledModalOpen && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '420px' }}>
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444' }}>
+              <Trash2 size={20} /> Limpar Cancelados e Faltas?
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
+              Esta ação excluirá permanentemente todos os <strong>{totalCancelledCount}</strong> agendamentos com status <strong>Cancelado</strong> ou <strong>Não compareceu</strong>. O histórico correspondente será removido da agenda.
+            </p>
+            <div className="admin-dialog-actions" style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                className="admin-icon-button"
+                style={{ width: 'auto', padding: '0 16px', borderRadius: '99px' }}
+                onClick={() => setClearCancelledModalOpen(false)}
+                disabled={clearingCancelled}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-icon-button admin-danger"
+                style={{
+                  width: 'auto',
+                  padding: '0 16px',
+                  borderRadius: '99px',
+                  background: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                }}
+                onClick={handleClearCancelledAndNoShow}
+                disabled={clearingCancelled}
+              >
+                {clearingCancelled ? 'Limpando...' : 'Excluir Todos'}
               </button>
             </div>
           </div>

@@ -86,7 +86,7 @@ export async function GET(request: Request) {
   const [messagesRes, controlsRes, clientsRes, lidMappingsRes] = await Promise.all([
     supabase
       .from('whatsapp_messages')
-      .select('phone, remote_jid, sender_name, content, created_at, from_me, media_type')
+      .select('phone, remote_jid, sender_name, content, created_at, from_me, media_type, media_url')
       .order('created_at', { ascending: false })
       .limit(600),
     supabase
@@ -242,9 +242,13 @@ export async function POST(request: Request) {
 
   // AÇÃO 1: Enviar mensagem manual do WhatsApp
   if (action === 'send_message') {
-    const text = sanitizeText(body.message || '').slice(0, 3000);
-    if (!text.trim()) {
-      return jsonError('Mensagem não pode ser vazia.', 422);
+    const rawText = sanitizeText(body.message || '').slice(0, 3000);
+    const mediaType = body.media_type ? String(body.media_type) : 'text';
+    const mediaUrl = body.media_url ? String(body.media_url) : null;
+    const text = rawText || (mediaType === 'image' ? '📷 [Foto enviada]' : mediaType === 'audio' ? '🎤 [Áudio enviado]' : '');
+
+    if (!text.trim() && !mediaUrl) {
+      return jsonError('Mensagem ou mídia não pode ser vazia.', 422);
     }
 
     const clientName = body.client_name ? sanitizeText(body.client_name).slice(0, 100) : null;
@@ -268,7 +272,8 @@ export async function POST(request: Request) {
         from_me: true,
         sender_type: 'admin_manual',
         content: text,
-        media_type: 'text',
+        media_type: mediaType,
+        media_url: mediaUrl,
         status: 'pending',
       })
       .select()

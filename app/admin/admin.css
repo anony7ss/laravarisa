@@ -2174,7 +2174,7 @@ a.admin-stat-card:hover {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .admin-shell {
     display: block;
   }

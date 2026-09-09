@@ -476,6 +476,32 @@ export function WhatsAppManager({
         .wa-nav-tabs::-webkit-scrollbar {
           display: none;
         }
+        .wa-tab-btn {
+          border-radius: 999px;
+          font-size: 13px;
+          padding: 8px 16px;
+          min-height: 38px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+          flex-shrink: 0;
+          cursor: pointer;
+        }
+        .wa-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+          width: 100%;
+        }
+        .wa-header-actions {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: nowrap;
+        }
         @media (max-width: 860px) {
           .wa-hero-card {
             grid-column: span 1 !important;
@@ -485,18 +511,32 @@ export function WhatsAppManager({
             gap: 16px !important;
           }
           .wa-header {
-            flex-direction: column !important;
-            align-items: stretch !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
           }
           .wa-header-actions {
-            justify-content: space-between !important;
-            width: 100% !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            width: auto !important;
           }
         }
         @media (max-width: 640px) {
           .wa-container {
             gap: 16px !important;
             padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+          }
+          .wa-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
+          }
+          .wa-header-actions {
+            display: flex !important;
+            width: 100% !important;
+            justify-content: flex-start !important;
+            gap: 10px !important;
           }
           .wa-nav-tabs {
             margin-bottom: 14px !important;
@@ -544,14 +584,18 @@ export function WhatsAppManager({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
-              padding: '6px 14px',
+              padding: '0 14px',
+              height: '38px',
               borderRadius: '999px',
               fontSize: '12px',
               fontWeight: 600,
               background: statusConfig.bg,
               border: `1px solid ${statusConfig.border}`,
               color: statusConfig.color,
+              boxSizing: 'border-box',
+              flexShrink: 0,
             }}
           >
             <span
@@ -560,6 +604,7 @@ export function WhatsAppManager({
                 height: '8px',
                 borderRadius: '50%',
                 background: statusConfig.color,
+                flexShrink: 0,
               }}
             />
             {statusConfig.label}
@@ -570,7 +615,20 @@ export function WhatsAppManager({
             onClick={() => fetchLatestSession(true)}
             disabled={loadingAction}
             className="admin-secondary"
-            style={{ minHeight: '36px', padding: '0 14px', fontSize: '12px' }}
+            style={{
+              height: '38px',
+              minHeight: '38px',
+              padding: '0 16px',
+              fontSize: '12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxSizing: 'border-box',
+              borderRadius: '999px',
+              flexShrink: 0,
+              margin: 0,
+            }}
             title="Atualizar status"
           >
             <RefreshCw size={13} className={loadingAction ? 'animate-spin' : ''} />
@@ -580,33 +638,13 @@ export function WhatsAppManager({
       </div>
 
       {/* NAVEGAÇÃO POR ABAS: CHAT, TERMINAL, CONEXÃO, DISPAROS */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          overflowX: 'auto',
-          paddingBottom: '6px',
-          borderBottom: '1px solid var(--admin-line)',
-          scrollbarWidth: 'none',
-          marginBottom: '20px',
-        }}
-      >
+      <div className="wa-nav-tabs">
         <button
           type="button"
           onClick={() => setActiveTab('chat')}
-          className={activeTab === 'chat' ? 'admin-primary' : 'admin-secondary'}
+          className={`${activeTab === 'chat' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
           style={{
-            borderRadius: '999px',
-            fontSize: '13px',
-            padding: '8px 16px',
-            minHeight: '38px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
             fontWeight: activeTab === 'chat' ? 600 : 500,
-            cursor: 'pointer',
           }}
         >
           <MessageSquare size={16} />
@@ -616,19 +654,9 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('terminal')}
-          className={activeTab === 'terminal' ? 'admin-primary' : 'admin-secondary'}
+          className={`${activeTab === 'terminal' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
           style={{
-            borderRadius: '999px',
-            fontSize: '13px',
-            padding: '8px 16px',
-            minHeight: '38px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
             fontWeight: activeTab === 'terminal' ? 600 : 500,
-            cursor: 'pointer',
           }}
         >
           <TerminalIcon size={16} />
@@ -638,19 +666,9 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('connection')}
-          className={activeTab === 'connection' ? 'admin-primary' : 'admin-secondary'}
+          className={`${activeTab === 'connection' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
           style={{
-            borderRadius: '999px',
-            fontSize: '13px',
-            padding: '8px 16px',
-            minHeight: '38px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
             fontWeight: activeTab === 'connection' ? 600 : 500,
-            cursor: 'pointer',
           }}
         >
           <Smartphone size={16} />
@@ -660,19 +678,9 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('disparos')}
-          className={activeTab === 'disparos' ? 'admin-primary' : 'admin-secondary'}
+          className={`${activeTab === 'disparos' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
           style={{
-            borderRadius: '999px',
-            fontSize: '13px',
-            padding: '8px 16px',
-            minHeight: '38px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
             fontWeight: activeTab === 'disparos' ? 600 : 500,
-            cursor: 'pointer',
           }}
         >
           <SendHorizontal size={16} />

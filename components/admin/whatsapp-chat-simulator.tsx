@@ -21,6 +21,14 @@ import {
   Shield,
   Maximize2,
   Minimize2,
+  Image as ImageIcon,
+  Paperclip,
+  Mic,
+  Volume2,
+  Download,
+  Eye,
+  X,
+  FileText,
 } from 'lucide-react';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { WhatsAppSession } from './whatsapp-manager';
@@ -52,8 +60,148 @@ export interface ChatMessage {
   sender_type: 'client' | 'bot_ai' | 'admin_manual' | 'system';
   content: string;
   media_type: string;
+  media_url?: string | null;
   status: string;
   created_at: string;
+}
+
+function ChatAudioPlayer({ src, isMe }: { src: string; isMe: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [speed, setSpeed] = useState<1 | 1.5 | 2>(1);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+  };
+
+  const cycleSpeed = () => {
+    if (!audioRef.current) return;
+    const nextSpeed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1;
+    audioRef.current.playbackRate = nextSpeed;
+    setSpeed(nextSpeed);
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const val = Number(e.target.value);
+    audioRef.current.currentTime = val;
+    setCurrentTime(val);
+  };
+
+  const formatSeconds = (sec: number) => {
+    if (isNaN(sec) || !isFinite(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 8px',
+        borderRadius: '12px',
+        background: isMe ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+        width: '100%',
+        minWidth: '220px',
+        maxWidth: '280px',
+        boxSizing: 'border-box',
+      }}
+    >
+      <audio
+        ref={audioRef}
+        src={src}
+        preload="metadata"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }}
+        onTimeUpdate={() => {
+          if (audioRef.current) {
+            setCurrentTime(audioRef.current.currentTime);
+          }
+        }}
+        onLoadedMetadata={() => {
+          if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+          }
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={togglePlay}
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          border: 'none',
+          background: isMe ? '#e289a8' : 'var(--admin-orange, #c58f59)',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          flexShrink: 0,
+          boxShadow: '0 2px 5px rgba(0, 0, 0, 0.2)',
+        }}
+        title={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
+      >
+        {isPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: '2px' }} />}
+      </button>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          step={0.1}
+          value={currentTime}
+          onChange={handleSeek}
+          style={{
+            width: '100%',
+            height: '4px',
+            accentColor: isMe ? '#e289a8' : 'var(--admin-orange, #c58f59)',
+            cursor: 'pointer',
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--admin-muted, #8b8b83)' }}>
+          <span>{formatSeconds(currentTime)}</span>
+          <span>{formatSeconds(duration)}</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={cycleSpeed}
+        style={{
+          fontSize: '10px',
+          fontWeight: 700,
+          padding: '2px 5px',
+          borderRadius: '6px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          color: 'var(--admin-ink, #f7f7f2)',
+          border: '1px solid var(--admin-line, #2a2a26)',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+        title="Velocidade de reprodução"
+      >
+        {speed}x
+      </button>
+    </div>
+  );
 }
 
 const QUICK_REPLIES = [
@@ -91,6 +239,34 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState('');
   const [newChatName, setNewChatName] = useState('');
+
+  // Visualizador de Imagem (Lightbox)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Envio de Mídia / Anexos (Fotos)
+  const [attachmentPreview, setAttachmentPreview] = useState<{ file: File; base64: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecione um arquivo de imagem válido (JPEG, PNG, WebP).');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      alert('A imagem não pode ultrapassar 8MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setAttachmentPreview({ file, base64: reader.result });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -309,13 +485,17 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     return list;
   }, [messages]);
 
-  // Enviar mensagem manual
+  // Enviar mensagem manual (com suporte a texto e imagem)
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() || !selectedPhone || sending) return;
+    if ((!inputText.trim() && !attachmentPreview) || !selectedPhone || sending) return;
 
     const messageText = inputText.trim();
+    const mediaBase64 = attachmentPreview?.base64 || null;
+    const mediaType = attachmentPreview ? 'image' : 'text';
+
     setInputText('');
+    setAttachmentPreview(null);
     setSending(true);
 
     const tempId = `temp-${Date.now()}`;
@@ -325,8 +505,9 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
       sender_name: 'Lara Varisa',
       from_me: true,
       sender_type: 'admin_manual',
-      content: messageText,
-      media_type: 'text',
+      content: messageText || (mediaType === 'image' ? '📷 [Foto enviada]' : ''),
+      media_type: mediaType,
+      media_url: mediaBase64,
       status: 'pending',
       created_at: new Date().toISOString(),
     };
@@ -341,6 +522,8 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
           phone: selectedPhone,
           client_name: effectiveContact?.name,
           message: messageText,
+          media_type: mediaType,
+          media_url: mediaBase64,
         }),
       });
       const data = await res.json();
@@ -1006,7 +1189,166 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                           </div>
                         )}
 
-                        <div style={{ color: 'var(--admin-ink, #dfdfd8)' }}>{msg.content}</div>
+                        {(() => {
+                          const isImage =
+                            msg.media_type === 'image' ||
+                            Boolean(msg.media_url && (msg.media_url.startsWith('data:image/') || msg.media_url.match(/\.(jpeg|jpg|png|webp|gif)/i))) ||
+                            msg.content.startsWith('data:image/') ||
+                            Boolean(msg.content.match(/^https?:\/\/[^\s]+?\.(jpeg|jpg|png|webp|gif)(\?.*)?$/i));
+
+                          const imageUrl = (msg.media_url && (msg.media_url.startsWith('data:image/') || msg.media_url.startsWith('http')))
+                            ? msg.media_url
+                            : (msg.content.startsWith('data:image/') || msg.content.match(/^https?:\/\/[^\s]+?\.(jpeg|jpg|png|webp|gif)(\?.*)?$/i))
+                            ? msg.content
+                            : null;
+
+                          const isAudio =
+                            msg.media_type === 'audio' ||
+                            msg.media_type === 'voice' ||
+                            msg.media_type === 'ptt' ||
+                            Boolean(msg.media_url && (msg.media_url.startsWith('data:audio/') || msg.media_url.match(/\.(ogg|mp3|m4a|wav|opus)/i))) ||
+                            msg.content.startsWith('data:audio/') ||
+                            Boolean(msg.content.match(/^https?:\/\/[^\s]+?\.(ogg|mp3|m4a|wav|opus)(\?.*)?$/i));
+
+                          const audioUrl = (msg.media_url && (msg.media_url.startsWith('data:audio/') || msg.media_url.startsWith('http')))
+                            ? msg.media_url
+                            : (msg.content.startsWith('data:audio/') || msg.content.match(/^https?:\/\/[^\s]+?\.(ogg|mp3|m4a|wav|opus)(\?.*)?$/i))
+                            ? msg.content
+                            : null;
+
+                          const isGenericImagePlaceholder =
+                            msg.content === '📷 [Foto enviada]' ||
+                            msg.content === 'Foto enviada' ||
+                            msg.content === '[Foto enviada]' ||
+                            msg.content.startsWith('data:image/');
+
+                          const isGenericAudioPlaceholder =
+                            msg.content === '🎤 [Áudio / Nota de voz]' ||
+                            msg.content === '🎤 [Nota de voz enviada]' ||
+                            msg.content === '🎤 [Áudio enviado]' ||
+                            msg.content.startsWith('data:audio/');
+
+                          if (isImage) {
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {imageUrl ? (
+                                  <div
+                                    onClick={() => setLightboxImage(imageUrl)}
+                                    style={{
+                                      position: 'relative',
+                                      borderRadius: '10px',
+                                      overflow: 'hidden',
+                                      cursor: 'pointer',
+                                      maxWidth: '260px',
+                                      maxHeight: '260px',
+                                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                                      background: 'rgba(0, 0, 0, 0.2)',
+                                    }}
+                                    title="Clique para ampliar a foto"
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt="Foto WhatsApp"
+                                      style={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        maxHeight: '260px',
+                                        objectFit: 'cover',
+                                        display: 'block',
+                                      }}
+                                      loading="lazy"
+                                    />
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        bottom: '6px',
+                                        right: '6px',
+                                        padding: '3px 7px',
+                                        borderRadius: '6px',
+                                        background: 'rgba(0, 0, 0, 0.65)',
+                                        color: '#ffffff',
+                                        fontSize: '10.5px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        backdropFilter: 'blur(4px)',
+                                      }}
+                                    >
+                                      <Eye size={11} /> Ampliar
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '8px 12px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      border: '1px solid var(--admin-line, #2a2a26)',
+                                      fontSize: '12px',
+                                      color: 'var(--admin-ink, #dfdfd8)',
+                                    }}
+                                  >
+                                    <ImageIcon size={16} style={{ color: isMe ? '#e289a8' : 'var(--admin-orange, #c58f59)' }} />
+                                    <span>Foto enviada pelo WhatsApp</span>
+                                  </div>
+                                )}
+                                {!isGenericImagePlaceholder && msg.content && (
+                                  <div style={{ color: 'var(--admin-ink, #dfdfd8)', marginTop: '2px' }}>{msg.content}</div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          if (isAudio) {
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {audioUrl ? (
+                                  <ChatAudioPlayer src={audioUrl} isMe={isMe} />
+                                ) : (
+                                  <div
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '7px 12px',
+                                      borderRadius: '10px',
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      border: '1px solid var(--admin-line, #2a2a26)',
+                                      fontSize: '12px',
+                                      color: isMe ? '#e289a8' : 'var(--admin-orange, #c58f59)',
+                                    }}
+                                  >
+                                    <Mic size={15} />
+                                    <span style={{ color: 'var(--admin-ink, #dfdfd8)', fontWeight: 500 }}>Áudio / Nota de voz</span>
+                                  </div>
+                                )}
+                                {!isGenericAudioPlaceholder && msg.content && (
+                                  <div
+                                    style={{
+                                      padding: '6px 9px',
+                                      borderRadius: '8px',
+                                      background: 'rgba(255, 255, 255, 0.04)',
+                                      border: '1px solid rgba(255, 255, 255, 0.07)',
+                                      fontSize: '11.5px',
+                                      color: 'var(--admin-ink, #dfdfd8)',
+                                      lineHeight: 1.4,
+                                    }}
+                                  >
+                                    <span style={{ fontSize: '9.5px', fontWeight: 600, color: 'var(--admin-muted, #8b8b83)', display: 'block', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                                      Transcrição IA:
+                                    </span>
+                                    {msg.content.replace(/^🎤\s*\[Áudio\]:\s*"?/, '').replace(/"?$/, '')}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return <div style={{ color: 'var(--admin-ink, #dfdfd8)' }}>{msg.content}</div>;
+                        })()}
 
                         <div
                           style={{
@@ -1062,6 +1404,51 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
               ))}
             </div>
 
+            {/* Preview de Imagem Anexada */}
+            {attachmentPreview && (
+              <div
+                style={{
+                  padding: '8px 14px',
+                  borderTop: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <img
+                    src={attachmentPreview.base64}
+                    alt="Preview"
+                    style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink, #dfdfd8)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {attachmentPreview.file.name}
+                    </span>
+                    <span style={{ fontSize: '10.5px', color: 'var(--admin-muted, #8b8b83)' }}>
+                      {(attachmentPreview.file.size / 1024).toFixed(0)} KB • Foto pronta para envio
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachmentPreview(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--admin-muted, #8b8b83)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                  }}
+                  title="Remover anexo"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             {/* Input de Envio */}
             <form
               onSubmit={handleSendMessage}
@@ -1074,8 +1461,37 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
               }}
             >
               <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: attachmentPreview ? 'rgba(226, 137, 168, 0.2)' : 'var(--admin-soft, #242420)',
+                  color: attachmentPreview ? '#e289a8' : 'var(--admin-ink, #f7f7f2)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                title="Anexar foto da galeria"
+              >
+                <ImageIcon size={17} />
+              </button>
+
+              <input
                 type="text"
-                placeholder="Escreva uma mensagem..."
+                placeholder={attachmentPreview ? "Adicione uma legenda (opcional)..." : "Escreva uma mensagem..."}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 style={{
@@ -1092,7 +1508,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
 
               <button
                 type="submit"
-                disabled={!inputText.trim() || sending}
+                disabled={(!inputText.trim() && !attachmentPreview) || sending}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1103,8 +1519,8 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   border: 'none',
                   background: '#e289a8',
                   color: '#fff',
-                  cursor: inputText.trim() && !sending ? 'pointer' : 'not-allowed',
-                  opacity: inputText.trim() && !sending ? 1 : 0.5,
+                  cursor: (inputText.trim() || attachmentPreview) && !sending ? 'pointer' : 'not-allowed',
+                  opacity: (inputText.trim() || attachmentPreview) && !sending ? 1 : 0.5,
                   flexShrink: 0,
                 }}
               >
@@ -1373,6 +1789,93 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Visualizador de Imagem Ampliada (Lightbox) */}
+      {lightboxImage && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            background: 'rgba(0, 0, 0, 0.92)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+          }}
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              zIndex: 10,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <a
+              href={lightboxImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              download="whatsapp_foto"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '999px',
+                background: 'rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                fontSize: '12px',
+                textDecoration: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                cursor: 'pointer',
+              }}
+            >
+              <Download size={14} /> Baixar Foto
+            </a>
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Fechar (Esc)"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <img
+            src={lightboxImage}
+            alt="Visualização da Imagem WhatsApp"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '88vh',
+              objectFit: 'contain',
+              borderRadius: '12px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8)',
+            }}
+          />
         </div>
       )}
     </div>

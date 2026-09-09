@@ -161,3 +161,41 @@ export async function POST(
   serverCache.delete(`admin_resource:${resource}`);
   return Response.json({ ok: true, data }, { status: 201, headers: NO_STORE_HEADERS });
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ resource: string }> },
+) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
+  const staff = await getStaffContext();
+  if (!staff) return jsonError('Não autorizado.', 401);
+  if (staff.profile.role === 'viewer') return jsonError('Sem permissão.', 403);
+  const { resource } = await context.params;
+  const config = resourceFor(resource);
+  if (!config) return jsonError('Recurso inválido.', 404);
+
+  const url = new URL(request.url);
+  const statusParam = url.searchParams.get('status');
+
+  if (resource === 'appointments' && statusParam) {
+    const statuses = statusParam
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const { error, count } = await staff.supabase
+      .from('appointments')
+      .delete({ count: 'exact' })
+      .in('status', statuses);
+
+    if (error) return jsonError(`Erro ao excluir agendamentos: ${error.message}`, 500);
+    serverCache.delete(`admin_resource:${resource}`);
+    return Response.json(
+      { ok: true, deleted: count || 0, message: `${count || 0} agendamentos excluídos com sucesso.` },
+      { headers: NO_STORE_HEADERS }
+    );
+  }
+
+  return jsonError('Parâmetro de exclusão não informado.', 400);
+}
+

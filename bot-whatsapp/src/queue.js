@@ -136,6 +136,8 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
     });
 
     if (!options.skipChatLog) {
+      const mime = options.mimetype || 'audio/ogg; codecs=opus';
+      const audioDataUrl = audioBuffer ? `data:${mime};base64,${audioBuffer.toString('base64')}` : null;
       registrarMensagemChat({
         phone: jid,
         remoteJid: jid,
@@ -144,6 +146,7 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
         senderType: 'bot_ai',
         content: options.transcription || '🎤 [Nota de voz enviada]',
         mediaType: 'audio',
+        mediaUrl: audioDataUrl,
       });
     }
 

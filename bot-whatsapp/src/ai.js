@@ -434,6 +434,80 @@ async function enviarRespostaHumanizadaOuVoz(sock, jid, textoResposta, pushName,
   return audioEnviado;
 }
 
+/**
+ * Parseador resiliente de argumentos de tool calls de LLMs.
+ * Recupera JSONs com vírgula omitida entre chaves, aspas não-escapadas,
+ * quebras de linha ou caracteres truncados.
+ */
+function parseToolArguments(rawArgs, nomeFuncao = '') {
+  if (!rawArgs || typeof rawArgs !== 'string' || rawArgs.trim() === '') {
+    return {};
+  }
+
+  const trimmed = rawArgs.trim();
+
+  // 1. Tentativa padrão direta
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
+  } catch {}
+
+  // 2. Limpeza e autocorreção de sintaxe comum em LLMs (ex: vírgula omitida entre propriedades)
+  try {
+    const sanitized = trimmed
+      // Remove blocos de código markdown se houver
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      // Corrige ausência de vírgula entre propriedades: "valor" "chave": -> "valor", "chave":
+      .replace(/(["\d\wtruefalsenull])\s+(?="[a-zA-Z0-9_-]+"\s*:)/gi, '$1, ')
+      // Remove vírgulas extras antes de fechar chaves/colchetes
+      .replace(/,\s*([}\]])/g, '$1');
+
+    const parsed = JSON.parse(sanitized);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
+  } catch {}
+
+  // 3. Fallback inteligente via Regex para extrair pares chave/valor
+  try {
+    const recovered = {};
+
+    // Extrai strings: "chave": "valor"
+    const stringMatches = trimmed.matchAll(/"([a-zA-Z0-9_-]+)"\s*:\s*"((?:\\.|[^"\\])*)"/g);
+    for (const m of stringMatches) {
+      recovered[m[1]] = m[2];
+    }
+
+    // Extrai primitivos: números, booleanos, null
+    const primitiveMatches = trimmed.matchAll(/"([a-zA-Z0-9_-]+)"\s*:\s*(-?\d+(?:\.\d+)?|true|false|null)/gi);
+    for (const m of primitiveMatches) {
+      if (!(m[1] in recovered)) {
+        if (m[2] === 'true') recovered[m[1]] = true;
+        else if (m[2] === 'false') recovered[m[1]] = false;
+        else if (m[2] === 'null') recovered[m[1]] = null;
+        else recovered[m[1]] = Number(m[2]);
+      }
+    }
+
+    // Resgate de UUID para ferramentas que exigem agendamento_id ou service_id
+    if (!recovered.agendamento_id && (nomeFuncao.includes('Agendamento') || nomeFuncao.includes('agendamento'))) {
+      const uuidMatch = trimmed.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+      if (uuidMatch) {
+        recovered.agendamento_id = uuidMatch[1];
+      }
+    }
+
+    if (Object.keys(recovered).length > 0) {
+      return recovered;
+    }
+  } catch {}
+
+  logWarn('IA', `Falha ao interpretar argumentos da ferramenta ${nomeFuncao}: ${trimmed.slice(0, 80)}`);
+  return {};
+}
 
 /**
  * Processa mensagens recebidas pelo WhatsApp através do motor de IA OpenCode Go
@@ -480,6 +554,16 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     if (resAudio.sucesso && resAudio.texto) {
       texto = resAudio.texto;
       logIncoming(pushName, `[Áudio]: "${texto}"`);
+      try {
+        const cleanJidPhone = String(jid).split('@')[0].replace(/\D/g, '');
+        await supabase
+          .from('whatsapp_messages')
+          .update({ content: `🎤 [Áudio]: "${texto}"` })
+          .eq('phone', cleanJidPhone)
+          .eq('media_type', 'audio')
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } catch {}
     } else {
       const msgFalhaAudio = 'Oi! Tive uma pequena dificuldade para ouvir seu áudio. Consegue me mandar por texto? Se preferir falar direto com a Lara, é só me avisar 💕';
       await sendHumanizedMessage(sock, jid, msgFalhaAudio);
@@ -731,13 +815,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         const toolResults = await Promise.all(
           responseMessage.tool_calls.map(async (toolCall) => {
             const nomeFuncao = toolCall.function.name;
-            let args = {};
-
-            try {
-              args = JSON.parse(toolCall.function.arguments || '{}');
-            } catch (parseErr) {
-              console.warn(`[ai] Falha ao parsear argumentos de ${nomeFuncao}:`, parseErr);
-            }
+            const args = parseToolArguments(toolCall.function.arguments, nomeFuncao);
 
             logAction('Ferramenta', `${nomeFuncao} (${pushName})`);
             const resultado = await executarFerramenta(nomeFuncao, args, context);

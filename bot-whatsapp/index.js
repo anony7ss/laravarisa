@@ -30,6 +30,7 @@ console.warn = function (...args) {
   _origWarn.apply(console, args);
 };
 
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { initWhatsApp, limparSessaoDesincronizada } from './src/whatsapp.js';
 
 console.error = function (...args) {
@@ -168,6 +169,39 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             }
           }
 
+          let mediaUrl = null;
+          if (ehImagem) {
+            try {
+              const buffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { reuploadRequest: sock?.updateMediaMessage }
+              );
+              if (buffer && buffer.length > 0) {
+                const mime = msg.message?.imageMessage?.mimetype || 'image/jpeg';
+                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+              }
+            } catch (errMedia) {
+              // Silencioso se mídia expirada
+            }
+          } else if (ehAudio) {
+            try {
+              const buffer = await downloadMediaMessage(
+                msg,
+                'buffer',
+                {},
+                { reuploadRequest: sock?.updateMediaMessage }
+              );
+              if (buffer && buffer.length > 0) {
+                const mime = (msg.message?.audioMessage || msg.message?.pttMessage)?.mimetype || 'audio/ogg';
+                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+              }
+            } catch (errMedia) {
+              // Silencioso se mídia expirada
+            }
+          }
+
           // Registra a mensagem recebida para o Chat ao Vivo no Painel com o telefone e nome reais
           registrarMensagemChat({
             phone: realPhone,
@@ -177,6 +211,7 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             senderType: 'client',
             content: texto || (ehAudio ? '🎤 [Áudio / Nota de voz]' : (ehImagem ? '📷 [Foto enviada]' : 'Mensagem')),
             mediaType: ehAudio ? 'audio' : (ehImagem ? 'image' : 'text'),
+            mediaUrl: mediaUrl,
           });
 
           if (!isAiEnabled()) {
