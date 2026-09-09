@@ -600,13 +600,13 @@ export function WhatsAppManager({
         </div>
       </div>
 
-      {/* NAVEGAÇÃO POR ABAS: CONEXÃO vs DISPAROS */}
+      {/* NAVEGAÇÃO POR ABAS: CHAT, TERMINAL, CONEXÃO, DISPAROS */}
       <div
         style={{
           display: 'flex',
           gap: '8px',
           overflowX: 'auto',
-          paddingBottom: '4px',
+          paddingBottom: '6px',
           borderBottom: '1px solid var(--admin-line)',
           scrollbarWidth: 'none',
           marginBottom: '20px',
@@ -619,17 +619,19 @@ export function WhatsAppManager({
           style={{
             borderRadius: '999px',
             fontSize: '13px',
-            padding: '8px 18px',
+            padding: '8px 16px',
             minHeight: '38px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
             fontWeight: activeTab === 'chat' ? 600 : 500,
             cursor: 'pointer',
           }}
         >
           <MessageSquare size={16} />
-          <span>Chat ao Vivo & Mensagens</span>
+          <span>Chat ao Vivo</span>
         </button>
 
         <button
@@ -639,17 +641,19 @@ export function WhatsAppManager({
           style={{
             borderRadius: '999px',
             fontSize: '13px',
-            padding: '8px 18px',
+            padding: '8px 16px',
             minHeight: '38px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
             fontWeight: activeTab === 'terminal' ? 600 : 500,
             cursor: 'pointer',
           }}
         >
           <TerminalIcon size={16} />
-          <span>Terminal & Logs ao Vivo</span>
+          <span>Terminal & Logs</span>
         </button>
 
         <button
@@ -659,17 +663,19 @@ export function WhatsAppManager({
           style={{
             borderRadius: '999px',
             fontSize: '13px',
-            padding: '8px 18px',
+            padding: '8px 16px',
             minHeight: '38px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
             fontWeight: activeTab === 'connection' ? 600 : 500,
             cursor: 'pointer',
           }}
         >
           <Smartphone size={16} />
-          <span>Conexão & Voz da IA</span>
+          <span>Conexão & Voz</span>
         </button>
 
         <button
@@ -679,17 +685,19 @@ export function WhatsAppManager({
           style={{
             borderRadius: '999px',
             fontSize: '13px',
-            padding: '8px 18px',
+            padding: '8px 16px',
             minHeight: '38px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
             fontWeight: activeTab === 'disparos' ? 600 : 500,
             cursor: 'pointer',
           }}
         >
           <SendHorizontal size={16} />
-          <span>Disparos & Campanhas VIP</span>
+          <span>Campanhas VIP</span>
         </button>
       </div>
 

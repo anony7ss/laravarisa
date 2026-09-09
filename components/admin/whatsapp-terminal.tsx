@@ -2,21 +2,15 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Terminal as TerminalIcon,
   Play,
   Pause,
   Trash2,
   Search,
-  Filter,
   RefreshCw,
-  Cpu,
-  Radio,
-  Clock,
-  MapPin,
-  CheckCircle2,
-  AlertCircle,
   Copy,
   Check,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { WhatsAppSession } from './whatsapp-manager';
@@ -38,33 +32,48 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Carrega logs iniciais
-  const fetchLogs = async () => {
+  // Carrega logs (com opção silenciosa para polling contínuo)
+  const fetchLogs = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch('/api/admin/whatsapp/logs');
       const data = await res.json();
       if (data.logs) {
-        // Inverte para ter a ordem cronológica no terminal (antigo -> novo)
-        setLogs([...data.logs].reverse());
+        const fetched = [...data.logs].reverse();
+        setLogs((prev) => {
+          if (prev.length === 0) return fetched;
+          const existingIds = new Set(prev.map((l) => l.id));
+          const newItems = fetched.filter((l) => !existingIds.has(l.id));
+          if (newItems.length === 0) return prev;
+          return [...prev, ...newItems].slice(-300);
+        });
       }
     } catch {
       // Silencioso
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(false);
+
+    // Polling de contingência a cada 3.5s para streaming ininterrupto mesmo com queda de Realtime
+    const pollTimer = setInterval(() => {
+      fetchLogs(true);
+    }, 3500);
+
+    return () => clearInterval(pollTimer);
   }, []);
 
-  // Escuta novos logs em tempo real via Supabase Realtime
+  // Realtime
   useEffect(() => {
     const supabase = createBrowserSupabase();
     if (!supabase) return;
+
     const channel = supabase
       .channel('whatsapp_terminal_live_logs')
       .on(
@@ -77,7 +86,10 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
         (payload) => {
           const newLog = payload.new as WhatsAppLogItem;
           if (newLog) {
-            setLogs((prev) => [...prev.slice(-250), newLog]);
+            setLogs((prev) => {
+              if (prev.some((l) => l.id === newLog.id)) return prev;
+              return [...prev.slice(-250), newLog];
+            });
           }
         }
       )
@@ -88,7 +100,7 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
     };
   }, []);
 
-  // Auto-scroll para a linha mais recente
+  // Auto-scroll
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -97,7 +109,7 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
 
   // Limpar logs
   const handleClearLogs = async () => {
-    if (!confirm('Deseja limpar o histórico do console?')) return;
+    if (!confirm('Deseja limpar os registros do console?')) return;
     setClearing(true);
     try {
       await fetch('/api/admin/whatsapp/logs', { method: 'DELETE' });
@@ -109,20 +121,19 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
     }
   };
 
-  // Copiar logs para o clipboard
+  // Copiar logs
   const handleCopyLogs = () => {
     const text = filteredLogs
-      .map((l) => `[${formatTime(l.created_at)}] [${l.level.toUpperCase()}] [${l.tag}] ${l.message}`)
+      .map((l) => `[${formatTime(l.created_at)}] [${l.tag}] ${l.message}`)
       .join('\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Filtragem dos logs
+  // Filtragem
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
-      // Filtro de nível/categoria
       if (filterLevel === 'chat') {
         if (log.level !== 'incoming' && log.level !== 'outgoing') return false;
       } else if (filterLevel === 'booking') {
@@ -135,13 +146,13 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
         if (log.level !== 'error' && log.level !== 'warn') return false;
       }
 
-      // Busca textual
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesTag = log.tag?.toLowerCase().includes(q);
-        const matchesMsg = log.message?.toLowerCase().includes(q);
-        const matchesLvl = log.level?.toLowerCase().includes(q);
-        return matchesTag || matchesMsg || matchesLvl;
+        return (
+          log.tag?.toLowerCase().includes(q) ||
+          log.message?.toLowerCase().includes(q) ||
+          log.level?.toLowerCase().includes(q)
+        );
       }
 
       return true;
@@ -165,180 +176,217 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
 
   const isConnected = session.status === 'connected';
   const aiModel = session.ai_model || 'qwen3.8-flash';
-  const aiModeText = session.ai_enabled === false
-    ? 'Pausada pelo Admin'
-    : (isConnected ? `Conectada (${aiModel})` : 'Aguardando WhatsApp');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* 1. Banner de Status do Terminal (Idêntico ao banner executável do Bot) */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        position: isFullscreen ? 'fixed' : 'relative',
+        inset: isFullscreen ? 0 : undefined,
+        zIndex: isFullscreen ? 99999 : undefined,
+        width: isFullscreen ? '100vw' : '100%',
+        height: isFullscreen ? '100dvh' : 'auto',
+        background: isFullscreen ? '#0c0c0e' : 'transparent',
+        padding: isFullscreen ? '16px' : 0,
+        boxSizing: 'border-box',
+        overflowY: isFullscreen ? 'hidden' : 'visible',
+      }}
+      className={`wa-terminal-container ${isFullscreen ? 'wa-terminal-fullscreen' : ''}`}
+    >
+      <style>{`
+        .wa-terminal-container.wa-terminal-fullscreen {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 99999 !important;
+          width: 100vw !important;
+          height: 100dvh !important;
+          background: #0c0c0e !important;
+          padding: 16px !important;
+          box-sizing: border-box !important;
+        }
+        .wa-terminal-container.wa-terminal-fullscreen .wa-terminal-window {
+          flex: 1 !important;
+          height: calc(100dvh - 190px) !important;
+          max-height: calc(100dvh - 190px) !important;
+        }
+        @media (max-width: 768px) {
+          .wa-terminal-window:not(.wa-terminal-fullscreen *) {
+            height: calc(100dvh - 260px) !important;
+            min-height: 380px !important;
+            font-size: 11.5px !important;
+            padding: 12px 14px !important;
+          }
+          .wa-terminal-log-row {
+            flex-wrap: wrap !important;
+            gap: 4px 8px !important;
+            padding: 4px 0 !important;
+          }
+        }
+      `}</style>
+
+      {/* 1. Header de Status Clean e Elegante */}
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(26, 17, 23, 0.95) 0%, rgba(15, 12, 17, 0.98) 100%)',
-          borderRadius: '20px',
-          border: '1px solid rgba(226, 137, 168, 0.25)',
-          padding: '22px 26px',
-          boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
-          color: '#f8fafc',
-          position: 'relative',
-          overflow: 'hidden',
+          background: 'var(--admin-card, #181815)',
+          borderRadius: '16px',
+          border: '1px solid var(--admin-line, #2a2a26)',
+          padding: '16px 20px',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '240px',
-            height: '240px',
-            background: 'radial-gradient(circle, rgba(226, 137, 168, 0.15) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Top Header do Terminal */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(226, 137, 168, 0.2)',
-            paddingBottom: '14px',
-            marginBottom: '18px',
             flexWrap: 'wrap',
             gap: '12px',
+            marginBottom: '14px',
+            paddingBottom: '12px',
+            borderBottom: '1px solid var(--admin-line, #2a2a26)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: isConnected ? '#22c55e' : '#eab308',
-                boxShadow: isConnected ? '0 0 12px #22c55e' : '0 0 12px #eab308',
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'monospace',
-                fontWeight: 700,
-                fontSize: '15px',
-                letterSpacing: '1px',
-                color: '#f5c6d6',
-                textTransform: 'uppercase',
-              }}
-            >
-              LARA LASH & SOBRANCELHAS | WhatsApp Bot VIP
-            </span>
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '999px',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: isConnected ? '#22c55e' : '#f59e0b',
+              }}
+            />
+            <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--admin-ink, #f7f7f2)' }}>
+              Studio Lara Varisa · WhatsApp Bot
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
                 fontSize: '11px',
-                fontFamily: 'monospace',
-                background: 'rgba(34, 197, 94, 0.15)',
-                color: '#4ade80',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
+                padding: '3px 9px',
+                borderRadius: '999px',
+                background: 'var(--admin-soft, #242420)',
+                color: 'var(--admin-muted, #8b8b83)',
               }}
             >
-              <Radio size={12} className="animate-pulse" />
-              REALTIME LIVE STREAM
+              Tempo Real Ativo
             </span>
           </div>
         </div>
 
-        {/* Linhas de status estilo console */}
+        {/* Indicadores em formato de pills minimalistas */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            fontSize: '13px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            fontSize: '12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin size={15} style={{ color: '#94a3b8' }} />
-            <span style={{ color: '#94a3b8' }}>Local:</span>
-            <span style={{ color: '#f8fafc', fontWeight: 600 }}>Porto Alegre - RS</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: isConnected ? '#4ade80' : '#eab308', fontWeight: 700 }}>
-              {isConnected ? '[OK]' : '[..]'}
+          <div
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: 'var(--admin-soft, #242420)',
+              color: 'var(--admin-ink, #f7f7f2)',
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ color: 'var(--admin-muted, #8b8b83)' }}>WhatsApp:</span>
+            <span style={{ fontWeight: 500, color: isConnected ? '#16a34a' : '#d97706' }}>
+              {isConnected ? (session.phone_connected ? `+${session.phone_connected}` : 'Conectado') : 'Desconectado'}
             </span>
-            <span style={{ color: '#94a3b8' }}>WhatsApp:</span>
-            <span style={{ color: isConnected ? '#4ade80' : '#fde047', fontWeight: 600 }}>
-              {isConnected ? `Conectado (${session.phone_connected || 'Studio'})` : 'Desconectado'}
+          </div>
+
+          <div
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: 'var(--admin-soft, #242420)',
+              color: 'var(--admin-ink, #f7f7f2)',
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ color: 'var(--admin-muted, #8b8b83)' }}>Motor IA:</span>
+            <span style={{ fontWeight: 500 }}>
+              {session.ai_enabled === false ? 'Pausada' : aiModel}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#4ade80', fontWeight: 700 }}>[OK]</span>
-            <span style={{ color: '#94a3b8' }}>Supabase:</span>
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>Conectado (Realtime)</span>
+          <div
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: 'var(--admin-soft, #242420)',
+              color: 'var(--admin-ink, #f7f7f2)',
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ color: 'var(--admin-muted, #8b8b83)' }}>Lembretes:</span>
+            <span style={{ fontWeight: 500 }}>Ativos (24h e 2h)</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#4ade80', fontWeight: 700 }}>[OK]</span>
-            <span style={{ color: '#94a3b8' }}>Lembretes:</span>
-            <span style={{ color: '#4ade80', fontWeight: 600 }}>Ativo (24h e 2h antes)</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', gridColumn: 'span 2' }}>
-            <Cpu size={15} style={{ color: '#38bdf8' }} />
-            <span style={{ color: '#94a3b8' }}>Motor IA:</span>
-            <span style={{ color: session.ai_enabled === false ? '#f87171' : '#38bdf8', fontWeight: 600 }}>
-              {aiModeText}
-            </span>
+          <div
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              background: 'var(--admin-soft, #242420)',
+              color: 'var(--admin-ink, #f7f7f2)',
+              display: 'flex',
+              gap: '6px',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ color: 'var(--admin-muted, #8b8b83)' }}>Local:</span>
+            <span style={{ fontWeight: 500 }}>Porto Alegre - RS</span>
           </div>
         </div>
       </div>
 
-      {/* 2. Barra de Ferramentas e Filtros do Console */}
+      {/* 2. Barra de Filtros e Busca */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px',
-          background: 'var(--admin-card)',
-          padding: '12px 18px',
-          borderRadius: '16px',
-          border: '1px solid var(--admin-line)',
+          gap: '10px',
+          background: 'var(--admin-card, #181815)',
+          padding: '10px 16px',
+          borderRadius: '14px',
+          border: '1px solid var(--admin-line, #2a2a26)',
         }}
       >
-        {/* Filtros em abas */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {/* Abas simples */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: 'Todos' },
-            { id: 'chat', label: 'Conversas (>> / <<)' },
-            { id: 'booking', label: 'Agendamentos (+)' },
-            { id: 'action', label: 'Ações IA ([>])' },
-            { id: 'reminder', label: 'Lembretes (*)' },
-            { id: 'error', label: 'Erros & Avisos' },
+            { id: 'chat', label: 'Conversas' },
+            { id: 'booking', label: 'Agendamentos' },
+            { id: 'action', label: 'Ações IA' },
+            { id: 'reminder', label: 'Lembretes' },
+            { id: 'error', label: 'Avisos' },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setFilterLevel(tab.id)}
               style={{
-                fontSize: '12px',
-                padding: '6px 12px',
-                borderRadius: '999px',
+                fontSize: '11.5px',
+                padding: '5px 10px',
+                borderRadius: '6px',
                 border: 'none',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                background: filterLevel === tab.id ? 'var(--admin-primary)' : 'rgba(0,0,0,0.05)',
-                color: filterLevel === tab.id ? '#ffffff' : 'var(--admin-muted)',
+                background: filterLevel === tab.id ? 'var(--admin-soft, #242420)' : 'transparent',
+                color: filterLevel === tab.id ? 'var(--admin-ink, #f7f7f2)' : 'var(--admin-muted, #8b8b83)',
                 fontWeight: filterLevel === tab.id ? 600 : 500,
               }}
             >
@@ -347,32 +395,32 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
           ))}
         </div>
 
-        {/* Busca e Ações */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Ferramentas */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: 'var(--admin-subtle)',
-              padding: '6px 12px',
-              borderRadius: '10px',
-              border: '1px solid var(--admin-line)',
+              background: 'var(--admin-soft, #242420)',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--admin-line, #2a2a26)',
             }}
           >
-            <Search size={14} style={{ color: 'var(--admin-muted)' }} />
+            <Search size={13} style={{ color: 'var(--admin-muted, #8b8b83)' }} />
             <input
               type="text"
-              placeholder="Filtrar logs..."
+              placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 border: 'none',
                 background: 'transparent',
                 outline: 'none',
-                fontSize: '12px',
-                color: 'var(--admin-text)',
-                width: '130px',
+                fontSize: '11.5px',
+                color: 'var(--admin-ink, #f7f7f2)',
+                width: '100px',
               }}
             />
           </div>
@@ -380,164 +428,164 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
           <button
             type="button"
             onClick={() => setAutoScroll(!autoScroll)}
-            title={autoScroll ? 'Pausar auto-scroll' : 'Ativar auto-scroll'}
             style={{
-              padding: '7px 10px',
-              borderRadius: '10px',
-              border: '1px solid var(--admin-line)',
-              background: autoScroll ? 'rgba(34, 197, 94, 0.1)' : 'var(--admin-subtle)',
-              color: autoScroll ? '#16a34a' : 'var(--admin-muted)',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              background: autoScroll ? 'rgba(34, 197, 94, 0.08)' : 'transparent',
+              color: autoScroll ? '#16a34a' : 'var(--admin-muted, #8b8b83)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              fontSize: '12px',
+              fontSize: '11.5px',
             }}
           >
-            {autoScroll ? <Pause size={14} /> : <Play size={14} />}
+            {autoScroll ? <Pause size={12} /> : <Play size={12} />}
             <span>Scroll</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopyLogs}
-            title="Copiar logs visíveis"
             style={{
-              padding: '7px 10px',
-              borderRadius: '10px',
-              border: '1px solid var(--admin-line)',
-              background: 'var(--admin-subtle)',
-              color: copied ? '#16a34a' : 'var(--admin-muted)',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              background: 'transparent',
+              color: copied ? '#16a34a' : 'var(--admin-muted, #8b8b83)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              fontSize: '12px',
+              fontSize: '11.5px',
             }}
           >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            <span>{copied ? 'Copiado' : 'Copiar'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleClearLogs}
             disabled={clearing}
-            title="Limpar histórico"
             style={{
-              padding: '7px 10px',
-              borderRadius: '10px',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              background: 'rgba(239, 68, 68, 0.08)',
-              color: '#dc2626',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              background: 'transparent',
+              color: 'var(--admin-muted, #8b8b83)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              fontSize: '12px',
+              fontSize: '11.5px',
             }}
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
             <span>Limpar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? 'Sair da tela cheia' : 'Abrir terminal em tela cheia'}
+            style={{
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              background: isFullscreen ? 'var(--admin-orange, #c58f59)' : 'transparent',
+              color: isFullscreen ? '#ffffff' : 'var(--admin-ink, #f7f7f2)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11.5px',
+            }}
+          >
+            {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+            <span>{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
           </button>
         </div>
       </div>
 
-      {/* 3. Janela do Terminal Escura e Fluida */}
+      {/* 3. Janela de Logs Clean e Legível */}
       <div
         ref={scrollRef}
+        className="wa-terminal-window"
         style={{
-          background: '#0a090b',
-          borderRadius: '20px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.25)',
-          padding: '20px 24px',
-          height: '520px',
+          background: '#0e0e10',
+          borderRadius: '16px',
+          border: '1px solid var(--admin-line, #2a2a26)',
+          padding: '16px 20px',
+          height: '480px',
           overflowY: 'auto',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-          fontSize: '13px',
-          lineHeight: '1.7',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
+          fontSize: '12.5px',
+          lineHeight: '1.65',
           color: '#e2e8f0',
         }}
       >
         {loading && logs.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8' }}>
-            <RefreshCw size={14} className="animate-spin" />
-            <span>Carregando console em tempo real...</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+            <RefreshCw size={13} className="animate-spin" />
+            <span>Carregando console...</span>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div style={{ color: '#64748b', fontStyle: 'italic', padding: '20px 0' }}>
-            Nenhum evento registrado com os filtros selecionados. Aguardando novas mensagens do WhatsApp...
+          <div style={{ color: '#64748b', fontStyle: 'italic', padding: '16px 0' }}>
+            Nenhum registro encontrado. Aguardando atividade do WhatsApp...
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {filteredLogs.map((log) => {
               const time = formatTime(log.created_at);
 
-              // Cores e símbolos idênticos ao terminal do Windows
-              let levelColor = '#94a3b8';
-              let badgeSymbol = '';
-              let textColor = '#e2e8f0';
+              // Cores sutis e minimalistas (sem arco-íris agressivo)
+              let tagColor = '#94a3b8';
+              let msgColor = '#cbd5e1';
 
-              if (log.level === 'success') {
-                levelColor = '#4ade80';
-                badgeSymbol = '[OK]';
-              } else if (log.level === 'incoming') {
-                levelColor = '#38bdf8';
-                badgeSymbol = '>>';
-                textColor = '#bae6fd';
+              if (log.level === 'incoming') {
+                tagColor = '#7dd3fc';
+                msgColor = '#f8fafc';
               } else if (log.level === 'outgoing') {
-                levelColor = '#f472b6';
-                badgeSymbol = '<<';
-                textColor = '#fbcfe8';
+                tagColor = '#f472b6';
+                msgColor = '#fce7f3';
               } else if (log.level === 'booking') {
-                levelColor = '#4ade80';
-                badgeSymbol = '[+]';
-                textColor = '#86efac';
-              } else if (log.level === 'reminder') {
-                levelColor = '#facc15';
-                badgeSymbol = '[*]';
-                textColor = '#fef08a';
+                tagColor = '#34d399';
+                msgColor = '#a7f3d0';
               } else if (log.level === 'action') {
-                levelColor = log.message.toLowerCase().includes('cancel') ? '#f87171' : '#c084fc';
-                badgeSymbol = '[>]';
-                textColor = log.message.toLowerCase().includes('cancel') ? '#fca5a5' : '#e9d5ff';
-              } else if (log.level === 'warn') {
-                levelColor = '#facc15';
-                badgeSymbol = '[!]';
-                textColor = '#fde047';
-              } else if (log.level === 'error') {
-                levelColor = '#ef4444';
-                badgeSymbol = '[X]';
-                textColor = '#fca5a5';
+                tagColor = '#c084fc';
+                msgColor = '#e9d5ff';
+              } else if (log.level === 'reminder') {
+                tagColor = '#fbbf24';
+                msgColor = '#fef3c7';
+              } else if (log.level === 'warn' || log.level === 'error') {
+                tagColor = '#f87171';
+                msgColor = '#fca5a5';
               }
 
               return (
                 <div
                   key={log.id}
+                  className="wa-terminal-log-row"
                   style={{
                     display: 'flex',
                     alignItems: 'baseline',
-                    gap: '10px',
+                    gap: '8px',
                     wordBreak: 'break-word',
                     padding: '2px 0',
-                    borderBottom: '1px solid rgba(255,255,255,0.02)',
                   }}
                 >
-                  <span style={{ color: '#64748b', fontSize: '12px', userSelect: 'none', minWidth: '65px' }}>
-                    [{time}]
+                  <span style={{ color: '#475569', fontSize: '11px', userSelect: 'none', minWidth: '60px' }}>
+                    {time}
                   </span>
 
-                  <span style={{ color: levelColor, fontWeight: 700, minWidth: '24px' }}>
-                    {badgeSymbol}
-                  </span>
-
-                  <span style={{ color: levelColor, fontWeight: 600 }}>
+                  <span style={{ color: tagColor, fontWeight: 600, minWidth: '80px' }}>
                     [{log.tag}]
                   </span>
 
-                  <span style={{ color: textColor }}>
-                    {log.level === 'incoming' || log.level === 'outgoing' ? `"${log.message}"` : log.message}
+                  <span style={{ color: msgColor }}>
+                    {log.message}
                   </span>
                 </div>
               );

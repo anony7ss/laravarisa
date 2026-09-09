@@ -58,14 +58,7 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
 
   return enqueue(jid, async () => {
     if (!options.skipTyping && !options.immediate) {
-      // 1. Marca como lida
-      try {
-        if (typeof sock.readMessages === 'function') {
-          await sock.readMessages([{ remoteJid: jid }]);
-        }
-      } catch {}
-
-      // 2. Disparo ágil e imediato (micro-presença de digitação de 80ms a 150ms)
+      // Micro-presença de digitação rápida
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
           sock.sendPresenceUpdate('composing', jid).catch(() => {});
@@ -73,7 +66,7 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
       } catch {}
 
       const textLength = formattedText.length;
-      const typingDuration = Math.min(Math.max(textLength * 2, 80), 160);
+      const typingDuration = Math.min(Math.max(textLength * 2, 60), 140);
       await sleep(typingDuration);
 
       try {
@@ -119,21 +112,14 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
 
   return enqueue(jid, async () => {
     if (!options.skipRecording && !options.immediate) {
-      // 1. Marca como lida se possível
-      try {
-        if (typeof sock.readMessages === 'function') {
-          sock.readMessages([{ remoteJid: jid }]).catch(() => {});
-        }
-      } catch {}
-
-      // 2. Simula presença 'gravando áudio...' instantânea (150ms)
+      // Simula presença 'gravando áudio...' instantânea (120ms)
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {
           sock.sendPresenceUpdate('recording', jid).catch(() => {});
         }
       } catch {}
 
-      await sleep(150);
+      await sleep(120);
 
       try {
         if (typeof sock.sendPresenceUpdate === 'function') {

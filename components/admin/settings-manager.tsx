@@ -216,61 +216,109 @@ export function SettingsManager({
             <div
               style={{
                 gridColumn: '1 / -1',
-                padding: '16px 20px',
+                padding: '18px 22px',
                 borderRadius: '16px',
-                background: bookingEnabled
-                  ? 'rgba(34, 197, 94, 0.06)'
-                  : 'rgba(239, 68, 68, 0.07)',
-                border: `1px solid ${
-                  bookingEnabled
-                    ? 'rgba(34, 197, 94, 0.28)'
-                    : 'rgba(239, 68, 68, 0.3)'
-                }`,
+                background: 'var(--admin-card)',
+                border: '1px solid var(--admin-line)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
-                gap: '14px',
+                gap: '16px',
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '15px' }}>{bookingEnabled ? '🟢' : '🔴'}</span>
-                  <strong style={{ fontSize: '14px', color: 'var(--admin-ink)' }}>
-                    {bookingEnabled
-                      ? 'Estúdio Aberto para Novos Agendamentos'
-                      : 'Estúdio Fechado / Agendamentos Pausados'}
-                  </strong>
+              <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '0.3px',
+                      background: bookingEnabled ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      color: bookingEnabled ? '#4ade80' : '#f87171',
+                      border: `1px solid ${bookingEnabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        background: bookingEnabled ? '#4ade80' : '#f87171',
+                      }}
+                    />
+                    {bookingEnabled ? 'ESTÚDIO ABERTO' : 'ESTÚDIO FECHADO'}
+                  </span>
                 </div>
+                <strong style={{ display: 'block', fontSize: '13.5px', color: 'var(--admin-ink)', fontWeight: 500, marginBottom: '2px' }}>
+                  {bookingEnabled
+                    ? 'Recebendo novos agendamentos no site e WhatsApp'
+                    : 'Agendamentos temporariamente bloqueados'}
+                </strong>
                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
                   {bookingEnabled
-                    ? 'Clientes conseguem agendar horários livremente através do site e do WhatsApp Bot.'
-                    : 'O site e o WhatsApp Bot bloquearão novas reservas e exibirão a mensagem explicativa abaixo.'}
+                    ? 'Clientes conseguem agendar horários livremente através do site e da Lara IA.'
+                    : 'Novos agendamentos estão pausados. Visitantes e clientes verão aviso explicativo.'}
                 </p>
               </div>
 
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: role === 'admin' ? 'pointer' : 'default',
-                  margin: 0,
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: bookingEnabled ? '#15803d' : '#b91c1c',
-                }}
-              >
-                <input
-                  name="booking_enabled"
-                  type="checkbox"
-                  checked={bookingEnabled}
-                  onChange={(e) => setBookingEnabled(e.target.checked)}
-                  disabled={role !== 'admin'}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                />
-                <span>{bookingEnabled ? 'Aberto (Online)' : 'Fechado (Pausado)'}</span>
-              </label>
+              {/* Luxury Switch */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <label
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    cursor: role === 'admin' ? 'pointer' : 'default',
+                    userSelect: 'none',
+                  }}
+                >
+                  <input
+                    name="booking_enabled"
+                    type="checkbox"
+                    checked={bookingEnabled}
+                    onChange={(e) => setBookingEnabled(e.target.checked)}
+                    disabled={role !== 'admin'}
+                    style={{
+                      opacity: 0,
+                      width: 0,
+                      height: 0,
+                      position: 'absolute',
+                    }}
+                  />
+                  <span
+                    style={{
+                      width: '46px',
+                      height: '26px',
+                      borderRadius: '999px',
+                      background: bookingEnabled ? 'var(--admin-orange, #c58f59)' : 'var(--admin-soft, #2a2a26)',
+                      border: '1px solid var(--admin-line, #3a3a35)',
+                      transition: 'background 0.2s ease',
+                      position: 'relative',
+                      display: 'inline-block',
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: bookingEnabled ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+                        transition: 'left 0.2s ease',
+                      }}
+                    />
+                  </span>
+                </label>
+              </div>
             </div>
 
             <label className="wide">

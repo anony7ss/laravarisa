@@ -9,6 +9,7 @@ import {
   gallerySchema,
   serviceSchema,
 } from '@/lib/validation';
+import { areSamePhone } from '@/lib/phone-utils';
 
 const resources = {
   leads: { table: 'leads', schema: null, order: 'created_at' },
@@ -108,6 +109,33 @@ export async function POST(
       if (client) {
         if (!payload.client_name && client.name) payload.client_name = client.name;
         if (!payload.client_phone && client.phone) payload.client_phone = client.phone;
+      }
+    }
+  }
+
+  // Deduplicação inteligente de clientes: se já existir cliente com mesmo telefone, atualiza em vez de duplicar
+  if (resource === 'clients') {
+    const rawPhone = String((payload as any).phone || '').replace(/\D/g, '');
+    if (rawPhone && rawPhone.length >= 8) {
+      const { data: allClients } = await staff.supabase
+        .from('clients')
+        .select('*');
+
+      const existingClient = (allClients || []).find((c: any) =>
+        areSamePhone(c.phone, rawPhone)
+      );
+
+      if (existingClient) {
+        const { data: updated, error: errUpdate } = await staff.supabase
+          .from('clients')
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq('id', existingClient.id)
+          .select('*')
+          .single();
+
+        if (errUpdate) return jsonError('Não foi possível atualizar cliente.', 500);
+        serverCache.delete(`admin_resource:${resource}`);
+        return Response.json({ ok: true, data: updated }, { status: 200, headers: NO_STORE_HEADERS });
       }
     }
   }

@@ -14,6 +14,9 @@ html.dark .admin-root,
   --admin-muted: #8b8b83;
   --admin-line: #2a2a26;
   --admin-orange: #ff6622;
+  --admin-text: #f7f7f2;
+  --admin-subtle: #242420;
+  --admin-primary: #e289a8;
   background: var(--admin-bg);
   color: var(--admin-ink);
 }
@@ -27,6 +30,9 @@ html.dark .admin-root,
   --admin-muted: #6f6f67;
   --admin-line: #d9d9d1;
   --admin-orange: #fc5000;
+  --admin-text: #11110f;
+  --admin-subtle: #f0efe8;
+  --admin-primary: #d46e91;
   min-height: 100dvh;
   background: var(--admin-bg);
   color: var(--admin-ink);
@@ -250,11 +256,14 @@ html.dark .admin-login-icon,
   font-size: 11px;
   color: #5d5d56;
 }
+html:has(.admin-shell),
+body:has(.admin-shell) {
+  overflow-x: clip;
+}
 .admin-shell {
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 290px minmax(0, 1fr);
-  align-items: start;
   position: relative;
   z-index: 0;
 }
@@ -273,6 +282,7 @@ html.dark .admin-login-icon,
 .admin-sidebar {
   position: sticky;
   top: 16px;
+  align-self: start;
   height: calc(100dvh - 32px);
   max-height: calc(100dvh - 32px);
   margin-left: 16px;
@@ -2795,30 +2805,29 @@ a.admin-stat-card:hover {
 
 .admin-notification-icon-wrap {
   position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: rgba(252, 80, 0, 0.12);
-  color: var(--admin-orange, #fc5000);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(226, 137, 168, 0.12);
+  color: #e289a8;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(252, 80, 0, 0.25);
+  border: 1px solid rgba(226, 137, 168, 0.2);
 }
 
 .admin-notification-dot {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 7px;
-  height: 7px;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--admin-orange, #fc5000);
-  box-shadow: 0 0 8px var(--admin-orange, #fc5000);
+  background: #e289a8;
 }
 
 .admin-notification-head h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--admin-ink, #fff);
@@ -2835,7 +2844,7 @@ a.admin-stat-card:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid var(--admin-line, rgba(255, 255, 255, 0.1));
   background: transparent;
@@ -2866,19 +2875,18 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-close-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--admin-ink, #fff);
 }
 
 .admin-notification-tabs {
   display: flex;
-  align-items: center;
   gap: 6px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--admin-line, rgba(255, 255, 255, 0.06));
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--admin-line, rgba(255, 255, 255, 0.08));
   overflow-x: auto;
-  flex-shrink: 0;
   scrollbar-width: none;
+  flex-shrink: 0;
 }
 
 .admin-notification-tabs::-webkit-scrollbar {
@@ -2886,13 +2894,13 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-tabs button {
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 999px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--admin-muted, #888);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--admin-muted, #888);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -2904,50 +2912,48 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-tabs button.active {
-  background: rgba(252, 80, 0, 0.14);
-  color: var(--admin-orange, #fc5000);
-  border-color: rgba(252, 80, 0, 0.3);
+  background: var(--admin-soft, rgba(255, 255, 255, 0.08));
+  color: var(--admin-ink, #fff);
   font-weight: 600;
+  border-color: var(--admin-line, rgba(255, 255, 255, 0.1));
 }
 
 .admin-notification-body {
   flex: 1;
-  min-height: 0;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: 14px 20px 24px;
 }
 
 .admin-notification-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .admin-notification-item {
   display: flex;
   gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: var(--admin-soft, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--admin-line, rgba(255, 255, 255, 0.08));
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .admin-notification-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(226, 137, 168, 0.3);
   transform: translateY(-1px);
 }
 
 .admin-notification-item.read {
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .admin-notification-item-icon {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.05);
@@ -2955,23 +2961,23 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-item.type-appointment .admin-notification-item-icon {
-  background: rgba(252, 80, 0, 0.12);
-  color: var(--admin-orange, #fc5000);
+  background: rgba(226, 137, 168, 0.12);
+  color: #e289a8;
 }
 
 .admin-notification-item.type-lead .admin-notification-item-icon {
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--admin-ink, #f7f7f2);
 }
 
 .admin-notification-item.type-maintenance .admin-notification-item-icon {
-  background: rgba(168, 85, 247, 0.14);
-  color: #a855f7;
+  background: rgba(226, 137, 168, 0.1);
+  color: #e289a8;
 }
 
 .admin-notification-item.type-bot .admin-notification-item-icon {
-  background: rgba(37, 211, 102, 0.12);
-  color: #25d366;
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
 }
 
 .admin-notification-item-content {
@@ -2983,87 +2989,90 @@ a.admin-stat-card:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .admin-notification-item-badge {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 2px 7px;
-  border-radius: 999px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--admin-muted, #888);
 }
 
 .admin-notification-unread-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--admin-orange, #fc5000);
-  box-shadow: 0 0 6px var(--admin-orange, #fc5000);
+  background: #e289a8;
 }
 
 .admin-notification-item-time {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--admin-muted, #888);
 }
 
 .admin-notification-item-title {
-  margin: 0 0 4px;
-  font-size: 13.5px;
+  margin: 0 0 2px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--admin-ink, #fff);
   line-height: 1.35;
 }
 
 .admin-notification-item-desc {
-  margin: 0 0 10px;
-  font-size: 12px;
-  color: var(--admin-muted, #999);
-  line-height: 1.45;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--admin-muted, #8b8b83);
+  line-height: 1.4;
 }
 
 .admin-notification-item-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .admin-notification-action-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--admin-orange, #fc5000);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--admin-line, rgba(255, 255, 255, 0.1));
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--admin-ink, #f7f7f2);
   text-decoration: none;
+  background: transparent;
+  transition: all 0.12s ease;
 }
 
 .admin-notification-action-link:hover {
-  text-decoration: underline;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .admin-notification-wa-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(37, 211, 102, 0.15);
-  color: #25d366;
-  border: 1px solid rgba(37, 211, 102, 0.3);
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
 }
 
 .admin-notification-wa-link:hover {
-  background: #25d366;
-  color: #000;
+  background: rgba(34, 197, 94, 0.18);
 }
 
 .admin-notification-empty {
@@ -3075,26 +3084,53 @@ a.admin-stat-card:hover {
 }
 
 .admin-notification-empty-icon {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.04);
   color: var(--admin-muted, #888);
   display: grid;
   place-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .admin-notification-empty p {
-  margin: 0 0 6px;
-  font-size: 14px;
+  margin: 0 0 4px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--admin-ink, #fff);
 }
 
 .admin-notification-empty small {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--admin-muted, #888);
-  max-width: 260px;
-  line-height: 1.5;
+  max-width: 240px;
+  line-height: 1.45;
+}
+
+/* Responsividade do WhatsApp Chat Simulator no Mobile */
+.wa-show-on-mobile {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .wa-chat-container {
+    height: calc(100dvh - 180px) !important;
+    min-height: 480px !important;
+  }
+  .wa-contacts-panel {
+    width: 100% !important;
+    min-width: 100% !important;
+    border-right: none !important;
+  }
+  .wa-chat-panel {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .wa-hide-on-mobile {
+    display: none !important;
+  }
+  .wa-show-on-mobile {
+    display: inline-flex !important;
+  }
 }

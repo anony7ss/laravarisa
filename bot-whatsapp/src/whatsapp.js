@@ -126,6 +126,9 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     shouldIgnoreJid: (jid) => isJidBroadcast(jid) || isJidStatusBroadcast(jid) || isJidNewsletter(jid),
     msgRetryCounterCache,
     markOnlineOnConnect: true,
+    keepAliveIntervalMs: 15000,
+    connectTimeoutMs: 30000,
+    defaultQueryTimeoutMs: 25000,
     getMessage: async (key) => {
       if (key?.id && messageStore.has(key.id)) {
         return messageStore.get(key.id);

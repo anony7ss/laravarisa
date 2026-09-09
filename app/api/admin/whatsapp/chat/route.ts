@@ -1,5 +1,11 @@
 import { requireStaff } from '@/lib/admin-auth';
 import { hasValidOrigin, jsonError, sanitizeText } from '@/lib/security';
+import {
+  normalizeCanonicalPhone,
+  getPhoneSearchVariants,
+  areSamePhone,
+  cleanPhoneDigits,
+} from '@/lib/phone-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,45 +17,51 @@ export async function GET(request: Request) {
 
   // 1. Se pediu mensagens de um telefone específico
   if (phoneParam) {
-    const cleanPhone = phoneParam.replace(/\D/g, '');
+    const searchVariants = getPhoneSearchVariants(phoneParam);
+    const canonicalPhone = normalizeCanonicalPhone(phoneParam) || cleanPhoneDigits(phoneParam);
+
     const [messagesRes, controlRes, clientRes] = await Promise.all([
       supabase
         .from('whatsapp_messages')
         .select('*')
-        .eq('phone', cleanPhone)
+        .in('phone', searchVariants)
         .order('created_at', { ascending: true })
-        .limit(200),
+        .limit(300),
       supabase
         .from('whatsapp_chat_control')
         .select('*')
-        .eq('phone', cleanPhone)
+        .in('phone', searchVariants)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from('clients')
-        .select('id, name, phone, notes, created_at')
-        .or(`phone.ilike.%${cleanPhone}%,phone.ilike.%${cleanPhone.slice(-8)}%`)
-        .maybeSingle(),
+        .select('id, name, phone, notes, created_at'),
     ]);
+
+    const matchedClient = (clientRes.data || []).find((cl: any) =>
+      areSamePhone(cl.phone, phoneParam)
+    ) || null;
 
     return Response.json({
       messages: messagesRes.data || [],
       control: controlRes.data || {
-        phone: cleanPhone,
+        phone: canonicalPhone,
         ai_paused: false,
         ai_paused_until: null,
       },
-      client: clientRes.data || null,
+      client: matchedClient,
     });
   }
 
   // 2. Se pediu lista geral de contatos/conversas
-  // Busca mensagens recentes para agrupar por telefone
+  // Busca mensagens recentes para agrupar por telefone canônico
   const [messagesRes, controlsRes, clientsRes] = await Promise.all([
     supabase
       .from('whatsapp_messages')
       .select('phone, sender_name, content, created_at, from_me, media_type')
       .order('created_at', { ascending: false })
-      .limit(500),
+      .limit(600),
     supabase
       .from('whatsapp_chat_control')
       .select('*'),
@@ -58,63 +70,70 @@ export async function GET(request: Request) {
       .select('id, name, phone, created_at'),
   ]);
 
-  const controlMap = new Map<string, any>();
-  for (const c of controlsRes.data || []) {
-    controlMap.set(c.phone, c);
-  }
+  const clientsList = clientsRes.data || [];
+  const controlsList = controlsRes.data || [];
 
-  const clientMap = new Map<string, any>();
-  for (const cl of clientsRes.data || []) {
-    const digits = String(cl.phone || '').replace(/\D/g, '');
-    if (digits) {
-      clientMap.set(digits, cl);
-      if (digits.length >= 10) {
-        clientMap.set(digits.slice(-8), cl);
-        clientMap.set(digits.slice(-9), cl);
-      }
-    }
-  }
-
-  // Agrupa contatos a partir das mensagens recentes
+  // Agrupa contatos a partir das mensagens recentes usando telefone canônico
   const contactsMap = new Map<string, any>();
   for (const msg of messagesRes.data || []) {
-    const phone = msg.phone;
-    if (!phone) continue;
+    if (!msg.phone) continue;
+    const canonical = normalizeCanonicalPhone(msg.phone);
+    if (!canonical) continue;
 
-    if (!contactsMap.has(phone)) {
-      const matchedClient = clientMap.get(phone) || clientMap.get(phone.slice(-9)) || clientMap.get(phone.slice(-8));
-      const control = controlMap.get(phone);
+    const matchedClient = clientsList.find((cl: any) =>
+      areSamePhone(cl.phone, canonical)
+    );
 
-      const isAiPaused = Boolean(
-        control?.ai_paused &&
-        (!control.ai_paused_until || new Date(control.ai_paused_until).getTime() > Date.now())
-      );
+    const control = controlsList.find((c: any) =>
+      areSamePhone(c.phone, canonical)
+    );
 
-      contactsMap.set(phone, {
-        phone,
+    const isAiPaused = Boolean(
+      control?.ai_paused &&
+      (!control.ai_paused_until || new Date(control.ai_paused_until).getTime() > Date.now())
+    );
+
+    if (!contactsMap.has(canonical)) {
+      contactsMap.set(canonical, {
+        phone: canonical,
         name: matchedClient?.name || (msg.from_me ? 'Cliente' : msg.sender_name) || 'Contato',
-        lastMessage: msg.content,
+        lastMessage: msg.content || '',
         lastTimestamp: msg.created_at,
         fromMe: msg.from_me,
-        mediaType: msg.media_type,
+        mediaType: msg.media_type || 'text',
         aiPaused: isAiPaused,
         aiPausedUntil: control?.ai_paused_until || null,
         clientId: matchedClient?.id || null,
       });
+    } else {
+      const existing = contactsMap.get(canonical);
+      if (new Date(msg.created_at).getTime() > new Date(existing.lastTimestamp).getTime()) {
+        existing.lastMessage = msg.content || '';
+        existing.lastTimestamp = msg.created_at;
+        existing.fromMe = msg.from_me;
+        existing.mediaType = msg.media_type || 'text';
+      }
+      if (!existing.clientId && matchedClient?.id) {
+        existing.clientId = matchedClient.id;
+        existing.name = matchedClient.name;
+      }
     }
   }
 
   // Inclui também clientes cadastrados que ainda não possuem histórico nas mensagens
-  for (const cl of clientsRes.data || []) {
-    const digits = String(cl.phone || '').replace(/\D/g, '');
-    if (digits && !contactsMap.has(digits) && digits.length >= 8) {
-      const control = controlMap.get(digits);
+  for (const cl of clientsList) {
+    const canonical = normalizeCanonicalPhone(cl.phone);
+    if (canonical && !contactsMap.has(canonical)) {
+      const control = controlsList.find((c: any) =>
+        areSamePhone(c.phone, canonical)
+      );
       const isAiPaused = Boolean(
         control?.ai_paused &&
         (!control.ai_paused_until || new Date(control.ai_paused_until).getTime() > Date.now())
       );
-      contactsMap.set(digits, {
-        phone: digits,
+
+      contactsMap.set(canonical, {
+        phone: canonical,
         name: cl.name,
         lastMessage: 'Cliente cadastrado no estúdio',
         lastTimestamp: cl.created_at,
@@ -154,11 +173,8 @@ export async function POST(request: Request) {
     return jsonError('Telefone é obrigatório.', 422);
   }
 
-  // Formata telefone com DDI 55 se necessário
-  let cleanPhone = rawPhone;
-  if (cleanPhone.length === 10 || cleanPhone.length === 11) {
-    cleanPhone = `55${cleanPhone}`;
-  }
+  // Formata telefone em formato canônico (com DDI 55 e 9º dígito se aplicável)
+  const cleanPhone = normalizeCanonicalPhone(rawPhone) || rawPhone;
 
   // AÇÃO 1: Enviar mensagem manual do WhatsApp
   if (action === 'send_message') {

@@ -25,6 +25,7 @@ import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
 import { AntiDebugger } from '@/components/anti-debugger';
+import { ScrollToTop } from '@/components/scroll-to-top';
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
@@ -56,7 +57,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];if(s==='dark'||c==='dark'||(!s&&!c&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';}}}catch(e){}})();`,
+            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];if(s==='dark'||c==='dark'||(!s&&!c&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';}}}catch(e){}})();`,
           }}
         />
         <link
@@ -71,9 +72,10 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");}catch(e){}`,
+            __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}catch(e){}`,
           }}
         />
+        <ScrollToTop />
         <AntiDebugger />
         <PromoBanner />
         {children}

@@ -9,23 +9,27 @@ import {
   Pause,
   Play,
   Clock,
-  Check,
   CheckCheck,
   Calendar,
-  Phone,
   Sparkles,
   Bot,
   UserCheck,
   AlertCircle,
-  MoreVertical,
   Plus,
   RefreshCw,
-  ExternalLink,
+  ArrowLeft,
   Shield,
-  CornerDownLeft,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { WhatsAppSession } from './whatsapp-manager';
+import {
+  areSamePhone,
+  normalizeCanonicalPhone,
+  formatPhoneForDisplay,
+  cleanPhoneDigits,
+} from '@/lib/phone-utils';
 
 export interface ChatContact {
   phone: string;
@@ -53,11 +57,11 @@ export interface ChatMessage {
 }
 
 const QUICK_REPLIES = [
-  'Olá, maravilhosa! ✨ Em que posso te ajudar hoje?',
+  'Olá! ✨ Em que posso te ajudar hoje?',
   'Seu agendamento está confirmado com sucesso! Te espero no estúdio. 💕',
-  'Aqui está nossa chave PIX para confirmação: 51989601662 (Studio Lara Varisa).',
+  'Chave PIX: 51989601662 (Studio Lara Varisa).',
   'Nosso estúdio fica em Porto Alegre - RS. Ao chegar pode tocar o interfone!',
-  'Lembre-se dos cuidados: não molhar as extensões nas primeiras 24h e pentear diariamente. 💖',
+  'Lembre-se dos cuidados: não molhar os cílios nas primeiras 24h. 💖',
 ];
 
 export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession }) {
@@ -67,17 +71,23 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
   const [searchContact, setSearchContact] = useState('');
   const [filterAi, setFilterAi] = useState<'all' | 'active' | 'paused'>('all');
 
+  // Controle de visualização mobile ('list' ou 'chat')
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
+  // Controle de tela cheia
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   // Mensagens da conversa selecionada
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Controle de Pausa da IA para o contato atual
+  // Modal de pausa da IA
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [pausingAi, setPausingAi] = useState(false);
 
-  // Nova conversa modal
+  // Modal de nova conversa
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatPhone, setNewChatPhone] = useState('');
   const [newChatName, setNewChatName] = useState('');
@@ -90,9 +100,8 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
       setLoadingContacts(true);
       const res = await fetch('/api/admin/whatsapp/chat');
       const data = await res.json();
-      if (data.contacts) {
+      if (data.contacts && Array.isArray(data.contacts)) {
         setContacts(data.contacts);
-        // Seleciona automaticamente o primeiro contato se nenhum estiver selecionado
         if (!selectedPhone && data.contacts.length > 0) {
           setSelectedPhone(data.contacts[0].phone);
         }
@@ -130,78 +139,85 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     }
   }, [selectedPhone]);
 
-  // 3. Escuta novas mensagens em tempo real via Supabase Realtime
+  // 3. Realtime Supabase
   useEffect(() => {
     const supabase = createBrowserSupabase();
     if (!supabase) return;
 
-    // Mensagens em tempo real
     const msgChannel = supabase
-      .channel('whatsapp_chat_simulator_messages')
+      .channel('wa_chat_live_messages')
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'whatsapp_messages',
-        },
+        { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' },
         (payload) => {
           const newMsg = payload.new as ChatMessage;
-          if (newMsg) {
-            // Se for da conversa atualmente aberta, adiciona
-            if (selectedPhone && newMsg.phone === selectedPhone) {
-              setMessages((prev) => [...prev, newMsg]);
-            }
+          if (!newMsg) return;
 
-            // Atualiza resumo do contato na lista lateral
-            setContacts((prev) => {
-              const existingIdx = prev.findIndex((c) => c.phone === newMsg.phone);
-              if (existingIdx >= 0) {
-                const updated = [...prev];
-                updated[existingIdx] = {
-                  ...updated[existingIdx],
-                  lastMessage: newMsg.content,
-                  lastTimestamp: newMsg.created_at,
-                  fromMe: newMsg.from_me,
-                };
-                return updated.sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
-              } else {
-                // Novo contato
-                const newContact: ChatContact = {
-                  phone: newMsg.phone,
-                  name: newMsg.sender_name || 'Contato',
-                  lastMessage: newMsg.content,
-                  lastTimestamp: newMsg.created_at,
-                  fromMe: newMsg.from_me,
-                  mediaType: newMsg.media_type,
-                  aiPaused: false,
-                  aiPausedUntil: null,
-                  clientId: null,
-                };
-                return [newContact, ...prev];
+          // Se a mensagem pertence à conversa atualmente selecionada
+          if (selectedPhone && areSamePhone(newMsg.phone, selectedPhone)) {
+            setMessages((prev) => {
+              // Já existe na lista pelo ID?
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+
+              // Se houver mensagem temporária otimista pendente igual, substitui
+              const optIndex = prev.findIndex(
+                (m) =>
+                  m.id.startsWith('temp-') &&
+                  m.from_me === newMsg.from_me &&
+                  m.content.trim() === newMsg.content.trim()
+              );
+              if (optIndex >= 0) {
+                const copy = [...prev];
+                copy[optIndex] = newMsg;
+                return copy;
               }
+
+              return [...prev, newMsg];
             });
           }
+
+          setContacts((prev) => {
+            const idx = prev.findIndex((c) => areSamePhone(c.phone, newMsg.phone));
+            const canonicalPhone = normalizeCanonicalPhone(newMsg.phone) || newMsg.phone;
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = {
+                ...updated[idx],
+                lastMessage: newMsg.content || '',
+                lastTimestamp: newMsg.created_at,
+                fromMe: newMsg.from_me,
+              };
+              return updated.sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
+            } else {
+              const newC: ChatContact = {
+                phone: canonicalPhone,
+                name: newMsg.sender_name || 'Contato',
+                lastMessage: newMsg.content || '',
+                lastTimestamp: newMsg.created_at,
+                fromMe: newMsg.from_me,
+                mediaType: newMsg.media_type || 'text',
+                aiPaused: false,
+                aiPausedUntil: null,
+                clientId: null,
+              };
+              return [newC, ...prev];
+            }
+          });
         }
       )
       .subscribe();
 
-    // Controle de IA por contato em tempo real
     const controlChannel = supabase
-      .channel('whatsapp_chat_simulator_controls')
+      .channel('wa_chat_live_controls')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'whatsapp_chat_control',
-        },
+        { event: '*', schema: 'public', table: 'whatsapp_chat_control' },
         (payload) => {
           const row = payload.new as any;
           if (row && row.phone) {
             setContacts((prev) =>
               prev.map((c) => {
-                if (c.phone === row.phone) {
+                if (areSamePhone(c.phone, row.phone)) {
                   const isPaused = Boolean(
                     row.ai_paused &&
                     (!row.ai_paused_until || new Date(row.ai_paused_until).getTime() > Date.now())
@@ -226,34 +242,74 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     };
   }, [selectedPhone]);
 
-  // Scroll suave ao receber nova mensagem
+  // Scroll suave para última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Contato selecionado ativo
   const activeContact = useMemo(() => {
-    return contacts.find((c) => c.phone === selectedPhone) || null;
+    if (!selectedPhone) return null;
+    return contacts.find((c) => areSamePhone(c.phone, selectedPhone)) || null;
   }, [contacts, selectedPhone]);
 
-  // Contatos filtrados por busca e status de IA
+  const effectiveContact = useMemo(() => {
+    if (activeContact) return activeContact;
+    if (selectedPhone) {
+      return {
+        phone: selectedPhone,
+        name: 'Contato',
+        lastMessage: '',
+        lastTimestamp: new Date().toISOString(),
+        fromMe: false,
+        mediaType: 'text',
+        aiPaused: false,
+        aiPausedUntil: null,
+        clientId: null,
+      } as ChatContact;
+    }
+    return null;
+  }, [activeContact, selectedPhone]);
+
   const filteredContacts = useMemo(() => {
     return contacts.filter((c) => {
+      if (!c) return false;
       if (filterAi === 'active' && c.aiPaused) return false;
       if (filterAi === 'paused' && !c.aiPaused) return false;
 
       if (searchContact.trim()) {
         const q = searchContact.toLowerCase();
-        const matchesName = c.name.toLowerCase().includes(q);
-        const matchesPhone = c.phone.includes(q);
-        const matchesMsg = c.lastMessage.toLowerCase().includes(q);
-        return matchesName || matchesPhone || matchesMsg;
+        const name = (c.name || '').toLowerCase();
+        const phone = (c.phone || '');
+        const lastMsg = (c.lastMessage || '').toLowerCase();
+        return name.includes(q) || phone.includes(q) || lastMsg.includes(q);
       }
       return true;
     });
   }, [contacts, filterAi, searchContact]);
 
-  // Enviar mensagem manual pelo chat
+  // Desduplicação inteligente para exibição sem mensagens repetidas
+  const displayMessages = useMemo(() => {
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    const list: ChatMessage[] = [];
+
+    for (const msg of messages) {
+      if (!msg || !msg.id) continue;
+      if (seenIds.has(msg.id)) continue;
+      seenIds.add(msg.id);
+
+      // Desduplica se for mensagem idêntica (autor + texto) dentro de janela de 6s
+      const bucket = Math.floor(new Date(msg.created_at || Date.now()).getTime() / 6000);
+      const dedupeKey = `${msg.from_me ? 'me' : 'them'}_${msg.content?.trim()}_${bucket}`;
+      if (seenKeys.has(dedupeKey)) continue;
+      seenKeys.add(dedupeKey);
+
+      list.push(msg);
+    }
+    return list;
+  }, [messages]);
+
+  // Enviar mensagem manual
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || !selectedPhone || sending) return;
@@ -262,7 +318,6 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     setInputText('');
     setSending(true);
 
-    // Adiciona otimisticamente
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
       id: tempId,
@@ -284,22 +339,36 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
         body: JSON.stringify({
           action: 'send_message',
           phone: selectedPhone,
-          client_name: activeContact?.name,
+          client_name: effectiveContact?.name,
           message: messageText,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
         alert(data.error || 'Erro ao enviar mensagem.');
+        // Remove mensagem otimista em caso de erro
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      } else if (data.message) {
+        // Substitui a temporária pelo registro oficial retornado
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === tempId);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = data.message;
+            return copy;
+          }
+          return prev;
+        });
       }
     } catch {
       alert('Erro de conexão ao enviar mensagem.');
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
       setSending(false);
     }
   };
 
-  // Alterar status de IA do contato (pausar temporariamente, permanente ou reativar)
+  // Pausar ou reativar IA para este contato
   const handleToggleAi = async (paused: boolean, hours: number | null = null) => {
     if (!selectedPhone || pausingAi) return;
     setPausingAi(true);
@@ -311,7 +380,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
         body: JSON.stringify({
           action: 'toggle_ai',
           phone: selectedPhone,
-          client_name: activeContact?.name,
+          client_name: effectiveContact?.name,
           ai_paused: paused,
           pause_duration_hours: hours,
         }),
@@ -354,11 +423,12 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     const existing = contacts.find((c) => c.phone === fullPhone);
     if (existing) {
       setSelectedPhone(fullPhone);
+      setMobileView('chat');
     } else {
       const newC: ChatContact = {
         phone: fullPhone,
         name: newChatName.trim() || 'Novo Contato',
-        lastMessage: 'Conversa iniciada pelo administrador',
+        lastMessage: 'Conversa iniciada',
         lastTimestamp: new Date().toISOString(),
         fromMe: true,
         mediaType: 'text',
@@ -368,6 +438,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
       };
       setContacts((prev) => [newC, ...prev]);
       setSelectedPhone(fullPhone);
+      setMobileView('chat');
     }
 
     setNewChatPhone('');
@@ -386,111 +457,164 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
   }
 
   function formatPhoneDisplay(raw: string) {
-    const digits = raw.replace(/\D/g, '');
-    if (digits.startsWith('55') && digits.length >= 12) {
-      const ddd = digits.slice(2, 4);
-      const rest = digits.slice(4);
-      if (rest.length === 9) {
-        return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-      }
-      return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-    }
-    return raw;
+    return formatPhoneForDisplay(raw);
   }
 
   return (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: '320px 1fr',
-        height: '660px',
-        background: 'var(--admin-card)',
-        borderRadius: '24px',
-        border: '1px solid var(--admin-line)',
+        display: 'flex',
+        height: isFullscreen ? '100dvh' : '640px',
+        maxHeight: isFullscreen ? '100dvh' : 'calc(100dvh - 200px)',
+        background: 'var(--admin-card, #181815)',
+        borderRadius: isFullscreen ? '0px' : '20px',
+        border: isFullscreen ? 'none' : '1px solid var(--admin-line, #2a2a26)',
         overflow: 'hidden',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.06)',
+        color: 'var(--admin-ink, #f7f7f2)',
+        position: isFullscreen ? 'fixed' : 'relative',
+        inset: isFullscreen ? 0 : undefined,
+        zIndex: isFullscreen ? 99999 : undefined,
+        width: isFullscreen ? '100vw' : '100%',
       }}
-      className="whatsapp-simulator-container"
+      className={`wa-chat-container ${isFullscreen ? 'wa-chat-fullscreen' : ''}`}
     >
+      <style>{`
+        .wa-chat-container.wa-chat-fullscreen {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 99999 !important;
+          width: 100vw !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          border-radius: 0 !important;
+          border: none !important;
+          margin: 0 !important;
+        }
+        @media (max-width: 768px) {
+          .wa-chat-container:not(.wa-chat-fullscreen) {
+            height: calc(100dvh - 120px) !important;
+            max-height: calc(100dvh - 120px) !important;
+            border-radius: 14px !important;
+          }
+          .wa-contacts-panel {
+            width: 100% !important;
+            min-width: 100% !important;
+            border-right: none !important;
+          }
+          .wa-chat-panel {
+            width: 100% !important;
+            min-width: 100% !important;
+          }
+          .wa-hide-on-mobile {
+            display: none !important;
+          }
+          .wa-show-on-mobile {
+            display: inline-flex !important;
+          }
+        }
+      `}</style>
+
       {/* ============================================================ */}
       {/* COLUNA ESQUERDA: LISTA DE CONVERSAS */}
       {/* ============================================================ */}
       <div
+        className={`wa-contacts-panel ${mobileView === 'chat' ? 'wa-hide-on-mobile' : ''}`}
         style={{
-          borderRight: '1px solid var(--admin-line)',
+          width: '320px',
+          minWidth: '280px',
+          borderRight: '1px solid var(--admin-line, #2a2a26)',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--admin-subtle)',
+          background: 'var(--admin-card, #181815)',
+          height: '100%',
         }}
       >
-        {/* Topo da lista */}
+        {/* Topo da lista de conversas */}
         <div
           style={{
-            padding: '16px 18px',
-            borderBottom: '1px solid var(--admin-line)',
+            padding: '14px 16px',
+            borderBottom: '1px solid var(--admin-line, #2a2a26)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '8px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MessageSquare size={18} style={{ color: 'var(--admin-primary)' }} />
-            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>Conversas</h3>
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>Conversas</span>
             <span
               style={{
                 fontSize: '11px',
-                fontWeight: 600,
                 padding: '2px 8px',
                 borderRadius: '999px',
-                background: 'var(--admin-line)',
-                color: 'var(--admin-muted)',
+                background: 'var(--admin-soft, #242420)',
+                color: 'var(--admin-muted, #8b8b83)',
               }}
             >
               {contacts.length}
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowNewChatModal(true)}
-            title="Iniciar nova conversa"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 10px',
-              borderRadius: '999px',
-              border: 'none',
-              background: 'var(--admin-primary)',
-              color: '#fff',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={13} />
-            <span>Novo</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Abrir em tela cheia'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '30px',
+                height: '30px',
+                borderRadius: '8px',
+                border: '1px solid var(--admin-line, #2a2a26)',
+                background: isFullscreen ? 'var(--admin-orange, #c58f59)' : 'var(--admin-soft, #242420)',
+                color: isFullscreen ? '#ffffff' : 'var(--admin-ink, #f7f7f2)',
+                cursor: 'pointer',
+              }}
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowNewChatModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                borderRadius: '999px',
+                border: '1px solid var(--admin-line, #2a2a26)',
+                background: 'var(--admin-soft, #242420)',
+                color: 'var(--admin-ink, #f7f7f2)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              <Plus size={13} />
+              <span>Nova</span>
+            </button>
+          </div>
         </div>
 
-        {/* Busca e Filtros de IA */}
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Busca e Filtro */}
+        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'var(--admin-card)',
+              background: 'var(--admin-soft, #242420)',
               padding: '8px 12px',
-              borderRadius: '12px',
-              border: '1px solid var(--admin-line)',
+              borderRadius: '10px',
+              border: '1px solid var(--admin-line, #2a2a26)',
             }}
           >
-            <Search size={14} style={{ color: 'var(--admin-muted)' }} />
+            <Search size={13} style={{ color: 'var(--admin-muted, #8b8b83)', flexShrink: 0 }} />
             <input
               type="text"
-              placeholder="Buscar cliente ou número..."
+              placeholder="Buscar cliente..."
               value={searchContact}
               onChange={(e) => setSearchContact(e.target.value)}
               style={{
@@ -498,18 +622,17 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 background: 'transparent',
                 outline: 'none',
                 fontSize: '12px',
-                color: 'var(--admin-text)',
+                color: 'var(--admin-ink, #f7f7f2)',
                 width: '100%',
               }}
             />
           </div>
 
-          {/* Abas de filtro: Todas / IA Ativa / IA Pausada */}
-          <div style={{ display: 'flex', gap: '4px', background: 'var(--admin-line)', padding: '2px', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
             {[
               { id: 'all', label: 'Todas' },
-              { id: 'active', label: '🟢 IA Ativa' },
-              { id: 'paused', label: '⏸️ Pausadas' },
+              { id: 'active', label: 'IA Ativa' },
+              { id: 'paused', label: 'Pausadas' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -519,13 +642,12 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   flex: 1,
                   fontSize: '11px',
                   fontWeight: filterAi === tab.id ? 600 : 500,
-                  padding: '5px 2px',
-                  borderRadius: '8px',
+                  padding: '5px 0',
+                  borderRadius: '6px',
                   border: 'none',
                   cursor: 'pointer',
-                  background: filterAi === tab.id ? 'var(--admin-card)' : 'transparent',
-                  color: filterAi === tab.id ? 'var(--admin-text)' : 'var(--admin-muted)',
-                  boxShadow: filterAi === tab.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  background: filterAi === tab.id ? 'var(--admin-soft, #242420)' : 'transparent',
+                  color: filterAi === tab.id ? 'var(--admin-ink, #f7f7f2)' : 'var(--admin-muted, #8b8b83)',
                 }}
               >
                 {tab.label}
@@ -534,89 +656,75 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
           </div>
         </div>
 
-        {/* Lista rolável de contatos */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 12px 8px' }}>
+        {/* Lista de Contatos */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 8px 12px 8px' }}>
           {loadingContacts ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--admin-muted)', fontSize: '12px' }}>
-              <RefreshCw size={16} className="animate-spin" style={{ margin: '0 auto 8px auto' }} />
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--admin-muted, #8b8b83)', fontSize: '12px' }}>
+              <RefreshCw size={14} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
               Carregando conversas...
             </div>
           ) : filteredContacts.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--admin-muted)', fontSize: '12px' }}>
-              Nenhum chat encontrado.
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--admin-muted, #8b8b83)', fontSize: '12px' }}>
+              Nenhuma conversa encontrada.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {filteredContacts.map((c) => {
                 const isSelected = c.phone === selectedPhone;
                 return (
                   <div
                     key={c.phone}
-                    onClick={() => setSelectedPhone(c.phone)}
+                    onClick={() => {
+                      setSelectedPhone(c.phone);
+                      setMobileView('chat');
+                    }}
                     style={{
-                      padding: '12px',
-                      borderRadius: '16px',
+                      padding: '10px 12px',
+                      borderRadius: '12px',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      background: isSelected ? 'rgba(226, 137, 168, 0.12)' : 'transparent',
-                      border: isSelected ? '1px solid rgba(226, 137, 168, 0.3)' : '1px solid transparent',
+                      transition: 'background 0.12s ease',
+                      background: isSelected ? 'var(--admin-soft, #242420)' : 'transparent',
+                      borderLeft: isSelected ? '3px solid #e289a8' : '3px solid transparent',
                       display: 'flex',
-                      gap: '12px',
+                      gap: '10px',
                       alignItems: 'center',
                     }}
                   >
-                    {/* Avatar com status de IA */}
-                    <div style={{ position: 'relative' }}>
-                      <div
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '50%',
-                          background: isSelected ? 'var(--admin-primary)' : 'rgba(226, 137, 168, 0.2)',
-                          color: isSelected ? '#fff' : 'var(--admin-primary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '14px',
-                        }}
-                      >
-                        {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
-                      </div>
-
-                      {/* Dot de status da IA */}
-                      <span
-                        title={c.aiPaused ? 'IA pausada para este contato' : 'IA respondendo automaticamente'}
-                        style={{
-                          position: 'absolute',
-                          bottom: '-1px',
-                          right: '-1px',
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          background: c.aiPaused ? '#f59e0b' : '#22c55e',
-                          border: '2px solid var(--admin-card)',
-                        }}
-                      />
+                    {/* Avatar minimalista */}
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: isSelected ? 'rgba(226, 137, 168, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        color: isSelected ? '#e289a8' : 'var(--admin-ink, #f7f7f2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 600,
+                        fontSize: '13px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
                     </div>
 
-                    {/* Detalhes do contato */}
+                    {/* Dados do contato */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-                        <h4
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span
                           style={{
-                            margin: 0,
                             fontSize: '13px',
-                            fontWeight: 600,
-                            color: 'var(--admin-text)',
+                            fontWeight: isSelected ? 600 : 500,
+                            color: 'var(--admin-ink, #f7f7f2)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                           }}
                         >
                           {c.name}
-                        </h4>
-                        <span style={{ fontSize: '10px', color: 'var(--admin-muted)', flexShrink: 0 }}>
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--admin-muted, #8b8b83)', flexShrink: 0 }}>
                           {formatTime(c.lastTimestamp)}
                         </span>
                       </div>
@@ -625,28 +733,28 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                         <p
                           style={{
                             margin: 0,
-                            fontSize: '12px',
-                            color: 'var(--admin-muted)',
+                            fontSize: '11.5px',
+                            color: 'var(--admin-muted, #8b8b83)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
-                            maxWidth: '170px',
                           }}
                         >
-                          {c.fromMe && <span style={{ color: 'var(--admin-primary)', fontWeight: 600 }}>Você: </span>}
+                          {c.fromMe && <span style={{ color: '#e289a8' }}>Você: </span>}
                           {c.lastMessage || 'Conversa iniciada'}
                         </p>
 
                         {c.aiPaused && (
                           <span
+                            title="IA pausada para este contato"
                             style={{
                               fontSize: '9px',
-                              fontWeight: 700,
-                              padding: '2px 5px',
+                              padding: '1px 5px',
                               borderRadius: '4px',
-                              background: 'rgba(245, 158, 11, 0.15)',
-                              color: '#b45309',
+                              background: 'rgba(245, 158, 11, 0.12)',
+                              color: '#d97706',
                               flexShrink: 0,
+                              fontWeight: 600,
                             }}
                           >
                             HUMANO
@@ -663,54 +771,102 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
       </div>
 
       {/* ============================================================ */}
-      {/* COLUNA DIREITA: JANELA DO CHAT (WHATSAPP WEB SIMULATOR) */}
+      {/* COLUNA DIREITA: CONVERSA ATIVA */}
       {/* ============================================================ */}
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--admin-card)' }}>
-        {activeContact ? (
+      <div
+        className={`wa-chat-panel ${mobileView === 'list' ? 'wa-hide-on-mobile' : ''}`}
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          background: 'var(--admin-card, #181815)',
+          minWidth: 0,
+        }}
+      >
+        {effectiveContact ? (
           <>
-            {/* Header da conversa ativa */}
+            {/* Header da conversa */}
             <div
               style={{
-                padding: '12px 20px',
-                borderBottom: '1px solid var(--admin-line)',
+                padding: '10px 16px',
+                borderBottom: '1px solid var(--admin-line, #2a2a26)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'var(--admin-subtle)',
+                background: 'var(--admin-card, #181815)',
+                gap: '8px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                {/* Botão voltar no mobile */}
+                <button
+                  type="button"
+                  onClick={() => setMobileView('list')}
+                  className="wa-show-on-mobile"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--admin-ink, #f7f7f2)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '50%',
-                    background: 'var(--admin-primary)',
-                    color: '#fff',
+                    background: 'rgba(226, 137, 168, 0.15)',
+                    color: '#e289a8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '15px',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    flexShrink: 0,
                   }}
                 >
-                  {activeContact.name.charAt(0).toUpperCase()}
+                  {(effectiveContact.name || 'C').charAt(0).toUpperCase()}
                 </div>
 
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--admin-text)' }}>
-                      {activeContact.name}
-                    </h3>
-                  </div>
-                  <span style={{ fontSize: '12px', color: 'var(--admin-muted)' }}>
-                    {formatPhoneDisplay(activeContact.phone)}
+                <div style={{ minWidth: 0 }}>
+                  <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {effectiveContact.name || 'Contato'}
+                  </h4>
+                  <span style={{ fontSize: '11px', color: 'var(--admin-muted, #8b8b83)' }}>
+                    {formatPhoneDisplay(effectiveContact.phone)}
                   </span>
                 </div>
               </div>
 
-              {/* Botão de Controle da IA para este chat específico */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  title={isFullscreen ? 'Sair da tela cheia' : 'Abrir em tela cheia'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--admin-line, #2a2a26)',
+                    background: isFullscreen ? 'var(--admin-orange, #c58f59)' : 'var(--admin-soft, #242420)',
+                    color: isFullscreen ? '#ffffff' : 'var(--admin-ink, #f7f7f2)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                </button>
+
+                {/* Botão de Controle de IA */}
                 <button
                   type="button"
                   onClick={() => setShowPauseModal(true)}
@@ -718,104 +874,90 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '8px 14px',
+                    padding: '6px 12px',
                     borderRadius: '999px',
-                    fontSize: '12px',
-                    fontWeight: 600,
+                    fontSize: '11.5px',
+                    fontWeight: 500,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    background: activeContact.aiPaused ? 'rgba(245, 158, 11, 0.12)' : 'rgba(34, 197, 94, 0.12)',
-                    border: `1px solid ${activeContact.aiPaused ? 'rgba(245, 158, 11, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`,
-                    color: activeContact.aiPaused ? '#b45309' : '#15803d',
+                    border: `1px solid ${effectiveContact.aiPaused ? 'rgba(245, 158, 11, 0.3)' : 'var(--admin-line, #2a2a26)'}`,
+                    background: effectiveContact.aiPaused ? 'rgba(245, 158, 11, 0.08)' : 'var(--admin-soft, #242420)',
+                    color: effectiveContact.aiPaused ? '#d97706' : 'var(--admin-ink, #f7f7f2)',
+                    flexShrink: 0,
                   }}
                 >
-                  {activeContact.aiPaused ? (
-                    <>
-                      <Pause size={14} />
-                      <span>IA Pausada ({activeContact.aiPausedUntil ? `Até ${formatTime(activeContact.aiPausedUntil)}` : 'Permanente'})</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={14} />
-                      <span>IA Ativa no Chat</span>
-                    </>
-                  )}
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: effectiveContact.aiPaused ? '#f59e0b' : '#22c55e',
+                    }}
+                  />
+                  <span>{effectiveContact.aiPaused ? 'IA Pausada' : 'IA Ativa'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Banner de aviso se a IA estiver pausada */}
-            {activeContact.aiPaused && (
+            {/* Aviso sutil se IA pausada */}
+            {effectiveContact.aiPaused && (
               <div
                 style={{
-                  background: 'rgba(245, 158, 11, 0.1)',
-                  borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
-                  padding: '8px 20px',
+                  background: 'rgba(245, 158, 11, 0.06)',
+                  borderBottom: '1px solid rgba(245, 158, 11, 0.15)',
+                  padding: '6px 16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  fontSize: '12px',
-                  color: '#b45309',
+                  fontSize: '11px',
+                  color: '#d97706',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={15} />
-                  <span>
-                    <strong>Atendimento manual ativado:</strong> A IA não responderá mensagens deste cliente automaticamente.
-                  </span>
-                </div>
-
+                <span>Atendimento humano manual ativado para este cliente.</span>
                 <button
                   type="button"
                   onClick={() => handleToggleAi(false)}
                   disabled={pausingAi}
                   style={{
-                    background: '#f59e0b',
-                    color: '#fff',
+                    background: 'transparent',
                     border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
+                    color: '#d97706',
+                    textDecoration: 'underline',
                     cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '11px',
                   }}
                 >
-                  {pausingAi ? 'Reativando...' : 'Reativar IA Agora'}
+                  Reativar IA
                 </button>
               </div>
             )}
 
-            {/* Container das Mensagens estilo WhatsApp */}
+            {/* Balões de Mensagem */}
             <div
               style={{
                 flex: 1,
+                minHeight: 0,
                 overflowY: 'auto',
-                padding: '20px',
+                padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '12px',
-                backgroundImage: 'radial-gradient(var(--admin-line) 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
+                gap: '8px',
+                background: 'var(--admin-card, #181815)',
               }}
             >
               {loadingMessages ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--admin-muted)', fontSize: '13px' }}>
-                  <RefreshCw size={16} className="animate-spin" style={{ margin: '0 auto 8px auto' }} />
+                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--admin-muted, #8b8b83)', fontSize: '12px' }}>
+                  <RefreshCw size={14} className="animate-spin" style={{ margin: '0 auto 6px auto' }} />
                   Carregando mensagens...
                 </div>
-              ) : messages.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-muted)' }}>
-                  <MessageSquare size={32} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
-                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 500 }}>Nenhuma mensagem nesta conversa ainda.</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', opacity: 0.8 }}>
-                    Envie uma mensagem abaixo para iniciar o contato diretamente no WhatsApp do cliente.
-                  </p>
+              ) : displayMessages.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--admin-muted, #8b8b83)', fontSize: '12px' }}>
+                  Nenhuma mensagem registrada nesta conversa.
                 </div>
               ) : (
-                messages.map((msg) => {
+                displayMessages.map((msg) => {
                   const isMe = msg.from_me;
-                  const isBotAi = msg.sender_type === 'bot_ai';
-                  const isManual = msg.sender_type === 'admin_manual';
+                  const isBot = msg.sender_type === 'bot_ai';
 
                   return (
                     <div
@@ -829,66 +971,56 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                     >
                       <div
                         style={{
-                          maxWidth: '78%',
-                          padding: '10px 14px',
-                          borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                          maxWidth: '82%',
+                          padding: '9px 13px',
+                          borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                           background: isMe
-                            ? 'linear-gradient(135deg, #e289a8 0%, #d46e91 100%)'
-                            : 'var(--admin-subtle)',
-                          color: isMe ? '#ffffff' : 'var(--admin-text)',
-                          border: isMe ? 'none' : '1px solid var(--admin-line)',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                          fontSize: '13.5px',
-                          lineHeight: '1.5',
+                            ? isBot
+                              ? 'rgba(226, 137, 168, 0.14)'
+                              : 'rgba(197, 143, 89, 0.15)'
+                            : 'var(--admin-soft, #242420)',
+                          border: isMe
+                            ? isBot
+                              ? '1px solid rgba(226, 137, 168, 0.25)'
+                              : '1px solid rgba(197, 143, 89, 0.28)'
+                            : '1px solid var(--admin-line, #2a2a26)',
+                          color: 'var(--admin-ink, #dfdfd8)',
+                          fontSize: '13px',
+                          lineHeight: '1.45',
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         }}
                       >
-                        {/* Tag de identificação de quem enviou */}
                         {isMe && (
                           <div
                             style={{
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              letterSpacing: '0.5px',
-                              marginBottom: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              color: 'rgba(255, 255, 255, 0.85)',
+                              fontSize: '9.5px',
+                              fontWeight: 600,
+                              letterSpacing: '0.4px',
+                              marginBottom: '3px',
+                              color: isBot ? '#e289a8' : '#c58f59',
                             }}
                           >
-                            {isBotAi ? (
-                              <>
-                                <Sparkles size={11} />
-                                <span>LARA IA</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck size={11} />
-                                <span>LARA (MANUAL)</span>
-                              </>
-                            )}
+                            {isBot ? 'LARA IA' : 'VOCÊ (MANUAL)'}
                           </div>
                         )}
 
-                        {/* Conteúdo da mensagem */}
-                        <div>{msg.content}</div>
+                        <div style={{ color: 'var(--admin-ink, #dfdfd8)' }}>{msg.content}</div>
 
-                        {/* Hora e checks */}
                         <div
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'flex-end',
-                            gap: '4px',
-                            marginTop: '4px',
-                            fontSize: '10px',
-                            color: isMe ? 'rgba(255, 255, 255, 0.8)' : 'var(--admin-muted)',
+                            gap: '3px',
+                            marginTop: '3px',
+                            fontSize: '9.5px',
+                            color: 'var(--admin-muted, #8b8b83)',
                           }}
                         >
                           <span>{formatTime(msg.created_at)}</span>
-                          {isMe && <CheckCheck size={13} style={{ color: '#fff' }} />}
+                          {isMe && <CheckCheck size={11} style={{ color: isBot ? '#e289a8' : '#c58f59' }} />}
                         </div>
                       </div>
                     </div>
@@ -898,21 +1030,17 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Barra de Respostas Rápidas */}
+            {/* Respostas Rápidas Minimalistas */}
             <div
               style={{
-                padding: '8px 16px',
-                background: 'var(--admin-subtle)',
-                borderTop: '1px solid var(--admin-line)',
+                padding: '6px 12px',
+                borderTop: '1px solid var(--admin-line, #2a2a26)',
                 display: 'flex',
-                gap: '8px',
+                gap: '6px',
                 overflowX: 'auto',
                 scrollbarWidth: 'none',
               }}
             >
-              <span style={{ fontSize: '11px', color: 'var(--admin-muted)', fontWeight: 600, alignSelf: 'center', flexShrink: 0 }}>
-                Rápidas:
-              </span>
               {QUICK_REPLIES.map((reply, i) => (
                 <button
                   key={i}
@@ -920,46 +1048,44 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   onClick={() => setInputText(reply)}
                   style={{
                     whiteSpace: 'nowrap',
-                    padding: '4px 10px',
-                    borderRadius: '999px',
-                    border: '1px solid var(--admin-line)',
-                    background: 'var(--admin-card)',
-                    color: 'var(--admin-text)',
-                    fontSize: '11px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--admin-line, #2a2a26)',
+                    background: 'transparent',
+                    color: 'var(--admin-muted, #8b8b83)',
+                    fontSize: '10.5px',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
                   }}
                 >
-                  {reply.slice(0, 28)}...
+                  {reply.slice(0, 24)}...
                 </button>
               ))}
             </div>
 
-            {/* Input para envio de mensagem */}
+            {/* Input de Envio */}
             <form
               onSubmit={handleSendMessage}
               style={{
-                padding: '12px 18px',
-                borderTop: '1px solid var(--admin-line)',
-                background: 'var(--admin-card)',
+                padding: '10px 14px',
+                borderTop: '1px solid var(--admin-line, #2a2a26)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
+                gap: '8px',
               }}
             >
               <input
                 type="text"
-                placeholder={`Mensagem para ${activeContact.name}...`}
+                placeholder="Escreva uma mensagem..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 style={{
                   flex: 1,
-                  padding: '12px 16px',
-                  borderRadius: '16px',
-                  border: '1px solid var(--admin-line)',
-                  background: 'var(--admin-subtle)',
-                  color: 'var(--admin-text)',
-                  fontSize: '13.5px',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
+                  fontSize: '13px',
                   outline: 'none',
                 }}
               />
@@ -970,50 +1096,39 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '12px 20px',
-                  borderRadius: '16px',
+                  justifyContent: 'center',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
                   border: 'none',
-                  background: 'var(--admin-primary)',
+                  background: '#e289a8',
                   color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: 600,
                   cursor: inputText.trim() && !sending ? 'pointer' : 'not-allowed',
-                  opacity: inputText.trim() && !sending ? 1 : 0.6,
+                  opacity: inputText.trim() && !sending ? 1 : 0.5,
+                  flexShrink: 0,
                 }}
               >
-                {sending ? (
-                  <RefreshCw size={16} className="animate-spin" />
-                ) : (
-                  <>
-                    <span>Enviar</span>
-                    <Send size={15} />
-                  </>
-                )}
+                {sending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
             </form>
           </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--admin-muted)' }}>
-            <MessageSquare size={48} style={{ opacity: 0.3, marginBottom: '14px' }} />
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Selecione uma conversa ao lado</h3>
-            <p style={{ margin: '6px 0 0 0', fontSize: '13px', opacity: 0.8 }}>
-              Você poderá visualizar todo o histórico, pausar a IA e responder manualmente.
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--admin-muted, #8b8b83)', padding: '20px', textAlign: 'center' }}>
+            <MessageSquare size={36} style={{ opacity: 0.25, marginBottom: '10px' }} />
+            <span style={{ fontSize: '13px' }}>Selecione um contato para abrir a conversa</span>
           </div>
         )}
       </div>
 
       {/* ============================================================ */}
-      {/* MODAL: PAUSAR OU REATIVAR IA PARA ESTE CHAT */}
+      {/* MODAL: PAUSAR IA (CLEAN & MINIMAL) */}
       {/* ============================================================ */}
-      {showPauseModal && activeContact && (
+      {showPauseModal && effectiveContact && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1024,43 +1139,24 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
         >
           <div
             style={{
-              background: 'var(--admin-card)',
-              borderRadius: '24px',
-              border: '1px solid var(--admin-line)',
-              padding: '24px',
-              maxWidth: '440px',
+              background: 'var(--admin-card, #181815)',
+              borderRadius: '16px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              padding: '20px',
+              maxWidth: '380px',
               width: '100%',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '12px',
-                  background: 'rgba(226, 137, 168, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--admin-primary)',
-                }}
-              >
-                <Bot size={20} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Controle de IA no Chat</h3>
-                <span style={{ fontSize: '12px', color: 'var(--admin-muted)' }}>{activeContact.name}</span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '13px', color: 'var(--admin-text)', lineHeight: '1.5', marginBottom: '20px' }}>
-              Escolha se a Lara IA deve responder mensagens automaticamente deste cliente ou se você prefere assumir o atendimento humano.
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600 }}>
+              Controle de Atendimento
+            </h4>
+            <p style={{ fontSize: '12px', color: 'var(--admin-muted, #8b8b83)', margin: '0 0 16px 0' }}>
+              {effectiveContact.name || 'Contato'} ({formatPhoneDisplay(effectiveContact.phone)})
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* Opção 1: Pausar por 1 hora */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
                 type="button"
                 onClick={() => handleToggleAi(true, 1)}
@@ -1069,23 +1165,20 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  border: '1px solid var(--admin-line)',
-                  background: 'var(--admin-subtle)',
-                  color: 'var(--admin-text)',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
                   cursor: 'pointer',
+                  fontSize: '12px',
                   textAlign: 'left',
                 }}
               >
-                <div>
-                  <strong style={{ display: 'block', fontSize: '13px' }}>⏸️ Pausar IA por 1 hora</strong>
-                  <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Ideal para concluir uma dúvida rápida</span>
-                </div>
-                <Clock size={16} style={{ color: 'var(--admin-muted)' }} />
+                <span>Pausar IA por 1 hora</span>
+                <Clock size={14} style={{ color: 'var(--admin-muted, #8b8b83)' }} />
               </button>
 
-              {/* Opção 2: Pausar por 24 horas */}
               <button
                 type="button"
                 onClick={() => handleToggleAi(true, 24)}
@@ -1094,23 +1187,20 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  border: '1px solid var(--admin-line)',
-                  background: 'var(--admin-subtle)',
-                  color: 'var(--admin-text)',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
                   cursor: 'pointer',
+                  fontSize: '12px',
                   textAlign: 'left',
                 }}
               >
-                <div>
-                  <strong style={{ display: 'block', fontSize: '13px' }}>⏸️ Pausar IA por 24 horas</strong>
-                  <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>Atendimento manual durante todo o dia de hoje</span>
-                </div>
-                <Calendar size={16} style={{ color: 'var(--admin-muted)' }} />
+                <span>Pausar IA por 24 horas</span>
+                <Calendar size={14} style={{ color: 'var(--admin-muted, #8b8b83)' }} />
               </button>
 
-              {/* Opção 3: Pausar Permanentemente */}
               <button
                 type="button"
                 onClick={() => handleToggleAi(true, null)}
@@ -1119,23 +1209,20 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  background: 'rgba(239, 68, 68, 0.05)',
-                  color: '#b91c1c',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
                   cursor: 'pointer',
+                  fontSize: '12px',
                   textAlign: 'left',
                 }}
               >
-                <div>
-                  <strong style={{ display: 'block', fontSize: '13px' }}>🚫 Pausar Permanentemente</strong>
-                  <span style={{ fontSize: '11px', opacity: 0.8 }}>A IA nunca responderá este cliente a menos que reativada</span>
-                </div>
-                <Shield size={16} />
+                <span>Pausar Permanentemente (Manual)</span>
+                <Shield size={14} style={{ color: 'var(--admin-muted, #8b8b83)' }} />
               </button>
 
-              {/* Opção 4: Reativar IA */}
               <button
                 type="button"
                 onClick={() => handleToggleAi(false)}
@@ -1144,38 +1231,37 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  border: '1px solid rgba(34, 197, 94, 0.4)',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  color: '#15803d',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  background: 'rgba(34, 197, 94, 0.08)',
+                  color: '#16a34a',
                   cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
                   textAlign: 'left',
                 }}
               >
-                <div>
-                  <strong style={{ display: 'block', fontSize: '13px' }}>🟢 Reativar IA Agora</strong>
-                  <span style={{ fontSize: '11px', opacity: 0.8 }}>Voltar a responder automaticamente com IA</span>
-                </div>
-                <Play size={16} />
+                <span>Reativar Atendimento da IA</span>
+                <Play size={14} />
               </button>
             </div>
 
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <div style={{ marginTop: '16px', textAlign: 'right' }}>
               <button
                 type="button"
                 onClick={() => setShowPauseModal(false)}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--admin-line)',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
                   background: 'transparent',
-                  color: 'var(--admin-muted)',
+                  color: 'var(--admin-muted, #8b8b83)',
                   fontSize: '12px',
                   cursor: 'pointer',
                 }}
               >
-                Fechar
+                Cancelar
               </button>
             </div>
           </div>
@@ -1183,15 +1269,14 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: INICIAR NOVA CONVERSA */}
+      {/* MODAL: NOVA CONVERSA */}
       {/* ============================================================ */}
       {showNewChatModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.5)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1202,77 +1287,67 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
         >
           <div
             style={{
-              background: 'var(--admin-card)',
-              borderRadius: '24px',
-              border: '1px solid var(--admin-line)',
-              padding: '24px',
-              maxWidth: '400px',
+              background: 'var(--admin-card, #181815)',
+              borderRadius: '16px',
+              border: '1px solid var(--admin-line, #2a2a26)',
+              padding: '20px',
+              maxWidth: '360px',
               width: '100%',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.3)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 700 }}>Nova Conversa no WhatsApp</h3>
-            <p style={{ fontSize: '12px', color: 'var(--admin-muted)', marginBottom: '18px' }}>
-              Digite o número do cliente com DDD para abrir uma conversa direta no painel.
+            <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 600 }}>
+              Nova Conversa
+            </h4>
+            <p style={{ fontSize: '12px', color: 'var(--admin-muted, #8b8b83)', margin: '0 0 14px 0' }}>
+              Digite o número do WhatsApp com DDD.
             </p>
 
-            <form onSubmit={handleCreateNewChat} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
-                  Nome do Cliente (opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Gabriela Silva"
-                  value={newChatName}
-                  onChange={(e) => setNewChatName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--admin-line)',
-                    background: 'var(--admin-subtle)',
-                    color: 'var(--admin-text)',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
-                />
-              </div>
+            <form onSubmit={handleCreateNewChat} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <input
+                type="text"
+                placeholder="Nome do cliente (opcional)"
+                value={newChatName}
+                onChange={(e) => setNewChatName(e.target.value)}
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
+                  fontSize: '12.5px',
+                  outline: 'none',
+                }}
+              />
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
-                  Telefone / WhatsApp (com DDD)
-                </label>
-                <input
-                  type="tel"
-                  placeholder="Ex: 51 98974-1970"
-                  value={newChatPhone}
-                  onChange={(e) => setNewChatPhone(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--admin-line)',
-                    background: 'var(--admin-subtle)',
-                    color: 'var(--admin-text)',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
-                />
-              </div>
+              <input
+                type="tel"
+                placeholder="Número: 51 98974-1970"
+                value={newChatPhone}
+                onChange={(e) => setNewChatPhone(e.target.value)}
+                required
+                style={{
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
+                  fontSize: '12.5px',
+                  outline: 'none',
+                }}
+              />
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                 <button
                   type="button"
                   onClick={() => setShowNewChatModal(false)}
                   style={{
-                    padding: '10px 16px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--admin-line)',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
                     background: 'transparent',
-                    color: 'var(--admin-muted)',
+                    color: 'var(--admin-muted, #8b8b83)',
                     fontSize: '12px',
                     cursor: 'pointer',
                   }}
@@ -1283,17 +1358,17 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 <button
                   type="submit"
                   style={{
-                    padding: '10px 18px',
-                    borderRadius: '12px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
                     border: 'none',
-                    background: 'var(--admin-primary)',
+                    background: '#e289a8',
                     color: '#fff',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  Abrir Conversa
+                  Iniciar
                 </button>
               </div>
             </form>

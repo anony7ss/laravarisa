@@ -306,14 +306,73 @@ export function DisparosManager({
   };
 
   return (
-    <div style={{ display: 'grid', gap: '24px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-        }}
-      >
+    <div className="disparos-container">
+      <style>{`
+        .disparos-container {
+          display: grid;
+          gap: 24px;
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        .disparos-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 14px;
+          width: 100%;
+        }
+        .disparos-main-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+          gap: 24px;
+          width: 100%;
+        }
+        .disparos-templates-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        @media (max-width: 860px) {
+          .disparos-main-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .disparos-stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .disparos-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .disparos-templates-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .disparos-filter-row {
+            flex-direction: column !important;
+          }
+          .disparos-filter-row select {
+            width: 100% !important;
+            min-width: 100% !important;
+          }
+          .disparos-batch-actions {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .disparos-batch-actions button {
+            width: 100% !important;
+            justify-content: center !important;
+          }
+          .disparos-batch-buttons {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
+
+      <div className="disparos-stats-grid">
         {/* Total de Clientes */}
         <div
           style={{
@@ -502,7 +561,7 @@ export function DisparosManager({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+      <div className="disparos-main-grid">
         <section className="admin-panel" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="admin-panel-head">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -536,7 +595,7 @@ export function DisparosManager({
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="disparos-filter-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <select
                 value={filterInactivity}
                 onChange={(e) => setFilterInactivity(e.target.value as any)}
@@ -577,7 +636,7 @@ export function DisparosManager({
               </select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="disparos-batch-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="admin-secondary"
@@ -595,7 +654,7 @@ export function DisparosManager({
                 )}
               </button>
 
-              <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="disparos-batch-buttons" style={{ display: 'flex', gap: '6px' }}>
                 <button
                   type="button"
                   className="admin-secondary"
@@ -730,7 +789,7 @@ export function DisparosManager({
               <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-ink)', margin: '0 0 6px' }}>
                 Modelos Rápidos (Templates VIP):
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="disparos-templates-grid">
                 {TEMPLATES.map((t) => {
                   const isActive = activeTemplateId === t.id;
                   return (

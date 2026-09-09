@@ -138,8 +138,10 @@ export function NotificationCenter({
               )}
             </div>
             <div>
-              <h2 id="notification-center-title">Central de Notificações</h2>
-              <small>
+              <h2 id="notification-center-title" style={{ margin: 0, fontSize: '14.5px', fontWeight: 500, color: '#e8e8e2', letterSpacing: '-0.01em' }}>
+                Central de Notificações
+              </h2>
+              <small style={{ display: 'block', marginTop: '2px', fontSize: '11px', color: '#8e8e86' }}>
                 {unreadItems.length > 0
                   ? `${unreadItems.length} ${unreadItems.length === 1 ? 'pendência' : 'pendências'} requer atenção`
                   : 'Tudo em dia por aqui!'}
