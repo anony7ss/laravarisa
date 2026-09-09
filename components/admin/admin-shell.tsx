@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   ArrowUpRight,
@@ -233,8 +234,15 @@ export function AdminShell({
                 className="flex items-center gap-3 group overflow-hidden h-full"
                 onClick={() => setOpen(false)}
               >
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#fc5000] to-[#e04000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-md shadow-[#fc5000]/25 flex-shrink-0">
-                  LV
+                <div className="h-9 w-9 rounded-xl bg-[#fc5000]/10 dark:bg-white/[0.06] border border-[#fc5000]/25 dark:border-white/10 flex items-center justify-center p-1 shadow-sm flex-shrink-0">
+                  <NextImage
+                    src="/logo-emblem.png"
+                    alt="Lara Varisa"
+                    width={36}
+                    height={36}
+                    className="w-full h-full object-contain"
+                    priority
+                  />
                 </div>
                 <motion.div
                   animate={{
@@ -244,10 +252,10 @@ export function AdminShell({
                   transition={{ duration: 0.15 }}
                   className="flex flex-col min-w-0 overflow-hidden whitespace-nowrap"
                 >
-                  <strong className="text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
+                  <strong className="text-neutral-900 dark:text-white text-sm font-semibold tracking-tight whitespace-nowrap leading-tight">
                     Lara Varisa
                   </strong>
-                  <small className="text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
+                  <small className="text-neutral-500 dark:text-neutral-400 text-[10px] tracking-widest uppercase font-medium">
                     Lash Designer
                   </small>
                 </motion.div>
@@ -278,7 +286,7 @@ export function AdminShell({
                 />
               ))}
 
-              <div className="my-2 border-t border-white/10" />
+              <div className="my-2 border-t border-black/[0.08] dark:border-white/10" />
 
               <SidebarLink
                 link={{
@@ -294,8 +302,8 @@ export function AdminShell({
           </div>
 
           {/* User Profile & Actions Footer */}
-          <div className="pt-3 border-t border-white/10 flex flex-col gap-2 flex-shrink-0">
-            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] h-12 overflow-hidden">
+          <div className="pt-3 border-t border-black/[0.08] dark:border-white/10 flex flex-col gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2.5 p-2 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] h-12 overflow-hidden">
               <div className="w-8 h-8 rounded-full bg-[#fc5000] text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
                 {(name || 'A').trim().slice(0, 1).toUpperCase()}
               </div>
@@ -307,10 +315,10 @@ export function AdminShell({
                 transition={{ duration: 0.15 }}
                 className="flex flex-col min-w-0 flex-1 overflow-hidden whitespace-nowrap"
               >
-                <strong className="text-white text-xs font-medium truncate block leading-tight">
+                <strong className="text-neutral-900 dark:text-white text-xs font-medium truncate block leading-tight">
                   {name || 'Conta administrativa'}
                 </strong>
-                <small className="text-neutral-400 text-[10px] truncate block">
+                <small className="text-neutral-500 dark:text-neutral-400 text-[10px] truncate block">
                   {roleLabel}
                 </small>
               </motion.div>
@@ -320,7 +328,7 @@ export function AdminShell({
               <button
                 type="button"
                 onClick={() => setNotificationsOpen(true)}
-                className="relative p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                className="relative p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 title={
                   notificationsCount > 0
                     ? `${notificationsCount} novidade(s) na central`
@@ -342,7 +350,7 @@ export function AdminShell({
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+                className="p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-black/[0.06] dark:text-neutral-300 dark:hover:text-white dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 aria-label="Alternar tema"
                 title="Alternar tema"
               >
@@ -357,7 +365,7 @@ export function AdminShell({
                   display: open ? 'inline-flex' : 'none',
                 }}
                 transition={{ duration: 0.15 }}
-                className="p-2 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors flex-shrink-0 ml-auto"
+                className="p-2 rounded-lg text-neutral-500 hover:text-red-500 hover:bg-red-500/10 dark:text-neutral-400 dark:hover:text-red-400 transition-colors flex-shrink-0 ml-auto"
                 aria-label="Sair do painel"
                 title="Sair"
               >
@@ -370,8 +378,14 @@ export function AdminShell({
       <div className="admin-main">
         <header className="admin-mobile-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="h-7 w-7 rounded-lg bg-[#fc5000] flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-sm flex-shrink-0">
-              LV
+            <div className="h-7 w-7 rounded-lg bg-[#fc5000]/10 dark:bg-white/10 border border-[#fc5000]/25 dark:border-white/10 flex items-center justify-center p-0.5 shadow-sm flex-shrink-0">
+              <NextImage
+                src="/logo-emblem.png"
+                alt="Lara Varisa"
+                width={28}
+                height={28}
+                className="w-full h-full object-contain"
+              />
             </div>
             <span>
               <small>PAINEL</small>

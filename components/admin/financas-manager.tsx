@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState, type SyntheticEvent } from 'react';
 import {
@@ -19,6 +19,7 @@ import {
   HelpCircle,
   X,
   Receipt,
+  Wallet,
 } from 'lucide-react';
 import { adminRequest } from './api';
 import type { AppointmentRow, ExpenseRow, ServiceRow } from '@/lib/admin-types';
@@ -263,134 +264,78 @@ export function FinancasManager({
       </div>
 
       {/* 4 Cards Principais de Indicadores Financeiros */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
+      <section className="admin-stat-grid" style={{ marginBottom: '24px' }}>
         {/* Receita Bruta */}
-        <div
-          className="admin-panel"
-          style={{
-            padding: '20px',
-            borderLeft: '4px solid #22c55e',
-            background: 'rgba(34, 197, 94, 0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--admin-muted)', fontWeight: 600 }}>RECEITA BRUTA</span>
-            <span style={{ color: '#22c55e' }}><TrendingUp size={18} /></span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#22c55e' }}>
-            {formatCurrency(grossRevenue)}
-          </div>
-          <small style={{ color: 'var(--admin-muted)', fontSize: '11px', marginTop: '6px', display: 'block' }}>
-            {monthAppointments.length} atendimentos concluídos
-          </small>
+        <div className="admin-stat-card">
+          <span>
+            <TrendingUp size={19} />
+          </span>
+          <strong>{formatCurrency(grossRevenue)}</strong>
+          <p>Receita Bruta · {monthAppointments.length} atendimentos</p>
         </div>
 
         {/* Despesas Totais */}
-        <div
-          className="admin-panel"
-          style={{
-            padding: '20px',
-            borderLeft: '4px solid #ef4444',
-            background: 'rgba(239, 68, 68, 0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--admin-muted)', fontWeight: 600 }}>DESPESAS TOTAIS</span>
-            <span style={{ color: '#ef4444' }}><TrendingDown size={18} /></span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#ef4444' }}>
-            {formatCurrency(totalExpenses)}
-          </div>
-          <small style={{ color: 'var(--admin-muted)', fontSize: '11px', marginTop: '6px', display: 'block' }}>
-            {monthExpenses.length} lançamentos de custos
-          </small>
+        <div className="admin-stat-card">
+          <span>
+            <TrendingDown size={19} />
+          </span>
+          <strong>{formatCurrency(totalExpenses)}</strong>
+          <p>Despesas Totais · {monthExpenses.length} lançamentos</p>
         </div>
 
         {/* Lucro Líquido Real */}
-        <div
-          className="admin-panel"
-          style={{
-            padding: '20px',
-            borderLeft: `4px solid ${netProfit >= 0 ? '#d4af37' : '#ef4444'}`,
-            background: netProfit >= 0 ? 'rgba(212, 175, 55, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--admin-muted)', fontWeight: 600 }}>LUCRO LÍQUIDO REAL</span>
-            <span style={{ color: '#d4af37' }}><Sparkles size={18} /></span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: netProfit >= 0 ? '#fef08a' : '#ef4444' }}>
+        <div className="admin-stat-card">
+          <span>
+            <Wallet size={19} />
+          </span>
+          <strong style={netProfit < 0 ? { color: '#ef4444' } : undefined}>
             {formatCurrency(netProfit)}
-          </div>
-          <small style={{ color: 'var(--admin-muted)', fontSize: '11px', marginTop: '6px', display: 'block' }}>
-            O que sobra limpo no bolso da Lara
-          </small>
+          </strong>
+          <p>Lucro Líquido {grossRevenue > 0 ? `· ${Math.round((netProfit / grossRevenue) * 100)}% margem` : ''}</p>
         </div>
 
         {/* Ticket Médio */}
-        <div
-          className="admin-panel"
-          style={{
-            padding: '20px',
-            borderLeft: '4px solid #3b82f6',
-            background: 'rgba(59, 130, 246, 0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--admin-muted)', fontWeight: 600 }}>TICKET MÉDIO</span>
-            <span style={{ color: '#3b82f6' }}><Receipt size={18} /></span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#93c5fd' }}>
-            {formatCurrency(avgTicket)}
-          </div>
-          <small style={{ color: 'var(--admin-muted)', fontSize: '11px', marginTop: '6px', display: 'block' }}>
-            Média de faturamento por cliente
-          </small>
+        <div className="admin-stat-card">
+          <span>
+            <Receipt size={19} />
+          </span>
+          <strong>{formatCurrency(avgTicket)}</strong>
+          <p>Ticket Médio por cliente</p>
         </div>
-      </div>
+      </section>
 
       {/* Seção com Detalhamento de Despesas e Categorias */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         {/* Tabela de Despesas */}
         <section className="admin-panel" style={{ gridColumn: 'span 2' }}>
           <div className="admin-panel-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#ef4444' }}><DollarSign size={18} /></span>
-              <div>
-                <h2>Despesas de {monthLabel}</h2>
-                <small style={{ color: 'var(--admin-muted)' }}>
-                  Controle simples de materiais, aluguel e custos operacionais
-                </small>
-              </div>
+            <div>
+              <h2>Despesas de {monthLabel}</h2>
+              <small style={{ color: 'var(--admin-muted)' }}>
+                Controle de materiais, espaço e custos operacionais
+              </small>
             </div>
+          </div>
 
-            {/* Filtro rápido por categoria */}
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Filtro rápido por categoria */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
+            <button
+              type="button"
+              className={`admin-filter-pill ${catFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setCatFilter('all')}
+            >
+              Todas ({monthExpenses.length})
+            </button>
+            {CATEGORIES.map((c) => (
               <button
+                key={c.id}
                 type="button"
-                className={`admin-filter-pill ${catFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setCatFilter('all')}
+                className={`admin-filter-pill ${catFilter === c.id ? 'active' : ''}`}
+                onClick={() => setCatFilter(c.id)}
               >
-                Todas ({monthExpenses.length})
+                {c.label}
               </button>
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`admin-filter-pill ${catFilter === c.id ? 'active' : ''}`}
-                  onClick={() => setCatFilter(c.id)}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
 
           {filteredExpenses.length ? (
@@ -430,8 +375,9 @@ export function FinancasManager({
                               padding: '3px 8px',
                               borderRadius: '6px',
                               fontSize: '11px',
-                              background: 'rgba(255, 255, 255, 0.05)',
-                              color: cat?.color || '#fff',
+                              background: 'var(--admin-soft)',
+                              color: 'var(--admin-ink)',
+                              border: '1px solid var(--admin-line)',
                             }}
                           >
                             {cat?.label || item.category}
@@ -481,17 +427,17 @@ export function FinancasManager({
               return (
                 <div key={c.id}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: c.color }}>
+                    <span style={{ color: 'var(--admin-ink)', fontWeight: 500 }}>
                       {c.label}
                     </span>
-                    <strong>{formatCurrency(catTotal)} ({pct}%)</strong>
+                    <strong style={{ color: 'var(--admin-ink)' }}>{formatCurrency(catTotal)} <span style={{ color: 'var(--admin-muted)', fontWeight: 400, fontSize: '12px' }}>({pct}%)</span></strong>
                   </div>
-                  <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: '6px', background: 'var(--admin-soft)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div
                       style={{
                         width: `${pct}%`,
                         height: '100%',
-                        background: c.color,
+                        background: 'var(--admin-ink)',
                         borderRadius: '3px',
                       }}
                     />
@@ -501,8 +447,8 @@ export function FinancasManager({
             })}
           </div>
 
-          <div style={{ marginTop: '20px', padding: '14px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '10px', fontSize: '12px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
-            💡 <strong>Dica Solo:</strong> Manter as despesas de materiais abaixo de 20% do faturamento garante uma margem líquida excelente para o seu estúdio.
+          <div style={{ marginTop: '20px', padding: '12px 14px', background: 'var(--admin-soft)', borderRadius: '10px', fontSize: '12px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
+            Manter as despesas operacionais e de materiais abaixo de 20% do faturamento garante uma margem líquida saudável para o estúdio.
           </div>
         </section>
       </div>

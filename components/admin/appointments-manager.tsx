@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef, type SyntheticEvent } from 'react';
 import {
   CalendarDays,
+  CalendarRange,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -22,6 +23,9 @@ import {
 import { adminRequest } from './api';
 import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
+
+export type MainViewMode = 'calendar' | 'kanban';
+export type CalendarSubView = 'month' | 'week' | 'day';
 
 function renderOriginBadge(origin?: string) {
   const isWa = origin === 'whatsapp_bot' || origin === 'whatsapp';
@@ -54,7 +58,7 @@ function renderOriginBadge(origin?: string) {
 }
 
 const statusLabels: Record<AppointmentRow['status'], string> = {
-  scheduled: 'Agendado',
+  scheduled: 'Aguardando',
   confirmed: 'Confirmado',
   completed: 'Concluído',
   cancelled: 'Cancelado',
@@ -144,6 +148,78 @@ function dateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  return new Date(y, m, d, 12, 0, 0);
+}
+
+function getWeekDays(baseDate: Date): Date[] {
+  const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 12, 0, 0);
+  const day = d.getDay(); // 0 is Sun, 1 is Mon...
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const dayDate = new Date(monday);
+    dayDate.setDate(monday.getDate() + i);
+    return dayDate;
+  });
+}
+
+function formatWeekTitle(weekDaysList: Date[]): string {
+  if (!weekDaysList || weekDaysList.length < 7) return '';
+  const first = weekDaysList[0];
+  const last = weekDaysList[6];
+  const sameMonth = first.getMonth() === last.getMonth();
+  const sameYear = first.getFullYear() === last.getFullYear();
+
+  const d1 = String(first.getDate()).padStart(2, '0');
+  const d2 = String(last.getDate()).padStart(2, '0');
+
+  if (sameMonth && sameYear) {
+    const monthName = first.toLocaleDateString('pt-BR', { month: 'long' });
+    const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    return `${d1} a ${d2} de ${capMonth} de ${first.getFullYear()}`;
+  } else if (sameYear) {
+    const m1 = first.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    const m2 = last.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    return `${d1} de ${m1} a ${d2} de ${m2} de ${first.getFullYear()}`;
+  } else {
+    const m1 = first.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    const m2 = last.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    return `${d1} de ${m1} de ${first.getFullYear()} a ${d2} de ${m2} de ${last.getFullYear()}`;
+  }
+}
+
+function formatDayTitle(date: Date): string {
+  const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const capWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleDateString('pt-BR', { month: 'long' });
+  const capMonth = month.charAt(0).toUpperCase() + month.slice(1);
+  const year = date.getFullYear();
+  return `${capWeekday}, ${day} de ${capMonth} de ${year}`;
+}
+
+function calculateRevenue(list: AppointmentRow[], sMap: Map<string, ServiceRow>): number {
+  let sum = 0;
+  for (const item of list) {
+    if (item.status === 'cancelled' || item.status === 'no_show') continue;
+    if (item.service_id) {
+      const s = sMap.get(item.service_id);
+      if (s?.price_label) {
+        const num = s.price_label.replace(/\D/g, '');
+        if (num) sum += parseInt(num, 10);
+      }
+    }
+  }
+  return sum;
+}
+
 function toLocalInput(value: string) {
   const date = new Date(value);
   const offset = date.getTimezoneOffset() * 60000;
@@ -206,6 +282,7 @@ export function AppointmentsManager({
   const [selectedDate, setSelectedDate] = useState(dateKey(today));
   const [editing, setEditing] = useState<AppointmentRow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [presetTime, setPresetTime] = useState<{ start: string; end: string } | null>(null);
   const [error, setError] = useState('');
 
   const isUpdatingRef = useRef(false);
@@ -246,14 +323,12 @@ export function AppointmentsManager({
 
   // Sincronização automática em TEMPO REAL (Realtime Supabase + Polling inteligente a cada 6s)
   useEffect(() => {
-    // 1. Polling a cada 6s quando a aba estiver em foco / visível
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden) {
         fetchFreshAppointments();
       }
     }, 6000);
 
-    // 2. Atualiza imediatamente ao voltar para a aba ou focar na tela
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && !document.hidden) {
         fetchFreshAppointments();
@@ -262,7 +337,6 @@ export function AppointmentsManager({
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
 
-    // 3. Canal Realtime do Supabase (para atualização em 0ms quando disponível)
     const supabase = createBrowserSupabase();
     let channel: any = null;
 
@@ -298,6 +372,12 @@ export function AppointmentsManager({
         ...editing,
         starts_at: toLocalInput(editing.starts_at),
         ends_at: toLocalInput(editing.ends_at),
+      }
+    : presetTime
+    ? {
+        ...emptyAppointment(selectedDate),
+        starts_at: presetTime.start,
+        ends_at: presetTime.end,
       }
     : emptyAppointment(selectedDate);
 
@@ -410,15 +490,42 @@ export function AppointmentsManager({
     setSelectedDate(dateKey(next));
   }
 
+  function changeWeek(offset: number) {
+    const cur = parseLocalDate(selectedDate);
+    cur.setDate(cur.getDate() + offset * 7);
+    const newDateStr = dateKey(cur);
+    setSelectedDate(newDateStr);
+    setMonth(new Date(cur.getFullYear(), cur.getMonth(), 1));
+  }
+
+  function changeDay(offset: number) {
+    const cur = parseLocalDate(selectedDate);
+    cur.setDate(cur.getDate() + offset);
+    const newDateStr = dateKey(cur);
+    setSelectedDate(newDateStr);
+    setMonth(new Date(cur.getFullYear(), cur.getMonth(), 1));
+  }
+
   function goToday() {
     setMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setSelectedDate(dateKey(today));
     setQuickFilter('today');
   }
 
-  function openCreate(day = selectedDate) {
+  function openCreate(day = selectedDate, timeStr?: string) {
     setSelectedDate(day);
     setEditing(null);
+    if (timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const start = new Date(`${day}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      setPresetTime({
+        start: toLocalInput(start.toISOString()),
+        end: toLocalInput(end.toISOString()),
+      });
+    } else {
+      setPresetTime(null);
+    }
     setCreating(true);
   }
 
@@ -457,6 +564,7 @@ export function AppointmentsManager({
       setSelectedDate(dateKey(savedDate));
       setEditing(null);
       setCreating(false);
+      setPresetTime(null);
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : 'Não foi possível salvar.',
@@ -469,7 +577,8 @@ export function AppointmentsManager({
   const [deletingAppointment, setDeletingAppointment] = useState<string | null>(null);
   const [clearCancelledModalOpen, setClearCancelledModalOpen] = useState(false);
   const [clearingCancelled, setClearingCancelled] = useState(false);
-  const [viewMode, setViewMode] = useState<'calendar' | 'kanban'>('calendar');
+  const [mainMode, setMainMode] = useState<MainViewMode>('calendar');
+  const [calendarView, setCalendarView] = useState<CalendarSubView>('month');
   const [kanbanScope, setKanbanScope] = useState<'today' | 'next7' | 'month' | 'all'>('next7');
   const [dragOverColumn, setDragOverColumn] = useState<KanbanColId | null>(null);
 
@@ -568,13 +677,27 @@ export function AppointmentsManager({
     }
   }
 
-  // Carrega e persiste a preferência de Kanban vs Calendário ao recarregar ou voltar à página
+  // Carrega e persiste a preferência de Modo ao recarregar ou voltar à página
   useEffect(() => {
     try {
-      const savedMode = localStorage.getItem('admin-agenda-view-mode');
-      if (savedMode === 'kanban' || savedMode === 'calendar') {
-        setViewMode(savedMode);
+      const savedMain = localStorage.getItem('admin-agenda-main-mode');
+      if (savedMain === 'calendar' || savedMain === 'kanban') {
+        setMainMode(savedMain);
+      } else {
+        const legacyMode = localStorage.getItem('admin-agenda-view-mode');
+        if (legacyMode === 'kanban') {
+          setMainMode('kanban');
+        } else if (legacyMode === 'week' || legacyMode === 'day' || legacyMode === 'month') {
+          setMainMode('calendar');
+          setCalendarView(legacyMode);
+        }
       }
+
+      const savedCalView = localStorage.getItem('admin-agenda-calendar-view');
+      if (savedCalView === 'month' || savedCalView === 'week' || savedCalView === 'day') {
+        setCalendarView(savedCalView);
+      }
+
       const savedScope = localStorage.getItem('admin-kanban-scope');
       if (savedScope === 'today' || savedScope === 'next7' || savedScope === 'month' || savedScope === 'all') {
         setKanbanScope(savedScope);
@@ -582,10 +705,17 @@ export function AppointmentsManager({
     } catch {}
   }, []);
 
-  const changeViewMode = (mode: 'calendar' | 'kanban') => {
-    setViewMode(mode);
+  const changeMainMode = (mode: MainViewMode) => {
+    setMainMode(mode);
     try {
-      localStorage.setItem('admin-agenda-view-mode', mode);
+      localStorage.setItem('admin-agenda-main-mode', mode);
+    } catch {}
+  };
+
+  const changeCalendarView = (view: CalendarSubView) => {
+    setCalendarView(view);
+    try {
+      localStorage.setItem('admin-agenda-calendar-view', view);
     } catch {}
   };
 
@@ -603,6 +733,46 @@ export function AppointmentsManager({
     }
     return map;
   }, [services]);
+
+  // Cálculos da Semana e Dia
+  const selectedDateObj = useMemo(() => parseLocalDate(selectedDate), [selectedDate]);
+  const currentWeekDays = useMemo(() => getWeekDays(selectedDateObj), [selectedDateObj]);
+
+  const weekItems = useMemo(() => {
+    if (!currentWeekDays.length) return [];
+    const startKey = dateKey(currentWeekDays[0]);
+    const endKey = dateKey(currentWeekDays[6]);
+    return items.filter((item) => {
+      const key = dateKey(new Date(item.starts_at));
+      return key >= startKey && key <= endKey;
+    }).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  }, [items, currentWeekDays]);
+
+  const weekConfirmed = useMemo(() => weekItems.filter(i => i.status === 'confirmed').length, [weekItems]);
+  const weekPending = useMemo(() => weekItems.filter(i => i.status === 'scheduled').length, [weekItems]);
+  const weekRevenue = useMemo(() => calculateRevenue(weekItems, serviceMap), [weekItems, serviceMap]);
+
+  const monthRevenue = useMemo(() => calculateRevenue(monthItems, serviceMap), [monthItems, serviceMap]);
+
+  const dayItems = useMemo(() => groupedItems.get(selectedDate) ?? [], [groupedItems, selectedDate]);
+  const dayConfirmed = useMemo(() => dayItems.filter(i => i.status === 'confirmed').length, [dayItems]);
+  const dayPending = useMemo(() => dayItems.filter(i => i.status === 'scheduled').length, [dayItems]);
+  const dayRevenue = useMemo(() => calculateRevenue(dayItems, serviceMap), [dayItems, serviceMap]);
+
+  const dayHoursList = useMemo(() => {
+    let startH = 8;
+    let endH = 20;
+    for (const it of dayItems) {
+      const h = new Date(it.starts_at).getHours();
+      if (h < startH) startH = Math.max(0, h);
+      if (h > endH) endH = Math.min(23, h);
+    }
+    const hours: number[] = [];
+    for (let i = startH; i <= endH; i++) {
+      hours.push(i);
+    }
+    return hours;
+  }, [dayItems]);
 
   const kanbanCounts = useMemo(() => {
     const todayStart = new Date(
@@ -747,14 +917,14 @@ export function AppointmentsManager({
   return (
     <>
       <section className="admin-calendar-toolbar">
-        <div className={`admin-calendar-period ${viewMode === 'kanban' ? 'is-kanban' : ''}`}>
-          {viewMode === 'calendar' ? (
+        <div className={`admin-calendar-period ${mainMode === 'kanban' ? 'is-kanban' : ''}`}>
+          {mainMode === 'calendar' && calendarView === 'month' && (
             <>
               <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
                 <ChevronLeft size={18} />
               </button>
               <div>
-                <small>CALENDÁRIO</small>
+                <small>CALENDÁRIO MENSAL</small>
                 <h2>
                   {month.toLocaleDateString('pt-BR', {
                     month: 'long',
@@ -769,34 +939,110 @@ export function AppointmentsManager({
                 Hoje
               </button>
             </>
-          ) : (
+          )}
+
+          {mainMode === 'calendar' && calendarView === 'week' && (
+            <>
+              <button onClick={() => changeWeek(-1)} aria-label="Semana anterior">
+                <ChevronLeft size={18} />
+              </button>
+              <div style={{ width: 'auto', minWidth: '220px' }}>
+                <small>VISÃO SEMANAL</small>
+                <h2 style={{ fontSize: '18px' }}>
+                  {formatWeekTitle(currentWeekDays)}
+                </h2>
+              </div>
+              <button onClick={() => changeWeek(1)} aria-label="Próxima semana">
+                <ChevronRight size={18} />
+              </button>
+              <button className="admin-today-button" onClick={goToday}>
+                Hoje
+              </button>
+            </>
+          )}
+
+          {mainMode === 'calendar' && calendarView === 'day' && (
+            <>
+              <button onClick={() => changeDay(-1)} aria-label="Dia anterior">
+                <ChevronLeft size={18} />
+              </button>
+              <div style={{ width: 'auto', minWidth: '230px' }}>
+                <small>VISÃO DIÁRIA</small>
+                <h2 style={{ fontSize: '18px' }}>
+                  {formatDayTitle(selectedDateObj)}
+                </h2>
+              </div>
+              <button onClick={() => changeDay(1)} aria-label="Próximo dia">
+                <ChevronRight size={18} />
+              </button>
+              <button className="admin-today-button" onClick={goToday}>
+                Hoje
+              </button>
+            </>
+          )}
+
+          {mainMode === 'kanban' && (
             <div className="admin-kanban-title">
               <small>QUADRO</small>
               <h2>Kanban da Agenda</h2>
             </div>
           )}
         </div>
+
         <div className="admin-toolbar-actions">
+          {mainMode === 'calendar' && (
+            <div className="admin-calendar-subview-toggle" role="group" aria-label="Visualização do calendário">
+              <button
+                type="button"
+                className={calendarView === 'month' ? 'active' : ''}
+                onClick={() => changeCalendarView('month')}
+                aria-pressed={calendarView === 'month'}
+              >
+                <CalendarDays size={13} />
+                <span>Mês</span>
+              </button>
+              <button
+                type="button"
+                className={calendarView === 'week' ? 'active' : ''}
+                onClick={() => changeCalendarView('week')}
+                aria-pressed={calendarView === 'week'}
+              >
+                <CalendarRange size={13} />
+                <span>Semana</span>
+              </button>
+              <button
+                type="button"
+                className={calendarView === 'day' ? 'active' : ''}
+                onClick={() => changeCalendarView('day')}
+                aria-pressed={calendarView === 'day'}
+              >
+                <Clock3 size={13} />
+                <span>Dia</span>
+              </button>
+            </div>
+          )}
+
           <div className="admin-mode-toggle" role="group" aria-label="Modo de visualização">
             <button
               type="button"
-              className={viewMode === 'calendar' ? 'active' : ''}
-              onClick={() => changeViewMode('calendar')}
-              aria-pressed={viewMode === 'calendar'}
+              className={mainMode === 'calendar' ? 'active' : ''}
+              onClick={() => changeMainMode('calendar')}
+              aria-pressed={mainMode === 'calendar'}
             >
-              <CalendarDays size={15} />
+              <CalendarDays size={14} />
               <span>Calendário</span>
             </button>
             <button
               type="button"
-              className={viewMode === 'kanban' ? 'active' : ''}
-              onClick={() => changeViewMode('kanban')}
-              aria-pressed={viewMode === 'kanban'}
+              className={mainMode === 'kanban' ? 'active' : ''}
+              onClick={() => changeMainMode('kanban')}
+              aria-pressed={mainMode === 'kanban'}
             >
-              <Kanban size={15} />
+              <Kanban size={14} />
               <span>Kanban</span>
             </button>
           </div>
+
           {role !== 'viewer' && (
             <div className="admin-toolbar-buttons">
               <button
@@ -816,7 +1062,7 @@ export function AppointmentsManager({
         </div>
       </section>
 
-      {viewMode === 'kanban' ? (
+      {mainMode === 'kanban' ? (
         <div className="admin-calendar-summary" aria-label="Filtros do Kanban">
           <button
             type="button"
@@ -846,6 +1092,96 @@ export function AppointmentsManager({
           >
             Todos ({items.length})
           </button>
+          {totalCancelledCount > 0 && role !== 'viewer' && (
+            <button
+              type="button"
+              className="admin-filter-pill"
+              onClick={() => setClearCancelledModalOpen(true)}
+              style={{
+                marginLeft: 'auto',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.06)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+              title="Excluir permanentemente todos os cancelados e faltas"
+            >
+              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
+            </button>
+          )}
+        </div>
+      ) : calendarView === 'week' ? (
+        <div className="admin-calendar-summary" aria-label="Resumo da semana">
+          <span className="admin-filter-pill active">
+            <strong>Semana:</strong> {weekItems.length} atendimentos
+          </span>
+          <button
+            type="button"
+            className="admin-filter-pill"
+            onClick={() => goToday()}
+          >
+            Hoje
+          </button>
+          <span className="admin-filter-pill">
+            <i className="confirmed" />
+            <strong>{weekConfirmed}</strong> confirmados
+          </span>
+          <span className="admin-filter-pill">
+            <i className="scheduled" />
+            <strong>{weekPending}</strong> aguardando
+          </span>
+          {weekRevenue > 0 && (
+            <span className="admin-filter-pill" style={{ color: 'var(--admin-ink)', fontWeight: 600 }}>
+              Receita prevista: R$ {weekRevenue}
+            </span>
+          )}
+          {totalCancelledCount > 0 && role !== 'viewer' && (
+            <button
+              type="button"
+              className="admin-filter-pill"
+              onClick={() => setClearCancelledModalOpen(true)}
+              style={{
+                marginLeft: 'auto',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+                background: 'rgba(239, 68, 68, 0.06)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+              title="Excluir permanentemente todos os cancelados e faltas"
+            >
+              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
+            </button>
+          )}
+        </div>
+      ) : calendarView === 'day' ? (
+        <div className="admin-calendar-summary" aria-label="Resumo do dia">
+          <span className="admin-filter-pill active">
+            <strong>Dia:</strong> {dayItems.length} atendimentos
+          </span>
+          <button
+            type="button"
+            className="admin-filter-pill"
+            onClick={() => goToday()}
+          >
+            Hoje
+          </button>
+          <span className="admin-filter-pill">
+            <i className="confirmed" />
+            <strong>{dayConfirmed}</strong> confirmados
+          </span>
+          <span className="admin-filter-pill">
+            <i className="scheduled" />
+            <strong>{dayPending}</strong> aguardando
+          </span>
+          {dayRevenue > 0 && (
+            <span className="admin-filter-pill" style={{ color: 'var(--admin-ink)', fontWeight: 600 }}>
+              Receita prevista: R$ {dayRevenue}
+            </span>
+          )}
           {totalCancelledCount > 0 && role !== 'viewer' && (
             <button
               type="button"
@@ -931,7 +1267,8 @@ export function AppointmentsManager({
         <p className="admin-form-error">{error}</p>
       )}
 
-      {viewMode === 'kanban' ? (
+      {/* Visualização 1: KANBAN */}
+      {mainMode === 'kanban' && (
         <div className="admin-kanban-board" role="region" aria-label="Quadro Kanban de agendamentos">
           {KANBAN_COLUMNS.map((col) => {
             const colItems = kanbanFilteredItems.filter((item) =>
@@ -1166,7 +1503,10 @@ export function AppointmentsManager({
             );
           })}
         </div>
-      ) : (
+      )}
+
+      {/* Visualização 2: MÊS */}
+      {mainMode === 'calendar' && calendarView === 'month' && (
         <div className="admin-calendar-layout admin-calendar-workspace">
           <section className="admin-month" aria-label="Calendário mensal">
             <div className="admin-calendar-weekdays">
@@ -1181,65 +1521,82 @@ export function AppointmentsManager({
                 const outside = day.getMonth() !== month.getMonth();
                 const isToday = key === dateKey(today);
                 const selected = key === selectedDate;
+
                 return (
                   <div
                     className={`admin-calendar-day ${outside ? 'outside' : ''} ${selected ? 'selected' : ''}`}
                     key={key}
+                    onClick={() => {
+                      if (outside) {
+                        setMonth(new Date(day.getFullYear(), day.getMonth(), 1));
+                      }
+                      setSelectedDate(key);
+                      setQuickFilter('selected');
+                    }}
                   >
-                    <button
-                      className="admin-calendar-day-hit"
-                      onClick={() => {
-                        if (outside)
-                          setMonth(
-                            new Date(day.getFullYear(), day.getMonth(), 1),
-                          );
-                        setSelectedDate(key);
-                        setQuickFilter('selected');
-                      }}
-                      aria-label={`${day.toLocaleDateString('pt-BR')}, ${dayItems.length} horários`}
-                      aria-pressed={selected}
-                    >
-                      <span className={isToday ? 'today' : ''}>
+                    <div className="admin-calendar-day-header">
+                      <span className={`admin-calendar-day-num ${isToday ? 'today' : ''}`}>
                         {day.getDate()}
                       </span>
-                      {dayItems.length > 0 && <i>{dayItems.length}</i>}
-                    </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {dayItems.length > 0 && (
+                          <span className="admin-calendar-day-badge">
+                            {dayItems.length}
+                          </span>
+                        )}
+                        {role !== 'viewer' && (
+                          <button
+                            type="button"
+                            className="admin-cal-day-add-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCreate(key);
+                            }}
+                            title={`Agendar em ${day.toLocaleDateString('pt-BR')}`}
+                          >
+                            <Plus size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="admin-calendar-events">
                       {dayItems.slice(0, 3).map((item) => {
-                        const originLabel =
-                          item.origin === 'whatsapp_bot' || item.origin === 'whatsapp'
-                            ? 'WhatsApp'
-                            : item.origin === 'web' || item.origin === 'site'
-                            ? 'Site'
-                            : 'Balcão';
+                        const service = item.service_id ? serviceMap.get(item.service_id) : null;
                         const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
+
                         return (
                           <button
                             key={item.id}
-                            className={`admin-calendar-event ${item.status}`}
-                            style={
-                              isBlocked
-                                ? {
-                                    background: 'rgba(234, 179, 8, 0.2)',
-                                    borderLeft: '3px solid #eab308',
-                                    color: '#fef08a',
-                                  }
-                                : undefined
-                            }
-                            onClick={() => {
+                            type="button"
+                            className={`admin-calendar-event ${item.status} ${isBlocked ? 'blocked' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedDate(key);
                               setQuickFilter('selected');
                               if (role !== 'viewer') setEditing(item);
                             }}
-                            title={`${item.client_name} • Canal: ${originLabel}`}
+                            title={`${item.client_name} • ${service?.name || 'Procedimento'} • ${timeLabel(item.starts_at)}`}
                           >
-                            <time>{timeLabel(item.starts_at)}</time>
-                            <span>{item.client_name}</span>
+                            <span className="admin-cal-pill-time">{timeLabel(item.starts_at)}</span>
+                            <span className="admin-cal-pill-name">{item.client_name}</span>
+                            {service && <span className="admin-cal-pill-service">• {service.name}</span>}
                           </button>
                         );
                       })}
                       {dayItems.length > 3 && (
-                        <small>+{dayItems.length - 3} horários</small>
+                        <button
+                          type="button"
+                          className="admin-calendar-more-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDate(key);
+                            changeCalendarView('day');
+                          }}
+                          title="Ver todos os horários deste dia"
+                        >
+                          +{dayItems.length - 3} mais
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1250,104 +1607,147 @@ export function AppointmentsManager({
 
           <aside className="admin-day-panel">
             <div className="admin-day-panel-head">
-              <span>
-                <CalendarDays size={18} />
-              </span>
               <div>
                 <small>{quickFilter === 'selected' ? 'SELECIONADO' : 'FILTRO ATIVO'}</small>
                 <h3>{panelTitle}</h3>
               </div>
+              <button
+                type="button"
+                className="admin-day-panel-view-day-btn"
+                onClick={() => changeCalendarView('day')}
+                title="Abrir linha do tempo detalhada deste dia"
+              >
+                <Clock3 size={13} />
+                <span>Ver dia</span>
+              </button>
             </div>
+
             <div className="admin-day-list">
               {displayedItems.length ? (
                 displayedItems.map((item) => {
                   const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
+                  const service = item.service_id ? serviceMap.get(item.service_id) : null;
+                  const waLink = getWhatsAppLink(item);
 
                   if (isBlocked) {
                     return (
-                      <article
-                        className="admin-appointment blocked"
-                        key={item.id}
-                        style={{
-                          borderLeft: '4px solid #eab308',
-                          background: 'rgba(234, 179, 8, 0.08)',
-                        }}
-                      >
-                        <div className="admin-appointment-time" style={{ color: '#eab308' }}>
-                          <Lock size={15} />
-                          <time>{timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}</time>
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <strong style={{ color: '#fef08a' }}>{item.client_name}</strong>
-                          <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--admin-muted)' }}>
-                            Compromisso pessoal • Bloqueado no site & WhatsApp
-                          </p>
-                        </div>
-                        <div className="admin-row-actions">
+                      <article className="admin-appointment blocked" key={item.id}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div className="admin-appointment-time" style={{ color: '#eab308' }}>
+                            <Lock size={14} />
+                            <time>{timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}</time>
+                          </div>
                           {role !== 'viewer' && (
                             <button
-                              className="admin-icon-button admin-danger"
+                              type="button"
+                              className="admin-icon-btn-mini danger"
                               onClick={() => remove(item.id)}
                               title="Desbloquear este horário"
                               aria-label="Desbloquear"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={14} />
                             </button>
                           )}
+                        </div>
+                        <div>
+                          <strong style={{ color: '#854d0e', fontSize: '13px' }}>{item.client_name}</strong>
+                          <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--admin-muted)' }}>
+                            Bloqueio de agenda • Fechado no site e WhatsApp
+                          </p>
                         </div>
                       </article>
                     );
                   }
 
-                  const waLink = getWhatsAppLink(item);
                   return (
-                    <article
-                      className={`admin-appointment ${item.status}`}
-                      key={item.id}
-                    >
-                      <div className="admin-appointment-time">
-                        <Clock3 size={15} />
-                        <time>{timeLabel(item.starts_at)}</time>
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <strong>{item.client_name}</strong>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
-                          <p style={{ margin: 0 }}>{statusLabels[item.status]}</p>
+                    <article className={`admin-appointment ${item.status}`} key={item.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div className="admin-appointment-time">
+                          <Clock3 size={14} />
+                          <time>{timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}</time>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           {renderOriginBadge(item.origin)}
+                          <span className={`admin-week-status-pill ${item.status}`}>
+                            {statusLabels[item.status]}
+                          </span>
                         </div>
                       </div>
-                      <div className="admin-row-actions">
-                        {waLink && (
-                          <a
-                            href={waLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="admin-icon-button admin-wa-btn"
-                            style={{ color: '#25D366' }}
-                            title="Enviar confirmação no WhatsApp"
-                            aria-label={`Enviar WhatsApp para ${item.client_name}`}
-                          >
-                            <MessageCircle size={15} />
-                          </a>
+
+                      <div>
+                        <strong style={{ fontSize: '13.5px' }}>{item.client_name}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                          {service && (
+                            <span className="admin-week-service-tag">{service.name}</span>
+                          )}
+                          {service?.price_label && (
+                            <span className="admin-week-price-tag">{service.price_label}</span>
+                          )}
+                        </div>
+                        {item.client_phone && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--admin-muted)' }}>{item.client_phone}</span>
+                            {waLink && (
+                              <a
+                                href={waLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="admin-week-wa-btn"
+                                title="Enviar confirmação no WhatsApp"
+                              >
+                                <MessageCircle size={11} />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+                          </div>
                         )}
-                        {role !== 'viewer' && (
-                          <button
-                            className="admin-icon-button"
-                            onClick={() => setEditing(item)}
-                            aria-label="Editar horário"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                        )}
-                        {role === 'admin' && (
-                          <button
-                            className="admin-icon-button admin-danger"
-                            onClick={() => remove(item.id)}
-                            aria-label="Excluir horário"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--admin-line)', paddingTop: '8px', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {item.status === 'scheduled' && (
+                            <button
+                              type="button"
+                              className="admin-quick-btn confirm"
+                              onClick={() => updateStatus(item.id, 'confirmed')}
+                            >
+                              <Check size={11} /> Confirmar
+                            </button>
+                          )}
+                          {item.status === 'confirmed' && (
+                            <button
+                              type="button"
+                              className="admin-quick-btn complete"
+                              onClick={() => updateStatus(item.id, 'completed')}
+                            >
+                              <CheckCircle2 size={11} /> Concluir
+                            </button>
+                          )}
+                        </div>
+                        <div className="admin-row-actions">
+                          {role !== 'viewer' && (
+                            <button
+                              type="button"
+                              className="admin-icon-btn-mini"
+                              onClick={() => setEditing(item)}
+                              aria-label="Editar horário"
+                              title="Editar"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                          )}
+                          {role === 'admin' && (
+                            <button
+                              type="button"
+                              className="admin-icon-btn-mini danger"
+                              onClick={() => remove(item.id)}
+                              aria-label="Excluir horário"
+                              title="Excluir"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </article>
                   );
@@ -1358,10 +1758,14 @@ export function AppointmentsManager({
                     <CalendarDays size={22} />
                   </span>
                   <strong>Dia livre</strong>
-                  <p>Nenhum atendimento marcado.</p>
+                  <p>Nenhum atendimento marcado para este dia.</p>
                   {role !== 'viewer' && (
-                    <button onClick={() => openCreate(selectedDate)}>
-                      Adicionar horário
+                    <button
+                      type="button"
+                      className="admin-day-empty-add-btn"
+                      onClick={() => openCreate(selectedDate)}
+                    >
+                      + Adicionar horário
                     </button>
                   )}
                 </div>
@@ -1371,6 +1775,410 @@ export function AppointmentsManager({
         </div>
       )}
 
+      {/* Visualização 3: SEMANA */}
+      {mainMode === 'calendar' && calendarView === 'week' && (
+        <div className="admin-week-view" role="region" aria-label="Visão semanal da agenda">
+          <div className="admin-week-grid">
+            {currentWeekDays.map((dayDate) => {
+              const dayKeyStr = dateKey(dayDate);
+              const isDayToday = dayKeyStr === dateKey(today);
+              const isDaySelected = dayKeyStr === selectedDate;
+              const dayApts = groupedItems.get(dayKeyStr) ?? [];
+              const weekdayName = dayDate.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+
+              return (
+                <div
+                  key={dayKeyStr}
+                  className={`admin-week-col ${isDayToday ? 'is-today' : ''} ${isDaySelected ? 'is-selected' : ''}`}
+                  onClick={() => setSelectedDate(dayKeyStr)}
+                >
+                  <div className="admin-week-col-header">
+                    <div className="admin-week-col-date">
+                      <span className="admin-week-day-name">{weekdayName}</span>
+                      <span className={`admin-week-day-num ${isDayToday ? 'today' : ''}`}>
+                        {dayDate.getDate()}
+                      </span>
+                    </div>
+                    <div className="admin-week-col-meta">
+                      {dayApts.length > 0 && (
+                        <span className="admin-week-count-badge">{dayApts.length}</span>
+                      )}
+                      {role !== 'viewer' && (
+                        <button
+                          type="button"
+                          className="admin-week-quick-add"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCreate(dayKeyStr);
+                          }}
+                          title={`Agendar em ${dayDate.toLocaleDateString('pt-BR')}`}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="admin-week-col-body">
+                    {dayApts.length === 0 ? (
+                      <div className="admin-week-empty-slot">
+                        <span>Dia livre</span>
+                        {role !== 'viewer' && (
+                          <button
+                            type="button"
+                            className="admin-week-slot-add-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCreate(dayKeyStr);
+                            }}
+                          >
+                            + Agendar
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      dayApts.map((item) => {
+                        const service = item.service_id ? serviceMap.get(item.service_id) : null;
+                        const waLink = getWhatsAppLink(item);
+                        const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
+
+                        return (
+                          <article
+                            key={item.id}
+                            className={`admin-week-card ${item.status} ${isBlocked ? 'blocked' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDate(dayKeyStr);
+                              if (role !== 'viewer') setEditing(item);
+                            }}
+                          >
+                            <div className="admin-week-card-top">
+                              <span className="admin-week-card-time">
+                                <Clock3 size={11} />
+                                {timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}
+                              </span>
+                              <span className={`admin-week-status-pill ${item.status}`}>
+                                {statusLabels[item.status]}
+                              </span>
+                            </div>
+
+                            <div className="admin-week-card-body">
+                              <strong className="admin-week-client">{item.client_name}</strong>
+                              <div className="admin-week-card-service-row">
+                                {service && (
+                                  <span className="admin-week-service-tag">{service.name}</span>
+                                )}
+                                {service?.price_label && (
+                                  <span className="admin-week-price-tag">{service.price_label}</span>
+                                )}
+                              </div>
+                              {item.client_phone && (
+                                <div className="admin-week-phone-row">
+                                  <span>{item.client_phone}</span>
+                                  {waLink && (
+                                    <a
+                                      href={waLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="admin-week-wa-btn"
+                                      onClick={(e) => e.stopPropagation()}
+                                      title="Enviar WhatsApp"
+                                    >
+                                      <MessageCircle size={11} />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              {item.notes && (
+                                <p className="admin-week-notes">“{item.notes}”</p>
+                              )}
+                            </div>
+
+                            <div className="admin-week-card-footer" onClick={(e) => e.stopPropagation()}>
+                              {item.status === 'scheduled' && (
+                                <button
+                                  type="button"
+                                  className="admin-quick-btn confirm"
+                                  onClick={() => updateStatus(item.id, 'confirmed')}
+                                  title="Confirmar"
+                                >
+                                  <Check size={11} /> Confirmar
+                                </button>
+                              )}
+                              {item.status === 'confirmed' && (
+                                <button
+                                  type="button"
+                                  className="admin-quick-btn complete"
+                                  onClick={() => updateStatus(item.id, 'completed')}
+                                  title="Concluir atendimento"
+                                >
+                                  <CheckCircle2 size={11} /> Concluir
+                                </button>
+                              )}
+                              <div className="admin-week-card-icons">
+                                {role !== 'viewer' && (
+                                  <button
+                                    type="button"
+                                    className="admin-icon-btn-mini"
+                                    onClick={() => setEditing(item)}
+                                    title="Editar"
+                                  >
+                                    <Edit3 size={12} />
+                                  </button>
+                                )}
+                                {role === 'admin' && (
+                                  <button
+                                    type="button"
+                                    className="admin-icon-btn-mini danger"
+                                    onClick={() => remove(item.id)}
+                                    title="Excluir"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Visualização 4: DIA */}
+      {mainMode === 'calendar' && calendarView === 'day' && (
+        <div className="admin-day-view" role="region" aria-label="Visão diária da agenda">
+          <div className="admin-day-timeline-box">
+            {dayHoursList.map((hour) => {
+              const hourStr = `${String(hour).padStart(2, '0')}:00`;
+              const slotApts = dayItems.filter((item) => new Date(item.starts_at).getHours() === hour);
+              const isNow =
+                selectedDate === dateKey(today) && today.getHours() === hour;
+
+              return (
+                <div key={hour} className={`admin-timeline-slot ${isNow ? 'is-now' : ''}`}>
+                  <div className="admin-timeline-slot-hour">
+                    <span>{hourStr}</span>
+                    {isNow && <span className="admin-timeline-now-badge">Agora</span>}
+                  </div>
+
+                  <div className="admin-timeline-slot-content">
+                    {slotApts.length > 0 ? (
+                      slotApts.map((item) => {
+                        const service = item.service_id ? serviceMap.get(item.service_id) : null;
+                        const waLink = getWhatsAppLink(item);
+                        const isBlocked = item.is_blocked || item.client_name.startsWith('Bloqueio:') || item.client_name.startsWith('🔒');
+
+                        if (isBlocked) {
+                          return (
+                            <article key={item.id} className="admin-timeline-card blocked">
+                              <div className="admin-timeline-card-header">
+                                <div className="admin-timeline-card-meta">
+                                  <span className="admin-timeline-card-time" style={{ color: '#eab308' }}>
+                                    <Lock size={14} />
+                                    {timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}
+                                  </span>
+                                  <span className="admin-timeline-status-pill blocked">Bloqueio</span>
+                                </div>
+                                {role !== 'viewer' && (
+                                  <div className="admin-timeline-card-actions">
+                                    <button
+                                      type="button"
+                                      className="admin-icon-btn-mini danger"
+                                      onClick={() => remove(item.id)}
+                                      title="Desbloquear horário"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="admin-timeline-card-body">
+                                <div>
+                                  <strong className="admin-timeline-card-client-name" style={{ color: '#854d0e' }}>
+                                    {item.client_name}
+                                  </strong>
+                                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--admin-muted)' }}>
+                                    Compromisso pessoal • Horário bloqueado para clientes
+                                  </p>
+                                </div>
+                              </div>
+                            </article>
+                          );
+                        }
+
+                        return (
+                          <article key={item.id} className={`admin-timeline-card ${item.status}`}>
+                            <div className="admin-timeline-card-header">
+                              <div className="admin-timeline-card-meta">
+                                <span className="admin-timeline-card-time">
+                                  <Clock3 size={14} />
+                                  {timeLabel(item.starts_at)} - {timeLabel(item.ends_at)}
+                                </span>
+                                {renderOriginBadge(item.origin)}
+                                <span className={`admin-timeline-status-pill ${item.status}`}>
+                                  {statusLabels[item.status]}
+                                </span>
+                              </div>
+                              <div className="admin-timeline-card-actions">
+                                {waLink && (
+                                  <a
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="admin-timeline-wa-btn"
+                                    title="Enviar WhatsApp"
+                                  >
+                                    <MessageCircle size={13} />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+                                {role !== 'viewer' && (
+                                  <button
+                                    type="button"
+                                    className="admin-icon-btn-mini"
+                                    onClick={() => setEditing(item)}
+                                    title="Editar horário"
+                                  >
+                                    <Edit3 size={14} />
+                                  </button>
+                                )}
+                                {role === 'admin' && (
+                                  <button
+                                    type="button"
+                                    className="admin-icon-btn-mini danger"
+                                    onClick={() => remove(item.id)}
+                                    title="Excluir horário"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="admin-timeline-card-body">
+                              <div>
+                                <strong className="admin-timeline-card-client-name">
+                                  {item.client_name}
+                                </strong>
+                                <div className="admin-timeline-card-details">
+                                  {service && (
+                                    <span className="admin-timeline-service-pill">
+                                      {service.name}
+                                    </span>
+                                  )}
+                                  {service?.price_label && (
+                                    <span className="admin-timeline-price">
+                                      {service.price_label}
+                                    </span>
+                                  )}
+                                  {item.client_phone && (
+                                    <span className="admin-timeline-phone">
+                                      {item.client_phone}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.notes && (
+                                  <p className="admin-timeline-notes">“{item.notes}”</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="admin-timeline-card-footer">
+                              <div className="admin-timeline-quick-statuses">
+                                {item.status === 'scheduled' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="admin-quick-btn confirm"
+                                      onClick={() => updateStatus(item.id, 'confirmed')}
+                                    >
+                                      <Check size={12} /> Confirmar presença
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-quick-btn cancel"
+                                      onClick={() => updateStatus(item.id, 'cancelled')}
+                                    >
+                                      <X size={12} /> Cancelar
+                                    </button>
+                                  </>
+                                )}
+                                {item.status === 'confirmed' && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="admin-quick-btn complete"
+                                      onClick={() => updateStatus(item.id, 'completed')}
+                                    >
+                                      <CheckCircle2 size={12} /> Concluir
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-quick-btn no-show"
+                                      onClick={() => updateStatus(item.id, 'no_show')}
+                                    >
+                                      Marcar falta
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-quick-btn reopen"
+                                      onClick={() => updateStatus(item.id, 'scheduled')}
+                                    >
+                                      Voltar para pendente
+                                    </button>
+                                  </>
+                                )}
+                                {item.status === 'completed' && (
+                                  <button
+                                    type="button"
+                                    className="admin-quick-btn reopen"
+                                    onClick={() => updateStatus(item.id, 'confirmed')}
+                                  >
+                                    <RotateCcw size={12} /> Reabrir atendimento
+                                  </button>
+                                )}
+                                {(item.status === 'cancelled' || item.status === 'no_show') && (
+                                  <button
+                                    type="button"
+                                    className="admin-quick-btn reopen"
+                                    onClick={() => updateStatus(item.id, 'scheduled')}
+                                  >
+                                    <RotateCcw size={12} /> Restaurar agendamento
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })
+                    ) : (
+                      role !== 'viewer' && (
+                        <button
+                          type="button"
+                          className="admin-timeline-free-btn"
+                          onClick={() => openCreate(selectedDate, hourStr)}
+                        >
+                          <Plus size={14} />
+                          <span>Horário livre — clique para agendar às {hourStr}</span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Criação / Edição de Horário */}
       {(creating || editing) && (
         <div className="admin-modal-backdrop" role="presentation">
           <section
@@ -1391,6 +2199,7 @@ export function AppointmentsManager({
                 onClick={() => {
                   setEditing(null);
                   setCreating(false);
+                  setPresetTime(null);
                   setError('');
                 }}
                 aria-label="Fechar"
@@ -1401,7 +2210,7 @@ export function AppointmentsManager({
             <form
               className="admin-form"
               onSubmit={save}
-              key={editing?.id ?? `new-${selectedDate}`}
+              key={editing?.id ?? `new-${selectedDate}-${presetTime?.start ?? ''}`}
             >
               <div className="admin-form-grid">
                 {editing && (
@@ -1510,6 +2319,7 @@ export function AppointmentsManager({
                   onClick={() => {
                     setEditing(null);
                     setCreating(false);
+                    setPresetTime(null);
                     setError('');
                   }}
                 >
@@ -1524,6 +2334,7 @@ export function AppointmentsManager({
         </div>
       )}
 
+      {/* Modal de Bloqueio de Horário */}
       {blockingModal && (
         <div className="admin-modal-backdrop" role="presentation">
           <section
@@ -1569,7 +2380,7 @@ export function AppointmentsManager({
                             borderRadius: '99px',
                             border: active ? '1px solid #eab308' : '1px solid rgba(255,255,255,0.1)',
                             background: active ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255,255,255,0.03)',
-                            color: active ? '#fef08a' : 'inherit',
+                            color: active ? '#854d0e' : 'inherit',
                             fontSize: '12px',
                             cursor: 'pointer',
                             fontWeight: active ? 600 : 400,
@@ -1626,7 +2437,7 @@ export function AppointmentsManager({
                   </label>
                 </div>
 
-                <div style={{ padding: '12px 14px', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.22)', borderRadius: '10px', fontSize: '12px', color: '#fef08a', lineHeight: 1.5 }}>
+                <div style={{ padding: '12px 14px', background: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.22)', borderRadius: '10px', fontSize: '12px', color: '#854d0e', lineHeight: 1.5 }}>
                   <strong>Bloqueio Automático:</strong> Este período será fechado na agenda. Clientes no site e no WhatsApp não conseguirão reservar essa faixa.
                 </div>
               </div>
@@ -1654,6 +2465,7 @@ export function AppointmentsManager({
         </div>
       )}
 
+      {/* Confirmação de Exclusão */}
       {deletingAppointment && (
         <div className="admin-modal-backdrop">
           <div className="admin-dialog" role="dialog" aria-modal="true">
@@ -1679,6 +2491,7 @@ export function AppointmentsManager({
         </div>
       )}
 
+      {/* Confirmação de Limpeza de Cancelados */}
       {clearCancelledModalOpen && (
         <div className="admin-modal-backdrop">
           <div className="admin-dialog" role="dialog" aria-modal="true" style={{ maxWidth: '420px' }}>

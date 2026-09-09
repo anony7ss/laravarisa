@@ -496,16 +496,13 @@ export function ClientsManager({
       )}
 
       {(creating || editing) && (
-        <section className="admin-panel" style={{ border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+        <section className="admin-panel">
           <div className="admin-panel-head">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ color: '#d4af37' }}><Sparkles size={20} /></span>
-              <div>
-                <h2>{editing ? `Ficha de ${editing.name}` : 'Nova cliente'}</h2>
-                <small style={{ color: 'var(--admin-muted)' }}>
-                  Cadastro unificado e Ficha Técnica de Lash Designer
-                </small>
-              </div>
+            <div>
+              <h2>{editing ? `Ficha de ${editing.name}` : 'Nova cliente'}</h2>
+              <small style={{ color: 'var(--admin-muted)' }}>
+                Cadastro unificado e Ficha Técnica
+              </small>
             </div>
             <button
               className="admin-icon-button"
@@ -518,40 +515,51 @@ export function ClientsManager({
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px', marginBottom: '20px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              gap: '4px',
+              padding: '4px',
+              borderRadius: '10px',
+              background: 'var(--admin-soft)',
+              marginBottom: '24px',
+            }}
+          >
             <button
               type="button"
               onClick={() => setActiveTab('cadastro')}
               style={{
-                padding: '8px 16px',
+                padding: '7px 16px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeTab === 'cadastro' ? 'rgba(255, 102, 34, 0.15)' : 'transparent',
-                color: activeTab === 'cadastro' ? 'var(--admin-orange)' : 'var(--admin-muted)',
-                fontWeight: activeTab === 'cadastro' ? 600 : 400,
+                background: activeTab === 'cadastro' ? 'var(--admin-card)' : 'transparent',
+                color: activeTab === 'cadastro' ? 'var(--admin-ink)' : 'var(--admin-muted)',
+                fontWeight: activeTab === 'cadastro' ? 600 : 500,
+                fontSize: '13px',
                 cursor: 'pointer',
+                boxShadow: activeTab === 'cadastro' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease',
               }}
             >
-              1. Dados Cadastrais
+              Dados Cadastrais
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('mapping')}
               style={{
-                padding: '8px 16px',
+                padding: '7px 16px',
                 borderRadius: '8px',
                 border: 'none',
-                background: activeTab === 'mapping' ? 'rgba(212, 175, 55, 0.15)' : 'transparent',
-                color: activeTab === 'mapping' ? '#d4af37' : 'var(--admin-muted)',
-                fontWeight: activeTab === 'mapping' ? 600 : 400,
+                background: activeTab === 'mapping' ? 'var(--admin-card)' : 'transparent',
+                color: activeTab === 'mapping' ? 'var(--admin-ink)' : 'var(--admin-muted)',
+                fontWeight: activeTab === 'mapping' ? 600 : 500,
+                fontSize: '13px',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                boxShadow: activeTab === 'mapping' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.15s ease',
               }}
             >
-              <Eye size={15} />
-              2. Ficha Técnica & Mapping de Fios ✨
+              Ficha Técnica & Mapping
             </button>
           </div>
 
@@ -601,9 +609,9 @@ export function ClientsManager({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ padding: '16px', background: 'rgba(212, 175, 55, 0.05)', border: '1px solid rgba(212, 175, 55, 0.2)', borderRadius: '10px' }}>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#fef08a' }}>
-                    💡 <strong>Para que serve o Mapping?</strong> Registre a curvatura, tamanho e estilo exato utilizado nos olhos da cliente. Assim, na manutenção de 15 a 20 dias você sabe na hora quais fios aplicar sem precisar lembrar de cabeça!
+                <div style={{ padding: '12px 14px', background: 'var(--admin-soft)', borderRadius: '10px' }}>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--admin-muted)', lineHeight: 1.4 }}>
+                    Registre o estilo, curvatura e espessura aplicados nos cílios da cliente para referência nas próximas manutenções.
                   </p>
                 </div>
 
@@ -621,11 +629,13 @@ export function ClientsManager({
                           style={{
                             padding: '6px 12px',
                             borderRadius: '8px',
-                            border: formMapping === mapStyle ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
-                            background: formMapping === mapStyle ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255,255,255,0.03)',
-                            color: formMapping === mapStyle ? '#fef08a' : 'inherit',
+                            border: formMapping === mapStyle ? '1px solid var(--admin-ink)' : '1px solid var(--admin-line)',
+                            background: formMapping === mapStyle ? 'var(--admin-ink)' : 'var(--admin-card)',
+                            color: formMapping === mapStyle ? 'var(--admin-bg)' : 'var(--admin-ink)',
                             fontSize: '12px',
+                            fontWeight: formMapping === mapStyle ? 600 : 400,
                             cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           {mapStyle}
@@ -647,12 +657,13 @@ export function ClientsManager({
                           style={{
                             padding: '6px 14px',
                             borderRadius: '8px',
-                            border: formCurl === curl ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
-                            background: formCurl === curl ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255,255,255,0.03)',
-                            color: formCurl === curl ? '#fef08a' : 'inherit',
+                            border: formCurl === curl ? '1px solid var(--admin-ink)' : '1px solid var(--admin-line)',
+                            background: formCurl === curl ? 'var(--admin-ink)' : 'var(--admin-card)',
+                            color: formCurl === curl ? 'var(--admin-bg)' : 'var(--admin-ink)',
                             fontSize: '12px',
-                            fontWeight: 600,
+                            fontWeight: formCurl === curl ? 600 : 400,
                             cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           {curl}
@@ -674,11 +685,13 @@ export function ClientsManager({
                           style={{
                             padding: '6px 12px',
                             borderRadius: '8px',
-                            border: formThickness === thick ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
-                            background: formThickness === thick ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255,255,255,0.03)',
-                            color: formThickness === thick ? '#fef08a' : 'inherit',
+                            border: formThickness === thick ? '1px solid var(--admin-ink)' : '1px solid var(--admin-line)',
+                            background: formThickness === thick ? 'var(--admin-ink)' : 'var(--admin-card)',
+                            color: formThickness === thick ? 'var(--admin-bg)' : 'var(--admin-ink)',
                             fontSize: '12px',
+                            fontWeight: formThickness === thick ? 600 : 400,
                             cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                         >
                           {thick} mm
@@ -734,7 +747,7 @@ export function ClientsManager({
                 Cancelar
               </button>
               <button className="admin-primary" type="submit">
-                Salvar Ficha Completa ✨
+                Salvar Ficha
               </button>
             </div>
           </form>

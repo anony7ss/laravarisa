@@ -11,10 +11,10 @@ export default function NotFound() {
         <Link href="/" className="brand" aria-label="Lara Varisa — início">
           <img
             className="brand-monogram"
-            src="/lv-monogram.svg"
+            src="/logo-emblem.png"
             width="48"
             height="48"
-            alt=""
+            alt="Lara Varisa"
           />
           <span className="brand-wordmark">Lara Varisa</span>
         </Link>

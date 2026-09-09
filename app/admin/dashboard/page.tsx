@@ -133,7 +133,7 @@ export default async function DashboardPage() {
       <section className="admin-panel" style={{ marginBottom: '24px', borderColor: 'var(--admin-orange)' }}>
         <div className="admin-panel-head">
           <div>
-            <p className="admin-kicker" style={{ color: 'var(--admin-orange)' }}>RADAR DE MANUTENÇÃO ⏰</p>
+            <p className="admin-kicker" style={{ color: 'var(--admin-orange)' }}>RADAR DE MANUTENÇÃO</p>
             <h2>Avisar Clientes (15 a 20 dias)</h2>
           </div>
         </div>

@@ -289,11 +289,11 @@ export default function AgendarPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2 w-full">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img
-              src="/lv-monogram.svg"
-              width="32"
-              height="32"
+              src="/logo-emblem.png"
+              width="36"
+              height="36"
               alt="Lara Varisa"
-              className="w-7 h-7 sm:w-9 sm:h-9 shrink-0"
+              className="w-7 h-7 sm:w-9 sm:h-9 shrink-0 object-contain"
             />
             <div className="flex items-baseline gap-1 sm:gap-1.5 min-w-0 truncate">
               <span className="font-[family-name:var(--font-display)] text-lg sm:text-2xl uppercase tracking-tight text-[var(--color-obsidian)] truncate">

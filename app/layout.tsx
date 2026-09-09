@@ -34,8 +34,13 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
   metadataBase: new URL('https://laravarisa.com.br'),
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/logo-emblem.png', type: 'image/png' },
+    ],
     shortcut: '/favicon.svg',
+    apple: '/logo-emblem.png',
   },
   openGraph: {
     title: 'Lara Varisa ︱ Lash Designer',

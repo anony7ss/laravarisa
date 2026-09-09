@@ -94,9 +94,18 @@ export function SiteFooter() {
             </Link>
           </div>
           <div className="footer-legal-bottom">
-            <span className="footer-copyright">
-              © {new Date().getFullYear()} Lara Varisa · Porto Alegre, RS
-            </span>
+            <div className="flex items-center gap-2">
+              <img
+                src="/logo-emblem.png"
+                alt="Lara Varisa"
+                width="20"
+                height="20"
+                className="w-5 h-5 object-contain inline-block"
+              />
+              <span className="footer-copyright">
+                © {new Date().getFullYear()} Lara Varisa · Porto Alegre, RS
+              </span>
+            </div>
             <a href="#conteudo" className="footer-back-top">
               Voltar ao topo <ArrowUp size={14} />
             </a>
