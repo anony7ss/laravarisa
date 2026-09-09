@@ -19,9 +19,6 @@ export default async function AdminLoginPage({
       </Link>
       <div className="admin-login-brand">LV</div>
       <LoginForm setupRequired={!configured || query.setup === '1'} />
-      <p className="admin-login-foot">
-        Acesso monitorado e protegido por autenticação.
-      </p>
     </main>
   );
 }

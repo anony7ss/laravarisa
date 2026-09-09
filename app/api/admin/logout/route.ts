@@ -13,6 +13,7 @@ export async function POST(request: Request) {
     }
   }
   cookieStore.delete('lv_staff');
+  cookieStore.delete('lv_remember');
   return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
 

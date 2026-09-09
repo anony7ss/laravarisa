@@ -24,6 +24,7 @@ export const loginSchema = z.object({
     .max(254)
     .transform((v) => v.toLowerCase()),
   password: z.string().min(8).max(256),
+  remember_me: z.boolean().optional().default(true),
 });
 
 export const leadUpdateSchema = z.object({

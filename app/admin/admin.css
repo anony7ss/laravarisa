@@ -4,10 +4,12 @@ html.dark body {
   color: #f7f7f2 !important;
 }
 
-html.dark .admin-root {
+html.dark .admin-root,
+.admin-root.dark {
   --admin-bg: #11110f;
   --admin-card: #181815;
   --admin-soft: #242420;
+  --admin-input-bg: #22221e;
   --admin-ink: #f7f7f2;
   --admin-muted: #8b8b83;
   --admin-line: #2a2a26;
@@ -19,6 +21,8 @@ html.dark .admin-root {
 .admin-root {
   --admin-bg: #efefeb;
   --admin-card: #fbfaf6;
+  --admin-soft: #f0efe8;
+  --admin-input-bg: #ffffff;
   --admin-ink: #11110f;
   --admin-muted: #6f6f67;
   --admin-line: #d9d9d1;
@@ -91,6 +95,10 @@ html.dark .admin-root {
   position: relative;
   background: linear-gradient(135deg, #efefeb 0 68%, #fc5000 68% 100%);
 }
+html.dark .admin-login-page,
+.admin-root.dark .admin-login-page {
+  background: linear-gradient(135deg, #11110f 0 68%, #ff6622 68% 100%);
+}
 .admin-back {
   position: absolute;
   left: 28px;
@@ -108,6 +116,10 @@ html.dark .admin-root {
   color: rgba(17, 17, 15, 0.1);
   letter-spacing: -0.06em;
 }
+html.dark .admin-login-brand,
+.admin-root.dark .admin-login-brand {
+  color: rgba(255, 255, 255, 0.04);
+}
 .admin-login-form {
   width: min(100%, 470px);
   position: relative;
@@ -119,6 +131,11 @@ html.dark .admin-root {
   padding: clamp(28px, 5vw, 52px);
   box-shadow: 0 26px 80px rgba(17, 17, 15, 0.12);
 }
+html.dark .admin-login-form,
+.admin-root.dark .admin-login-form {
+  border: 1px solid var(--admin-line);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.5);
+}
 .admin-login-icon {
   width: 48px;
   height: 48px;
@@ -127,6 +144,12 @@ html.dark .admin-root {
   border-radius: 50%;
   background: #11110f;
   color: white;
+}
+html.dark .admin-login-icon,
+.admin-root.dark .admin-login-icon {
+  background: var(--admin-soft);
+  color: var(--admin-orange);
+  border: 1px solid var(--admin-line);
 }
 .admin-login-form h1 {
   font: 400 clamp(38px, 5vw, 58px)/1 var(--font-display);
@@ -149,12 +172,18 @@ html.dark .admin-root {
 .admin-form select {
   width: 100%;
   min-height: 48px;
-  border: 1px solid #c9c9c0;
+  border: 1px solid var(--admin-line);
   border-radius: 13px;
-  background: #fff;
+  background: var(--admin-input-bg);
   color: var(--admin-ink);
   padding: 10px 13px;
   outline: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.admin-login-form input::placeholder,
+.admin-form input::placeholder,
+.admin-form textarea::placeholder {
+  color: var(--admin-muted);
 }
 .admin-login-form input:focus,
 .admin-form input:focus,

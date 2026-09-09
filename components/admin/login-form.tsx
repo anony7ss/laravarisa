@@ -11,6 +11,7 @@ export function LoginForm({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,6 +25,7 @@ export function LoginForm({
         body: JSON.stringify({
           email: String(form.get('email') ?? '').trim().toLowerCase(),
           password: String(form.get('password') ?? ''),
+          remember_me: rememberMe,
         }),
       });
       const result = (await response.json()) as { error?: string };
@@ -87,7 +89,7 @@ export function LoginForm({
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#888',
+              color: 'var(--admin-muted)',
               display: 'flex',
               alignItems: 'center',
               padding: 4,
@@ -98,6 +100,15 @@ export function LoginForm({
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
+      </label>
+      <label className="admin-check" style={{ cursor: 'pointer', userSelect: 'none', marginTop: -4 }}>
+        <input
+          type="checkbox"
+          name="remember_me"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+        />
+        <span>Lembrar de mim</span>
       </label>
       {error && (
         <p className="admin-form-error" role="alert">

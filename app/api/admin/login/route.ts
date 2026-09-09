@@ -82,8 +82,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const remember = parsed.data.remember_me !== false;
+  const maxAge = remember ? 30 * 24 * 60 * 60 : undefined;
+
   // 4. Salva a nova sessão nos cookies do navegador
-  const serverSupabase = await createServerSupabase();
+  const serverSupabase = await createServerSupabase({ remember });
   if (serverSupabase) {
     await serverSupabase.auth.setSession({
       access_token: data.session.access_token,
@@ -96,8 +99,20 @@ export async function POST(request: Request) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 604800,
+    ...(maxAge ? { maxAge } : {}),
   });
+
+  if (remember) {
+    cookieStore.set('lv_remember', '1', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge,
+    });
+  } else {
+    cookieStore.delete('lv_remember');
+  }
 
   return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
