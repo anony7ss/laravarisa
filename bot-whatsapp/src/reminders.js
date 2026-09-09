@@ -180,23 +180,26 @@ export async function processarLembretes(sock) {
   }
 }
 
+let currentSocket = null;
+
 /**
  * Inicia o cron em segundo plano para verificação periódica de lembretes (a cada 2 minutos)
  * @param {any} sock Instância do socket Baileys
  */
 export function iniciarLembretesAutomaticos(sock) {
-  if (!sock) return;
+  if (sock) currentSocket = sock;
+  if (!currentSocket) return;
 
   if (reminderInterval) {
     clearInterval(reminderInterval);
   }
 
   // Executa imediatamente na subida
-  processarLembretes(sock);
+  processarLembretes(currentSocket);
 
   // E roda a cada 2 minutos
   reminderInterval = setInterval(() => {
-    processarLembretes(sock);
+    processarLembretes(currentSocket);
   }, 2 * 60 * 1000);
 
   if (reminderInterval.unref) {

@@ -70,15 +70,39 @@ export function limparSessaoDesincronizada(idOuJid) {
     if (!fs.existsSync(authPath)) return;
 
     const files = fs.readdirSync(authPath);
+    let remCount = 0;
     for (const f of files) {
-      if (f.startsWith(`session-${raw}`) && f.endsWith('.json')) {
+      if (
+        (f.startsWith(`session-${raw}`) || (raw.length >= 8 && f.includes(raw.slice(-8)))) &&
+        f.endsWith('.json')
+      ) {
         try {
           fs.unlinkSync(path.join(authPath, f));
-          logWarn('WhatsApp', `Auto-recuperação: Sessão Signal redefinida para ${raw} (${f})`);
+          remCount++;
         } catch {}
       }
     }
+    if (remCount > 0) {
+      logWarn('WhatsApp', `Auto-recuperação: ${remCount} chave(s) de sessão desincronizada(s) limpa(s) para ${raw}. Chaves renovadas!`);
+    }
   } catch {}
+}
+
+let consecutiveDisconnectCount = 0;
+
+export function limparSessaoGeral(motivo = 'Sessão corrompida') {
+  logWarn('WhatsApp', `Auto-recuperação: ${motivo}. Deletando chaves inválidas e renovando sessão do zero...`);
+  try {
+    if (fs.existsSync(authPath)) {
+      fs.rmSync(authPath, { recursive: true, force: true });
+    }
+  } catch {}
+  publicarStatusBot({
+    status: 'disconnected',
+    qr_code: null,
+    phone_connected: null,
+    profile_name: null,
+  });
 }
 
 /**
@@ -104,7 +128,20 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     fs.mkdirSync(authPath, { recursive: true });
   }
 
-  const { state, saveCreds } = await useMultiFileAuthState(authPath);
+  let state, saveCreds;
+  try {
+    const auth = await useMultiFileAuthState(authPath);
+    state = auth.state;
+    saveCreds = auth.saveCreds;
+  } catch (errAuth) {
+    limparSessaoGeral(`Erro de leitura na pasta de autenticação (${errAuth?.message || errAuth})`);
+    if (!fs.existsSync(authPath)) {
+      fs.mkdirSync(authPath, { recursive: true });
+    }
+    const auth = await useMultiFileAuthState(authPath);
+    state = auth.state;
+    saveCreds = auth.saveCreds;
+  }
 
   let version;
   try {
@@ -180,6 +217,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     }
 
     if (connection === 'open') {
+      consecutiveDisconnectCount = 0;
       const me = sock.user || sock.authState?.creds?.me;
       const rawJid = me?.id || '';
       // Baileys IDs: "555199999999:2@s.whatsapp.net" ou "555199999999@s.whatsapp.net"
@@ -210,21 +248,34 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
 
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const isLoggedOut = statusCode === DisconnectReason?.loggedOut || statusCode === 401;
+      const errorMsg = String(lastDisconnect?.error?.message || lastDisconnect?.error || '');
+      consecutiveDisconnectCount++;
 
-      if (isLoggedOut) {
-        publicarStatusBot({
-          status: 'disconnected',
-          qr_code: null,
-          phone_connected: null,
-          profile_name: null,
-        });
-        logWarn('WhatsApp', 'Sessão desconectada (401). Gerando novo QR Code...');
-        try {
-          fs.rmSync(authPath, { recursive: true, force: true });
-        } catch {
-          // ignore
-        }
+      const isLoggedOut = statusCode === DisconnectReason?.loggedOut || statusCode === 401;
+      const isBadSession = statusCode === DisconnectReason?.badSession || statusCode === 500;
+      const isMultideviceMismatch = errorMsg.includes('multidevice_mismatch') || errorMsg.includes('Bad MAC');
+      const isCorruptOrConflict =
+        statusCode === 403 ||
+        statusCode === 405 ||
+        statusCode === 411 ||
+        errorMsg.includes('conflict') ||
+        errorMsg.includes('Stream Errored') ||
+        errorMsg.includes('QR refs attempts ended') ||
+        consecutiveDisconnectCount >= 4;
+
+      if (isLoggedOut || isBadSession || isMultideviceMismatch || isCorruptOrConflict) {
+        const motivo = isLoggedOut
+          ? 'Desconectado pelo WhatsApp (401)'
+          : isBadSession
+          ? 'Sessão corrompida (500 - Bad Session)'
+          : isMultideviceMismatch
+          ? 'Desincronização de chaves Signal (Bad MAC)'
+          : isCorruptOrConflict
+          ? `Sessão inválida ou falhas consecutivas (${errorMsg || statusCode})`
+          : 'Sessão corrompida';
+
+        limparSessaoGeral(motivo);
+        consecutiveDisconnectCount = 0;
         setTimeout(() => initWhatsApp(onMessageReceived, onConnectionUpdate), 1500);
       } else {
         publicarStatusBot({
@@ -233,7 +284,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
           phone_connected: null,
           profile_name: null,
         });
-        logWarn('WhatsApp', `Reconectando automaticamente (código: ${statusCode || 'rede'})...`);
+        logWarn('WhatsApp', `Reconectando automaticamente (código: ${statusCode || 'rede'}, tentativa ${consecutiveDisconnectCount})...`);
         setTimeout(() => initWhatsApp(onMessageReceived, onConnectionUpdate), 3000);
       }
     }
@@ -252,7 +303,15 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     if (type !== 'notify') return;
 
     for (const msg of messages) {
-      if (!msg.message) continue;
+      const jid = msg.key?.remoteJid;
+
+      // Se a mensagem chegou sem corpo decriptado (erro de cifra / Bad MAC / chave desincronizada)
+      if (!msg.message) {
+        if (jid && !jid.endsWith('@g.us') && !jid.includes('@broadcast')) {
+          limparSessaoDesincronizada(jid);
+        }
+        continue;
+      }
 
       // 1. Ignora mensagens enviadas pelo próprio bot
       if (msg.key?.fromMe) continue;
@@ -263,7 +322,6 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
         continue;
       }
 
-      const jid = msg.key?.remoteJid;
       if (!jid) continue;
 
       // 2. Ignora mensagens de grupos (@g.us)

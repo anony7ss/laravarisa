@@ -194,20 +194,9 @@ function handleConnectionUpdate(sock, update) {
     renderBanner(config);
     logSuccess('WhatsApp', 'Conectado com sucesso!');
 
-    if (!siteSyncActive) {
-      siteSyncActive = true;
-      iniciarSincronizacaoSite(sock);
-    }
-
-    if (!remindersActive) {
-      remindersActive = true;
-      iniciarLembretesAutomaticos(sock);
-    }
-
-    if (!outboxActive) {
-      outboxActive = true;
-      iniciarProcessadorOutbox(sock);
-    }
+    iniciarSincronizacaoSite(sock);
+    iniciarLembretesAutomaticos(sock);
+    iniciarProcessadorOutbox(sock);
   } else if (connection === 'close') {
     updateStatus('whatsapp', 'Desconectado');
     updateStatus('supabase', 'Pausado');

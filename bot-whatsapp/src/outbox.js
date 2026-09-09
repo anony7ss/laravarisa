@@ -10,6 +10,7 @@ import { resolverJidWhatsApp } from './phone-utils.js';
 let isProcessing = false;
 let pollingInterval = null;
 let realtimeSubscription = null;
+let currentSocket = null;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -17,7 +18,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * Processa mensagens pendentes na fila whatsapp_outbox
  */
 export async function processarFilaOutbox(sock) {
-  if (!sock) return;
+  const activeSock = sock || currentSocket;
+  if (!activeSock) return;
   if (isProcessing) return;
   isProcessing = true;
 
@@ -119,7 +121,8 @@ export async function processarFilaOutbox(sock) {
  * @param {any} sock Socket do Baileys
  */
 export function iniciarProcessadorOutbox(sock) {
-  if (!sock) return;
+  if (sock) currentSocket = sock;
+  if (!currentSocket) return;
 
   // 1. Escuta Realtime na tabela whatsapp_outbox
   if (!realtimeSubscription) {
@@ -133,7 +136,7 @@ export function iniciarProcessadorOutbox(sock) {
           table: 'whatsapp_outbox',
         },
         () => {
-          processarFilaOutbox(sock);
+          processarFilaOutbox(currentSocket);
         }
       )
       .subscribe();
@@ -142,13 +145,13 @@ export function iniciarProcessadorOutbox(sock) {
   // 2. Polling de contingência a cada 5 segundos
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
-    processarFilaOutbox(sock);
+    processarFilaOutbox(currentSocket);
   }, 5000);
 
   if (pollingInterval.unref) pollingInterval.unref();
 
   // Executa uma primeira vez ao conectar
-  processarFilaOutbox(sock);
+  processarFilaOutbox(currentSocket);
 }
 
 /**

@@ -34,39 +34,72 @@ export const supabase = createClient(
 
 const agendamentosNotificados = new Set();
 let realtimeChannel = null;
+let currentSocket = null;
+let syncInterval = null;
+let isCheckingPending = false;
+
+/**
+ * Varre o banco em busca de agendamentos pendentes de notificação (origem web)
+ * @param {any} sock Instância ativa do Baileys
+ */
+export async function verificarAgendamentosPendentes(sock) {
+  const activeSock = sock || currentSocket;
+  if (!activeSock) return;
+  if (isCheckingPending) return;
+  isCheckingPending = true;
+
+  try {
+    const sessentaMinAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recentes, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('origin', 'web')
+      .is('whatsapp_notification_sent_at', null)
+      .gte('created_at', sessentaMinAtras)
+      .order('created_at', { ascending: true })
+      .limit(10);
+
+    if (!error && recentes && recentes.length > 0) {
+      for (const ag of recentes) {
+        await notificarAgendamentoSite(activeSock, ag);
+      }
+    }
+  } catch {
+    // Silencioso em caso de verificação vazia
+  } finally {
+    isCheckingPending = false;
+  }
+}
 
 /**
  * Inicia a sincronização em tempo real dos agendamentos vindos do site.
- * Escuta eventos de INSERT na tabela public.appointments via Supabase Realtime.
+ * Usa Realtime E polling contínuo a cada 3s para NUNCA falhar ou depender de reinício.
  * 
  * @param {any} sock Instância ativa do Baileys Socket
  * @returns {any} Canal Realtime do Supabase
  */
 export function iniciarSincronizacaoSite(sock) {
-  if (!sock) return null;
+  if (sock) {
+    currentSocket = sock;
+  }
+  if (!currentSocket) return null;
 
-  // 1. Busca agendamentos recentes do site (últimos 60 minutos) que ainda NÃO foram notificados no banco
-  (async () => {
-    try {
-      const sessentaMinAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { data: recentes } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('origin', 'web')
-        .is('whatsapp_notification_sent_at', null)
-        .gte('created_at', sessentaMinAtras)
-        .order('created_at', { ascending: true });
+  // 1. Executa verificação imediata na subida
+  verificarAgendamentosPendentes(currentSocket);
 
-      if (recentes && recentes.length > 0) {
-        for (const ag of recentes) {
-          await notificarAgendamentoSite(sock, ag);
-        }
-      }
-    } catch {
-      // Silencioso em caso de verificação vazia
-    }
-  })();
+  // 2. Polling ativo contínuo a cada 3s para NUNCA depender apenas de WebSockets ou reinício
+  if (syncInterval) {
+    clearInterval(syncInterval);
+  }
+  syncInterval = setInterval(() => {
+    verificarAgendamentosPendentes(currentSocket);
+  }, 3000);
 
+  if (syncInterval.unref) {
+    syncInterval.unref();
+  }
+
+  // 3. Realtime (escuta instantânea se o canal estiver conectado)
   if (realtimeChannel) {
     return realtimeChannel;
   }
@@ -85,7 +118,7 @@ export function iniciarSincronizacaoSite(sock) {
           const novo = payload.new;
           if (!novo) return;
 
-          await notificarAgendamentoSite(sock, novo);
+          await notificarAgendamentoSite(currentSocket, novo);
         } catch (error) {
           logError('Supabase', `Erro ao processar novo agendamento: ${error?.message || error}`);
         }
@@ -119,9 +152,9 @@ export function iniciarSincronizacaoSite(sock) {
       if (status === 'SUBSCRIBED') {
         // Silencioso - o status já é exibido no banner principal
       } else if (status === 'CHANNEL_ERROR') {
-        logWarn('Supabase', 'Oscilação no canal Realtime (reconectando automaticamente)...');
+        logWarn('Supabase', 'Oscilação no canal Realtime (mantendo polling ativo)...');
       } else if (status === 'TIMED_OUT') {
-        logWarn('Supabase', 'Conexão Realtime com o Supabase atingiu timeout.');
+        logWarn('Supabase', 'Conexão Realtime com o Supabase atingiu timeout (polling ativo).');
       } else if (status === 'CLOSED') {
         realtimeChannel = null;
       }
@@ -137,8 +170,9 @@ export function iniciarSincronizacaoSite(sock) {
  * @returns {Promise<{ ok: boolean, mensagem?: string, jid?: string }>}
  */
 export async function notificarAgendamentoSite(sock, agendamento) {
-  if (!agendamento) {
-    return { ok: false, erro: 'Agendamento não fornecido.' };
+  const activeSock = sock || currentSocket;
+  if (!activeSock || !agendamento) {
+    return { ok: false, erro: 'Socket ou agendamento não fornecido.' };
   }
 
   if (agendamento.whatsapp_notification_sent_at) {
