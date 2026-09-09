@@ -99,9 +99,9 @@ function AnamneseForm() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between py-12 px-4">
-        <div className="max-w-md mx-auto w-full text-center space-y-5 my-auto">
-          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shadow-sm">
+      <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-center py-12 px-4">
+        <div className="max-w-md mx-auto w-full text-center space-y-5">
+          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shadow-xs">
             <Check size={26} strokeWidth={2.5} />
           </div>
 
@@ -109,7 +109,7 @@ function AnamneseForm() {
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84]">
               Lara Varisa Studio
             </span>
-            <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+            <h1 className="text-2xl sm:text-3xl font-serif text-[var(--color-obsidian)]">
               Ficha Registrada
             </h1>
             <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-sm mx-auto">
@@ -117,10 +117,10 @@ function AnamneseForm() {
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3 pt-4">
+          <div className="bg-white p-5 rounded-3xl border border-[#d6d6cf] shadow-xs space-y-3 pt-4">
             <Link
               href="/agendar"
-              className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-sm"
+              className="w-full py-3.5 px-5 rounded-full bg-[var(--color-obsidian)] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-colors shadow-xs"
             >
               <span>Agendar Procedimento</span>
               <ArrowUpRight size={15} />
@@ -139,41 +139,45 @@ function AnamneseForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-between">
+    <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] flex flex-col justify-start pb-12">
       {/* Top Header */}
       <header className="w-full border-b border-[#cfcfc9] bg-[var(--color-pumice)]/90 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link
-            href="/agendar"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 hover:bg-white text-[var(--color-obsidian)] border border-[#d6d6cf] text-xs font-medium transition-colors"
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs text-[#6b6b64] hover:text-[var(--color-obsidian)] transition-colors"
           >
-            <ArrowLeft size={13} />
-            <span>Voltar</span>
+            <ArrowLeft size={14} />
+            <span>Voltar ao início</span>
           </Link>
-
-          <span className="text-xs font-semibold tracking-wider uppercase font-[family-name:var(--font-display)] text-[var(--color-obsidian)]">
-            Lara Varisa
-          </span>
 
           <Link
             href="/"
-            className="text-xs text-[#707068] hover:text-[var(--color-obsidian)] transition-colors"
+            className="font-serif text-lg tracking-tight text-[var(--color-obsidian)] hover:opacity-80 transition-opacity"
           >
-            Início
+            Lara Varisa
+          </Link>
+
+          <Link
+            href="/agendar"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-obsidian)] hover:opacity-70 transition-opacity"
+          >
+            <span>Agendar</span>
+            <ArrowUpRight size={13} />
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-6 sm:py-8 space-y-5">
+      <main className="max-w-lg mx-auto w-full px-4 py-8 sm:py-10 space-y-6">
         <div className="text-center space-y-1">
           <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#8c8c84]">
             Pré-atendimento
           </span>
-          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-display)] uppercase tracking-tight text-[var(--color-obsidian)]">
+          <h1 className="text-2xl sm:text-3xl font-serif text-[var(--color-obsidian)]">
             Ficha de Anamnese
           </h1>
-          <p className="text-xs sm:text-sm text-[#595952] max-w-sm mx-auto">
+          <p className="text-xs sm:text-sm text-[#595952] max-w-sm mx-auto leading-relaxed">
             Questionário rápido para personalizarmos seu atendimento com total segurança.
           </p>
         </div>
@@ -186,7 +190,7 @@ function AnamneseForm() {
         )}
 
         {/* Card Principal do Formulário */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-5">
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-[#d6d6cf] shadow-xs space-y-5">
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* Dados Pessoais */}
@@ -331,7 +335,7 @@ function AnamneseForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-full bg-[var(--color-obsidian)] hover:bg-neutral-800 text-white font-bold text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -348,18 +352,6 @@ function AnamneseForm() {
           </form>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
-        <div className="max-w-lg mx-auto px-4 flex items-center justify-between">
-          <span>Lara Varisa Studio</span>
-          <div className="flex items-center gap-3 text-[11px]">
-            <Link href="/termos" className="hover:text-[var(--color-obsidian)] transition-colors">Termos</Link>
-            <span>·</span>
-            <Link href="/privacidade" className="hover:text-[var(--color-obsidian)] transition-colors">Privacidade</Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -377,5 +369,3 @@ export default function AnamnesePage() {
     </Suspense>
   );
 }
-
-
