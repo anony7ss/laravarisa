@@ -1178,26 +1178,30 @@ export default function AgendarPage() {
                   href={whatsappUrl('Olá, Lara! Estive no seu site e gostaria de tirar uma dúvida.')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-2xl bg-[#f0fdf4] border border-emerald-200 hover:border-emerald-400 flex items-center justify-between text-xs transition-colors"
+                  className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
                 >
-                  <div className="flex items-center gap-2.5 text-emerald-900 font-semibold">
-                    <MessageCircle size={17} className="text-emerald-600" />
+                  <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
+                    <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
+                      <MessageCircle size={15} />
+                    </div>
                     <span>WhatsApp Direto com a Lara</span>
                   </div>
-                  <ChevronRight size={15} className="text-emerald-600" />
+                  <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
                 </a>
 
                 <a
                   href={siteSettings?.studio_instagram_url || 'https://www.instagram.com/laravarisa.lashes/'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-2xl bg-[#fdf2f8] border border-pink-200 hover:border-pink-400 flex items-center justify-between text-xs transition-colors"
+                  className="group p-3 sm:p-3.5 rounded-2xl bg-white hover:bg-[#fafaf8] border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/50 flex items-center justify-between text-xs sm:text-sm transition-all shadow-sm"
                 >
-                  <div className="flex items-center gap-2.5 text-pink-900 font-semibold">
-                    <InstagramIcon size={17} className="text-pink-600" />
+                  <div className="flex items-center gap-2.5 text-[var(--color-obsidian)] font-semibold">
+                    <div className="w-7 h-7 rounded-full bg-[var(--color-limestone)] flex items-center justify-center text-[var(--color-obsidian)] shrink-0">
+                      <InstagramIcon size={15} />
+                    </div>
                     <span>Instagram ({siteSettings?.studio_instagram || '@laravarisa.lashes'})</span>
                   </div>
-                  <ChevronRight size={15} className="text-pink-600" />
+                  <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
                 </a>
               </div>
             </div>
