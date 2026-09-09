@@ -190,17 +190,8 @@ export function SettingsManager({
       onSubmit={save}
       style={{ display: 'grid', gap: '20px' }}
     >
-      {/* NAVEGAÇÃO POR SUBPÁGINAS / ABAS INTERNAS */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          overflowX: 'auto',
-          paddingBottom: '6px',
-          borderBottom: '1px solid var(--admin-line)',
-          scrollbarWidth: 'none',
-        }}
-      >
+      {/* NAVEGAÇÃO POR SUBPÁGINAS / ABAS INTERNAS PADRONIZADA */}
+      <div className="admin-nav-tabs">
         {[
           { id: 'visual' as const, label: 'Visual do Agendamento (/agendar)', icon: Palette },
           { id: 'horarios' as const, label: 'Horários & Estúdio', icon: CalendarDays },
@@ -217,19 +208,7 @@ export function SettingsManager({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={isActive ? 'admin-primary' : 'admin-secondary'}
-              style={{
-                borderRadius: '999px',
-                fontSize: '13px',
-                padding: '8px 16px',
-                minHeight: '38px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                whiteSpace: 'nowrap',
-                fontWeight: isActive ? 600 : 500,
-                cursor: 'pointer',
-              }}
+              className={`admin-nav-tab-btn ${isActive ? 'active' : ''}`}
             >
               <Icon size={16} />
               <span>{tab.label}</span>

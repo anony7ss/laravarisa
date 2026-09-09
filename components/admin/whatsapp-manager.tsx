@@ -640,15 +640,12 @@ export function WhatsAppManager({
         </div>
       </div>
 
-      {/* NAVEGAÇÃO POR ABAS: CHAT, TERMINAL, CONEXÃO, DISPAROS */}
-      <div className="wa-nav-tabs">
+      {/* NAVEGAÇÃO POR ABAS PADRONIZADA: CHAT, TERMINAL, CONEXÃO, DISPAROS, LINKS */}
+      <div className="admin-nav-tabs" style={{ marginBottom: '20px' }}>
         <button
           type="button"
           onClick={() => setActiveTab('chat')}
-          className={`${activeTab === 'chat' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
-          style={{
-            fontWeight: activeTab === 'chat' ? 600 : 500,
-          }}
+          className={`admin-nav-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
         >
           <MessageSquare size={16} />
           <span>Chat ao Vivo</span>
@@ -657,10 +654,7 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('terminal')}
-          className={`${activeTab === 'terminal' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
-          style={{
-            fontWeight: activeTab === 'terminal' ? 600 : 500,
-          }}
+          className={`admin-nav-tab-btn ${activeTab === 'terminal' ? 'active' : ''}`}
         >
           <TerminalIcon size={16} />
           <span>Terminal & Logs</span>
@@ -669,10 +663,7 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('connection')}
-          className={`${activeTab === 'connection' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
-          style={{
-            fontWeight: activeTab === 'connection' ? 600 : 500,
-          }}
+          className={`admin-nav-tab-btn ${activeTab === 'connection' ? 'active' : ''}`}
         >
           <Smartphone size={16} />
           <span>Conexão & Voz</span>
@@ -681,10 +672,7 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('disparos')}
-          className={`${activeTab === 'disparos' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
-          style={{
-            fontWeight: activeTab === 'disparos' ? 600 : 500,
-          }}
+          className={`admin-nav-tab-btn ${activeTab === 'disparos' ? 'active' : ''}`}
         >
           <SendHorizontal size={16} />
           <span>Campanhas</span>
@@ -693,10 +681,7 @@ export function WhatsAppManager({
         <button
           type="button"
           onClick={() => setActiveTab('links')}
-          className={`${activeTab === 'links' ? 'admin-primary' : 'admin-secondary'} wa-tab-btn`}
-          style={{
-            fontWeight: activeTab === 'links' ? 600 : 500,
-          }}
+          className={`admin-nav-tab-btn ${activeTab === 'links' ? 'active' : ''}`}
         >
           <Link2 size={16} />
           <span>Gerador de Link</span>
