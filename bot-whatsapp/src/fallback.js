@@ -171,14 +171,14 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
 
   // 2. Mapeamento de termos específicos do catálogo Lara Varisa
   const padroes = [
-    { keys: ['volume egipcio', 'egipcio', 'egipcia'], query: 'egípcio' },
-    { keys: ['volume russo', 'russo', 'russa'], query: 'russo' },
-    { keys: ['fox eyes', 'fox', 'raposa'], query: 'fox eyes' },
-    { keys: ['fio a fio', 'classico', 'classica', 'fio'], query: 'fio a fio' },
+    { keys: ['volume egipcio', 'egipcio', 'egipcia', 'fio w', '3d w', '4d w'], query: 'egípcio' },
+    { keys: ['volume russo', 'russo', 'russa', '4d', '5d', '6d', '8d', 'mega volume', 'mega'], query: 'russo' },
+    { keys: ['fox eyes', 'fox', 'raposa', 'siren eyes', 'gatinho', 'cat eye'], query: 'fox eyes' },
+    { keys: ['fio a fio', 'classico', 'classica', 'fio', '1d', '2d', '3d'], query: 'fio a fio' },
     { keys: ['lash lifting', 'lifting', 'lift'], query: 'lifting' },
     { keys: ['manutencao', 'manutencao de cilios', 'manut'], query: 'manutenção' },
     { keys: ['remocao', 'remocao segura', 'remover', 'tirar cilios'], query: 'remoção' },
-    { keys: ['volume brasileiro', 'brasileiro', 'brasileira'], query: 'brasileiro' },
+    { keys: ['volume brasileiro', 'brasileiro', 'brasileira', 'fio y'], query: 'brasileiro' },
     { keys: ['sobrancelha', 'sobrancelhas', 'design'], query: 'sobrancelha' },
   ];
 
@@ -401,6 +401,51 @@ export async function processarFallback(texto = '', context = {}) {
 
   if (ehCuidados) {
     return getFaqCuidados();
+  }
+
+  // 2.4.1 Tratamento de Foto ou Imagem de Referência enviada no WhatsApp
+  if (
+    context.ehImagem ||
+    norm.includes('foto') ||
+    norm.includes('imagem') ||
+    norm.includes('foto de referencia') ||
+    norm.includes('referencia')
+  ) {
+    if (norm.includes('pix') || norm.includes('comprovante') || norm.includes('paguei')) {
+      return `Comprovante recebido com sucesso! Muito obrigada 💕`;
+    }
+    if (context.ehImagem) {
+      return `Recebi sua foto de referência! A Lara personaliza e reproduz perfeitamente esse modelo no seu olhar (seja 4D, 5D, Fox Eyes ou Russo). Quer aproveitar e marcar seu horário? 💕`;
+    }
+  }
+
+  // 2.4.2 Dúvidas sobre Modelos e Técnicas de Cílios (4D, 5D, Mega, Wet Look, Wispy, etc.)
+  const ehDuvidaModelosCilios =
+    /\b(4d|5d|6d|8d|mega volume|wet look|wispy|kim k|boneca|gatinho)\b/i.test(norm) ||
+    norm.includes('volume 4d') ||
+    norm.includes('volume 5d') ||
+    norm.includes('efeito molhado') ||
+    norm.includes('efeito pluma') ||
+    norm.includes('manga') ||
+    norm.includes('anime') ||
+    norm.includes('efeito boneca') ||
+    norm.includes('efeito gatinho') ||
+    norm.includes('diferenca entre');
+
+  if (ehDuvidaModelosCilios) {
+    if (/\b(4d|5d|6d|8d|mega)\b/i.test(norm)) {
+      return `O Volume 4D e 5D utilizam leques artesanais levíssimos para um acabamento aveludado, bem pretinho e marcante. A Lara personaliza essa densidade no nosso Volume Russo ou Egípcio! Quer marcar seu horário? 💕`;
+    }
+    if (norm.includes('wet') || norm.includes('molhado')) {
+      return `O Wet Look dá aquele acabamento sofisticado e moderno de fios alinhados com efeito molhado. A Lara domina e adora fazer essa estilização! Quer agendar o seu? 💕`;
+    }
+    if (norm.includes('wispy') || norm.includes('kim') || norm.includes('pluma')) {
+      return `O estilo Wispy (Kim K) alterna fios mais longos em destaque criando uma textura linda, moderna e despojada. A Lara personaliza esse efeito no estúdio! Quer marcar? 💕`;
+    }
+    if (norm.includes('boneca') || norm.includes('gatinho')) {
+      return `O efeito Gatinho (ou Fox Eyes) alonga o canto externo e o Boneca abre o olhar no centro. A Lara faz o visagismo ideal para valorizar seus olhos! Quer agendar? 💕`;
+    }
+    return `Trabalhamos com Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo (incluindo 4D e 5D) e Lash Lifting! Você pode me mandar uma foto de referência que te oriento com carinho 💕`;
   }
 
   // 2.5 Pergunta de Preço Específico (ex: "quanto tá o volume egípcio?")
