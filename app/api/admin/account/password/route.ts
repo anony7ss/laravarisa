@@ -1,32 +1,30 @@
 import { getStaffContext } from '@/lib/admin-auth';
 import { createPublicSupabase } from '@/lib/supabase/server';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
+import { passwordChangeSchema } from '@/lib/validation';
+
+const MAX_BODY_BYTES = 10_000;
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
 
-  let body: { current_password?: string; new_password?: string; confirm_password?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('Dados inválidos.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
-
-  const { current_password, new_password, confirm_password } = body;
-
-  if (!current_password || !new_password) {
-    return jsonError('Preencha a senha atual e a nova senha.', 422);
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Dados inválidos.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
+  const body = bodyResult.data;
 
-  if (new_password.length < 6) {
-    return jsonError('A nova senha deve conter pelo menos 6 caracteres.', 422);
-  }
-
-  if (confirm_password && new_password !== confirm_password) {
-    return jsonError('A confirmação de senha não confere.', 422);
-  }
+  const parsed = passwordChangeSchema.safeParse(body);
+  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || 'Revise os dados informados.', 422);
+  const { current_password, new_password } = parsed.data;
 
   const authClient = createPublicSupabase();
   if (!authClient) return jsonError('Serviço indisponível.', 503);

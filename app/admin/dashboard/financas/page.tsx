@@ -6,9 +6,20 @@ export default async function FinancasPage() {
   const { supabase, profile } = await requireStaff();
 
   const [expensesRes, appointmentsRes, servicesRes] = await Promise.all([
-    supabase.from('expenses').select('*').order('date', { ascending: false }),
-    supabase.from('appointments').select('*').order('starts_at', { ascending: false }),
-    supabase.from('services').select('*').order('sort_order', { ascending: true }),
+    supabase
+      .from('expenses')
+      .select('id, description, amount, category, date, notes, created_at')
+      .order('date', { ascending: false })
+      .limit(5000),
+    supabase
+      .from('appointments')
+      .select('id, service_id, client_name, client_phone, starts_at, ends_at, status, notes, origin, is_blocked')
+      .order('starts_at', { ascending: false })
+      .limit(5000),
+    supabase
+      .from('services')
+      .select('id, slug, name, price_label, duration_label, duration_minutes, active, sort_order')
+      .order('sort_order', { ascending: true }),
   ]);
 
   return (

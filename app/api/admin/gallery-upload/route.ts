@@ -4,20 +4,26 @@ import {
   imageMimeFromMagic,
   jsonError,
   NO_STORE_HEADERS,
+  readFormData,
   safeStorageName,
 } from '@/lib/security';
 
 const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_PIXELS = 40_000_000;
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
-  const contentLength = Number(request.headers.get('content-length') || '0');
-  if (contentLength > MAX_BYTES + 64 * 1024)
-    return jsonError('A imagem deve ter até 8 MB.', 413);
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
   if (staff.profile.role === 'viewer') return jsonError('Sem permissão.', 403);
-  const form = await request.formData();
+  const formResult = await readFormData(request, MAX_BYTES + 64 * 1024);
+  if (!formResult.ok) {
+    return jsonError(
+      formResult.reason === 'too_large' ? 'A imagem deve ter até 8 MB.' : 'Formulário inválido.',
+      formResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const form = formResult.data;
   const file = form.get('file');
   if (!(file instanceof File)) return jsonError('Arquivo ausente.', 400);
   if (file.size < 1 || file.size > MAX_BYTES)
@@ -29,13 +35,13 @@ export async function POST(request: Request) {
   // Convert to WebP using sharp
   try {
     const sharp = (await import('sharp')).default;
-    const webpBuffer = await sharp(bytes)
+    const webpBuffer = await sharp(bytes, { limitInputPixels: MAX_IMAGE_PIXELS })
       .webp({ quality: 80, effort: 6 })
       .toBuffer();
     bytes = new Uint8Array(webpBuffer);
   } catch (err) {
     console.error('Failed to convert to WebP:', err);
-    // Proceed with original if conversion fails
+    return jsonError('Não foi possível processar a imagem.', 415);
   }
 
   // Generate path but ensure extension is .webp

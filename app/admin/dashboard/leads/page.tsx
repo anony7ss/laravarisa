@@ -6,8 +6,9 @@ export default async function LeadsPage() {
   const { supabase, profile } = await requireStaff();
   const { data } = await supabase
     .from('leads')
-    .select('*')
-    .order('created_at', { ascending: false });
+    .select('id, name, email, phone, message, status, created_at')
+    .order('created_at', { ascending: false })
+    .limit(5000);
   return (
     <main className="admin-page">
       <div className="admin-page-title">

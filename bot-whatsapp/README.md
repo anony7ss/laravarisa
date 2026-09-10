@@ -33,7 +33,7 @@ No painel do seu bot na Shard Cloud, navegue até a aba **Variáveis de Ambiente
 | `OPENCODE_API_KEY` | `sk-...` | Sua chave de API da OpenCode Go |
 | `OPENCODE_BASE_URL` | `https://opencode.ai/zen/go/v1` | Endpoint oficial da API OpenCode Go |
 | `OPENCODE_MODEL` | `deepseek-v4-flash` | Modelo DeepSeek V4 Flash (ultra rápido) |
-| `SUPABASE_URL` | `https://rthnsupiueesipypazxq.supabase.co` | URL do seu projeto Supabase |
+| `SUPABASE_URL` | `https://seu-projeto.supabase.co` | URL do seu projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | `eyJhbGci...` | Chave de serviço (Service Role) do Supabase |
 | `STUDIO_NAME` | `Lara Lash & Sobrancelhas` | Nome exibido nas mensagens |
 | `STUDIO_CITY` | `Porto Alegre - RS` | Cidade e localização do estúdio |

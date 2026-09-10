@@ -25,6 +25,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
   const [api, setApi] = useState<CarouselApi>();
   const [playing, setPlaying] = useState(!full);
   const userPaused = useRef(false);
+  const reducedMotion = useRef(false);
   const host = useRef<HTMLDivElement>(null);
   const autoScroll = useMemo(
     () =>
@@ -44,12 +45,28 @@ export function Gallery({ full = false }: { full?: boolean }) {
 
     let isVisible = false;
     const sync = () => {
-      if (isVisible && !document.hidden && !userPaused.current) {
+      if (isVisible && !document.hidden && !userPaused.current && !reducedMotion.current) {
         autoScrollPlugin.play(0);
       } else {
         autoScrollPlugin.stop();
       }
     };
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion.current = motionQuery.matches;
+    if (motionQuery.matches) {
+      userPaused.current = true;
+      setPlaying(false);
+    }
+    const onMotionPreferenceChange = (event: MediaQueryListEvent) => {
+      reducedMotion.current = event.matches;
+      if (event.matches) {
+        userPaused.current = true;
+        setPlaying(false);
+      }
+      sync();
+    };
+    motionQuery.addEventListener('change', onMotionPreferenceChange);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -72,6 +89,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
       autoScrollPlugin.stop();
       api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);
+      motionQuery.removeEventListener('change', onMotionPreferenceChange);
     };
   }, [api, full]);
 
@@ -80,6 +98,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
     api?.plugins().autoScroll?.stop();
   }
   function toggle() {
+    if (reducedMotion.current) return;
     if (playing) pause();
     else {
       userPaused.current = false;
@@ -174,6 +193,7 @@ export function Gallery({ full = false }: { full?: boolean }) {
                 className="play-button"
                 onClick={toggle}
                 aria-label={playing ? 'Pausar galeria' : 'Continuar galeria'}
+                aria-pressed={playing}
               >
                 {playing ? <Pause size={16} /> : <Play size={16} />}
                 <span>{playing ? 'Pausar' : 'Continuar'}</span>

@@ -380,7 +380,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
       if (isBanner) setCoverUrl(compressedWebp);
       else setAvatarUrl(compressedWebp);
 
-      // 2. Envia para o servidor para armazenar de forma permanente no bucket Supabase
+      // 2. Envia para o servidor para armazenar de forma permanente no bucket de mídia
       const form = new FormData();
       form.append('file', file);
       form.append('type', type);
@@ -1934,9 +1934,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                               <p style={{ margin: 0, fontSize: '12px', color: textColor, opacity: 0.85 }}>
                                 Parabéns, {simClientName.split(' ')[0]}! Sua sessão foi reservada.
                               </p>
-                              <span style={{ display: 'inline-block', marginTop: '4px', fontSize: '10.5px', color: accentColor, fontWeight: 600 }}>
-                                (Modo de Demonstração Interativa - Não gravado no banco)
-                              </span>
                             </div>
 
                             {/* Card de Resumo do Voucher */}

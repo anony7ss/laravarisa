@@ -6,8 +6,8 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
     const scriptSrc = isDev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://unpkg.com;"
-      : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://unpkg.com;";
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com;"
+      : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;";
 
     const cspHeader = `
       default-src 'self';
@@ -15,7 +15,7 @@ const nextConfig = {
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https:;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://*.netlify.app;
+      connect-src 'self' https://challenges.cloudflare.com;
       frame-src 'self' https://challenges.cloudflare.com https://www.google.com https://*.google.com https://maps.google.com;
       object-src 'none';
       base-uri 'self';

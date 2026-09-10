@@ -31,7 +31,9 @@ import {
 import { testarConexaoIA, processarMensagemComIA } from './ai.js';
 import { supabase } from './supabase.js';
 
-const ACTOR_PHONE = '5551989741970'; // Lara authorized phone
+const ACTOR_PHONE = process.env.BENCHMARK_ACTOR_PHONE || '';
+const CLIENT_PHONE = process.env.BENCHMARK_CLIENT_PHONE || ACTOR_PHONE;
+const CLIENT_TERM = process.env.BENCHMARK_CLIENT_TERM || 'Cliente';
 
 async function timeOperation(name, fn) {
   const start = performance.now();
@@ -46,6 +48,10 @@ async function timeOperation(name, fn) {
 }
 
 async function runBenchmark() {
+  if (!ACTOR_PHONE) {
+    console.log('Benchmark ignorado: defina BENCHMARK_ACTOR_PHONE explicitamente para executar ações reais.');
+    return;
+  }
   console.log('='.repeat(70));
   console.log('🚀 INICIANDO BENCHMARK COMPLETO DE FERRAMENTAS & MOTOR DE IA');
   console.log('='.repeat(70));
@@ -68,7 +74,7 @@ async function runBenchmark() {
   }));
 
   results.push(await timeOperation('consultarAgendamentoCliente', async () => {
-    const res = await consultarAgendamentoCliente('5551989741970');
+    const res = await consultarAgendamentoCliente(CLIENT_PHONE);
     return `OK (${res.total || 0} agendamentos encontrados)`;
   }));
 
@@ -94,7 +100,7 @@ async function runBenchmark() {
   }));
 
   results.push(await timeOperation('consultarHistoricoClienteProfissional', async () => {
-    const res = await consultarHistoricoClienteProfissional({ termo_busca: 'Gabriel', actor_phone: ACTOR_PHONE });
+    const res = await consultarHistoricoClienteProfissional({ termo_busca: CLIENT_TERM, actor_phone: ACTOR_PHONE });
     if (!res.ok) throw new Error(res.erro || 'Erro CRM');
     return `OK (${res.total_clientes_encontrados || 0} clientes)`;
   }));

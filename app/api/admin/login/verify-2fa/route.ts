@@ -11,7 +11,10 @@ import {
   jsonError,
   NO_STORE_HEADERS,
 } from '@/lib/security';
-import { openTwoFactorPending, safeCompareOtpCode } from '@/lib/two-factor';
+import { hashOtpCode, openTwoFactorPending } from '@/lib/two-factor';
+import { twoFactorLoginSchema } from '@/lib/validation';
+
+const MAX_BODY_BYTES = 5_000;
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -22,17 +25,24 @@ export async function POST(request: Request) {
     return jsonError('Muitas tentativas com código. Aguarde alguns minutos.', 429);
   }
 
-  let body: { code?: string; tempToken?: string };
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
+  }
+
+  let body: unknown;
   try {
-    body = await request.json();
+    const rawBody = await request.arrayBuffer();
+    if (rawBody.byteLength > MAX_BODY_BYTES) {
+      return jsonError('Conteúdo muito grande.', 413);
+    }
+    body = JSON.parse(new TextDecoder().decode(rawBody));
   } catch {
     return jsonError('Dados inválidos.', 400);
   }
 
-  const { code, tempToken } = body;
-  if (!code || code.trim().length !== 6) {
-    return jsonError('Código de 6 dígitos inválido.', 422);
-  }
+  const parsedBody = twoFactorLoginSchema.safeParse(body);
+  if (!parsedBody.success) return jsonError('Código de 6 dígitos inválido.', 422);
+  const { code, tempToken } = parsedBody.data;
 
   const cookieStore = await cookies();
   const rawPending = cookieStore.get('lv_2fa_pending')?.value;
@@ -50,9 +60,20 @@ export async function POST(request: Request) {
     return jsonError('Token de segurança incompatível.', 401);
   }
 
+  // Limita também por desafio, evitando que um atacante distribua tentativas
+  // do mesmo código entre vários endereços IP.
+  const tokenCheck = checkRateLimit(
+    `login-2fa-token:${pendingData.temp_token}`,
+    5,
+    10 * 60 * 1000,
+  );
+  if (!tokenCheck.allowed) {
+    return jsonError('Muitas tentativas com código. Solicite um novo código.', 429);
+  }
+
   const adminClient = createAdminSupabase();
   const authClient = createPublicSupabase();
-  if (!adminClient && !authClient) return jsonError('Serviço indisponível.', 503);
+  if (!adminClient) return jsonError('Serviço indisponível.', 503);
 
   if (authClient && pendingData.access_token && pendingData.refresh_token) {
     try {
@@ -65,39 +86,32 @@ export async function POST(request: Request) {
     }
   }
 
-  const db = adminClient || authClient!;
+  const db = adminClient;
 
-  const { data: profile, error } = await db
-    .from('profiles')
-    .select('id, two_factor_code, two_factor_expires_at, two_factor_temp_token')
-    .eq('id', pendingData.user_id)
-    .single();
-
-  if (error || !profile) {
-    console.error('[verify-2fa] Erro ao buscar perfil:', { error, userId: pendingData.user_id });
-    return jsonError('Usuário não encontrado.', 404);
-  }
-
-  if (!profile.two_factor_code || !safeCompareOtpCode(code.trim(), profile.two_factor_code)) {
-    return jsonError('Código de verificação incorreto.', 401);
-  }
-
-  if (
-    profile.two_factor_expires_at &&
-    new Date(profile.two_factor_expires_at).getTime() < Date.now()
-  ) {
-    return jsonError('Código expirado. Solicite um novo código.', 401);
-  }
-
-  // Limpa o código usado no banco
-  await db
+  // Consome o desafio em uma única operação condicional. O banco bloqueia a
+  // linha durante o UPDATE, então duas requisições simultâneas não conseguem
+  // reutilizar o mesmo código 2FA.
+  const { data: consumed, error } = await db
     .from('profiles')
     .update({
       two_factor_code: null,
       two_factor_expires_at: null,
       two_factor_temp_token: null,
     })
-    .eq('id', pendingData.user_id);
+    .eq('id', pendingData.user_id)
+    .eq('two_factor_code', hashOtpCode(code))
+    .eq('two_factor_temp_token', pendingData.temp_token)
+    .gt('two_factor_expires_at', new Date().toISOString())
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    console.error('[verify-2fa] Erro ao consumir desafio:', { error: error.message });
+    return jsonError('Não foi possível verificar o código agora.', 500);
+  }
+  if (!consumed) {
+    return jsonError('Código de verificação incorreto ou expirado.', 401);
+  }
 
   // Remove cookie temporário de 2FA
   cookieStore.delete('lv_2fa_pending');

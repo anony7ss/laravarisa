@@ -17,8 +17,8 @@ export function SiteFooter() {
     href ? (
       <a
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={href.startsWith('#') || href.startsWith('/') ? undefined : '_blank'}
+        rel={href.startsWith('#') || href.startsWith('/') ? undefined : 'noopener noreferrer'}
         className="social-link"
       >
         {icon}

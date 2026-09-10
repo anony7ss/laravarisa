@@ -1,6 +1,12 @@
 import { supabase, consultarHorarios, criarAgendamento, reagendarAgendamento, cancelarAgendamento } from './src/tools.js';
+import config from './src/config.js';
 
 async function testLifecycle() {
+  if (process.env.RUN_BOT_INTEGRATION_TESTS !== '1' || !config.supabaseUrl || !config.supabaseServiceRoleKey) {
+    console.log('ℹ️ Teste de ciclo de vida ignorado. Defina RUN_BOT_INTEGRATION_TESTS=1 e as credenciais do Supabase para executar testes que criam e removem dados.');
+    return;
+  }
+
   console.log('=== TESTE DE CICLO DE VIDA E LIBERAÇÃO AUTOMÁTICA DE HORÁRIOS ===\n');
 
   const dataTeste = '2026-09-12'; // Sábado futuro
@@ -49,7 +55,7 @@ async function testLifecycle() {
   // 4. Teste de Reagendamento para outro horário
   const novoSlot = slotsAposCriar.slots.find(s => s.horario === '16:30') || slotsAposCriar.slots[slotsAposCriar.slots.length - 1];
   console.log(`\n4. Reagendando de ${slotParaReservar.horario} para ${novoSlot.horario}...`);
-  const resReagendar = await reagendarAgendamento(agendamentoId, novoSlot.starts_at);
+  const resReagendar = await reagendarAgendamento(agendamentoId, novoSlot.starts_at, true);
   console.log(`   Resultado do reagendamento:`, resReagendar.mensagem);
 
   // 5. Verifica se o horário antigo foi liberado e o novo bloqueado
@@ -62,7 +68,7 @@ async function testLifecycle() {
 
   // 6. Teste de Cancelamento (liberação definitiva)
   console.log('\n6. Cancelando o agendamento...');
-  const resCancelar = await cancelarAgendamento(agendamentoId, 'Imprevisto da cliente');
+  const resCancelar = await cancelarAgendamento(agendamentoId, 'Imprevisto da cliente', true);
   console.log(`   Resultado do cancelamento:`, resCancelar.mensagem);
 
   // 7. Verifica se o novo horário foi liberado após o cancelamento

@@ -4,9 +4,11 @@ import {
   imageMimeFromMagic,
   jsonError,
   NO_STORE_HEADERS,
+  readFormData,
 } from '@/lib/security';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_PIXELS = 40_000_000;
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -14,9 +16,19 @@ export async function POST(request: Request) {
   if (!staff) return jsonError('Não autorizado.', 401);
   if (staff.profile.role !== 'admin') return jsonError('Sem permissão de administrador.', 403);
 
-  const form = await request.formData();
+  const formResult = await readFormData(request, MAX_BYTES + 64 * 1024);
+  if (!formResult.ok) {
+    return jsonError(
+      formResult.reason === 'too_large' ? 'A imagem deve ter até 10 MB.' : 'Formulário inválido.',
+      formResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const form = formResult.data;
   const file = form.get('file');
-  const type = (form.get('type') as string) || 'asset';
+  const type = form.get('type');
+  if (type !== 'avatar' && type !== 'banner') {
+    return jsonError('Tipo de imagem inválido.', 400);
+  }
 
   if (!(file instanceof File)) return jsonError('Arquivo ausente.', 400);
   if (file.size < 1 || file.size > MAX_BYTES) {
@@ -29,7 +41,7 @@ export async function POST(request: Request) {
 
   try {
     const sharp = (await import('sharp')).default;
-    let pipeline = sharp(bytes);
+    let pipeline = sharp(bytes, { limitInputPixels: MAX_IMAGE_PIXELS });
 
     if (type === 'avatar') {
       pipeline = pipeline.resize(400, 400, { fit: 'cover', position: 'center' }).webp({ quality: 85 });
@@ -42,6 +54,7 @@ export async function POST(request: Request) {
     bytes = new Uint8Array(webpBuffer);
   } catch (err) {
     console.error('[Booking Asset WebP Error]:', err);
+    return jsonError('Não foi possível processar a imagem.', 415);
   }
 
   const fileName = `booking-${type}-${Date.now()}.webp`;

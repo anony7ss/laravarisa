@@ -3,9 +3,11 @@
  */
 
 import { supabase } from './supabase.js';
-import { isIAConectada, getModeloIA } from './ai.js';
+import { getAiStatus } from './ai-status.js';
 import { logInfo, logWarn, logAction, setRemoteLogHandler } from './terminal.js';
 import { isLid, resolverLidParaTelefone } from './phone-utils.js';
+import config from './config.js';
+import { isSafeWhatsAppJid, sanitizeUntrustedText } from './security-utils.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,32 +25,82 @@ let lastKnownProfile = null;
 let lastKnownQr = null;
 let cachedAiEnabled = true;
 
-// Conecta o logger do terminal ao Supabase whatsapp_logs em tempo real
-setRemoteLogHandler(async ({ level, tag, message }) => {
+// Conecta o logger do terminal ao Supabase em pequenos lotes. Uma inserção por
+// linha de log gerava latência e carga desnecessárias durante uma conversa.
+const remoteLogQueue = [];
+const MAX_REMOTE_LOG_QUEUE = 500;
+let remoteLogFlushTimer = null;
+let remoteLogFlushing = false;
+
+async function flushRemoteLogs() {
+  if (remoteLogFlushing || remoteLogQueue.length === 0) return;
+  remoteLogFlushing = true;
+  const batch = remoteLogQueue.splice(0, 20);
   try {
-    await supabase.from('whatsapp_logs').insert({
-      level,
-      tag: String(tag || '').slice(0, 80),
-      message: String(message || '').slice(0, 1000),
-    });
+    await supabase.from('whatsapp_logs').insert(batch);
   } catch {}
+  remoteLogFlushing = false;
+  if (remoteLogQueue.length > 0) {
+    remoteLogFlushTimer = setTimeout(() => {
+      remoteLogFlushTimer = null;
+      flushRemoteLogs().catch(() => {});
+    }, 250);
+    if (remoteLogFlushTimer.unref) remoteLogFlushTimer.unref();
+  }
+}
+
+setRemoteLogHandler(({ level, tag, message }) => {
+  if (remoteLogQueue.length >= MAX_REMOTE_LOG_QUEUE) {
+    remoteLogQueue.splice(0, remoteLogQueue.length - MAX_REMOTE_LOG_QUEUE + 1);
+  }
+  remoteLogQueue.push({
+    level: ['info', 'warn', 'error', 'action', 'success', 'incoming', 'outgoing', 'booking', 'reminder'].includes(level) ? level : 'info',
+    tag: sanitizeUntrustedText(String(tag || ''), 80),
+    message: sanitizeUntrustedText(String(message || ''), 500),
+  });
+
+  if (remoteLogQueue.length >= 10) {
+    flushRemoteLogs().catch(() => {});
+    return;
+  }
+
+  if (!remoteLogFlushTimer) {
+    remoteLogFlushTimer = setTimeout(() => {
+      remoteLogFlushTimer = null;
+      flushRemoteLogs().catch(() => {});
+    }, 250);
+    if (remoteLogFlushTimer.unref) remoteLogFlushTimer.unref();
+  }
 });
 
 // Cache em memória de controle de IA por contato (para consulta ultra-rápida sem latência)
 const pausedChatsCache = new Map(); // phone -> { paused: boolean, until: Date | null }
+const MAX_PAUSED_CHAT_ENTRIES = 5000;
+
+function guardarPausa(phone, control) {
+  if (!phone || !control) return;
+  pausedChatsCache.set(phone, control);
+  while (pausedChatsCache.size > MAX_PAUSED_CHAT_ENTRIES) {
+    pausedChatsCache.delete(pausedChatsCache.keys().next().value);
+  }
+}
 
 export async function carregarControleChats() {
   try {
     const { data } = await supabase
       .from('whatsapp_chat_control')
-      .select('phone, ai_paused, ai_paused_until');
+      .select('phone, ai_paused, ai_paused_until')
+      .limit(MAX_PAUSED_CHAT_ENTRIES);
     if (data) {
       pausedChatsCache.clear();
       for (const row of data) {
-        if (row.ai_paused) {
-          pausedChatsCache.set(row.phone, {
+        const cleanPhone = String(row.phone || '').replace(/\D/g, '');
+        if (row.ai_paused && cleanPhone.length >= 8 && cleanPhone.length <= 15) {
+          guardarPausa(cleanPhone, {
             paused: true,
-            until: row.ai_paused_until ? new Date(row.ai_paused_until) : null,
+            until: row.ai_paused_until && Number.isFinite(new Date(row.ai_paused_until).getTime())
+              ? new Date(row.ai_paused_until)
+              : null,
           });
         }
       }
@@ -96,7 +148,7 @@ export async function registrarMensagemChat({
 }) {
   try {
     let cleanPhone = String(phone || remoteJid || '').replace(/\D/g, '');
-    if (!cleanPhone || !content) return;
+    if (!cleanPhone || cleanPhone.length < 8 || cleanPhone.length > 15 || typeof content !== 'string' || !content.trim()) return;
 
     if (isLid(cleanPhone)) {
       const mapped = resolverLidParaTelefone(cleanPhone);
@@ -105,16 +157,44 @@ export async function registrarMensagemChat({
       }
     }
 
+    // Nunca persiste mídia como data URL/base64: além de inflar o banco, isso
+    // transforma uma conversa em armazenamento permanente de dados pessoais.
+    // O painel continua exibindo o tipo e o texto da mensagem; URLs públicas
+    // curtas podem ser usadas quando houver um storage dedicado.
+    let safeMediaUrl = null;
+    if (typeof mediaUrl === 'string' && mediaUrl.length <= 2000) {
+      try {
+        const mediaParsed = new URL(mediaUrl);
+        const configured = config.supabaseUrl ? new URL(config.supabaseUrl) : null;
+        if (
+          configured &&
+          mediaParsed.protocol === 'https:' &&
+          mediaParsed.hostname === configured.hostname &&
+          !mediaParsed.username &&
+          !mediaParsed.password
+        ) {
+          safeMediaUrl = mediaParsed.toString();
+        }
+      } catch {}
+    }
+
+    const safeRemoteJid = isSafeWhatsAppJid(String(remoteJid || '')) ? String(remoteJid).trim() : null;
+    const safeSenderType = ['client', 'bot_ai', 'bot_copilot', 'admin_manual', 'system'].includes(senderType)
+      ? senderType
+      : (fromMe ? 'bot_ai' : 'client');
+    const safeMediaType = ['text', 'audio', 'image', 'video', 'document'].includes(mediaType) ? mediaType : 'text';
+    const safeStatus = ['sent', 'delivered', 'read', 'failed'].includes(status) ? status : 'delivered';
+
     await supabase.from('whatsapp_messages').insert({
       phone: cleanPhone,
-      remote_jid: remoteJid || null,
-      sender_name: senderName || (fromMe ? 'Lara Varisa' : 'Cliente'),
+      remote_jid: safeRemoteJid,
+      sender_name: sanitizeUntrustedText(String(senderName || (fromMe ? 'Lara Varisa' : 'Cliente')), 120),
       from_me: Boolean(fromMe),
-      sender_type: senderType || (fromMe ? 'bot_ai' : 'client'),
-      content: String(content),
-      media_type: mediaType,
-      media_url: mediaUrl || null,
-      status: status,
+      sender_type: safeSenderType,
+      content: sanitizeUntrustedText(String(content), 4000),
+      media_type: safeMediaType,
+      media_url: safeMediaUrl,
+      status: safeStatus,
     });
   } catch {}
 }
@@ -126,44 +206,62 @@ export function isAiEnabled() {
   return cachedAiEnabled;
 }
 
+async function carregarEstadoIA() {
+  try {
+    const { data } = await supabase
+      .from('whatsapp_bot_session')
+      .select('ai_enabled')
+      .eq('id', 'default')
+      .maybeSingle();
+    if (typeof data?.ai_enabled === 'boolean') {
+      cachedAiEnabled = data.ai_enabled;
+    }
+  } catch {}
+}
+
 /**
  * Publica o estado atual do bot no Supabase para o painel admin
  */
 export async function publicarStatusBot(dados = {}) {
   try {
-    if (dados.status) {
-      lastKnownStatus = dados.status;
-      if (dados.status !== 'connected') {
+    const allowedStatuses = new Set(['connecting', 'connected', 'disconnected', 'qr_ready']);
+    const requestedStatus = typeof dados.status === 'string' && allowedStatuses.has(dados.status)
+      ? dados.status
+      : null;
+    if (requestedStatus) {
+      lastKnownStatus = requestedStatus;
+      if (requestedStatus !== 'connected') {
         lastKnownPhone = null;
         lastKnownProfile = null;
       }
-      if (dados.status !== 'qr_ready') {
+      if (requestedStatus !== 'qr_ready') {
         lastKnownQr = null;
       }
     }
 
     if ('phone_connected' in dados) {
-      lastKnownPhone = dados.phone_connected;
+      const phone = String(dados.phone_connected || '').replace(/\D/g, '');
+      lastKnownPhone = phone.length >= 8 && phone.length <= 15 ? phone : null;
     }
     if ('profile_name' in dados) {
-      lastKnownProfile = dados.profile_name;
+      lastKnownProfile = sanitizeUntrustedText(String(dados.profile_name || ''), 120) || null;
     }
     if ('qr_code' in dados) {
-      lastKnownQr = dados.qr_code;
+      lastKnownQr = typeof dados.qr_code === 'string' ? dados.qr_code.slice(0, 10000) : null;
     }
 
+    const aiStatus = getAiStatus();
     const payload = {
       id: 'default',
       status: lastKnownStatus,
       phone_connected: lastKnownStatus === 'connected' ? lastKnownPhone : null,
       profile_name: lastKnownStatus === 'connected' ? lastKnownProfile : null,
       qr_code: lastKnownStatus === 'qr_ready' ? lastKnownQr : null,
-      ai_mode: isIAConectada() ? 'opencode_go' : 'fallback_ativo',
-      ai_model: getModeloIA(),
+      ai_mode: aiStatus.connected ? 'opencode_go' : 'fallback_ativo',
+      ai_model: aiStatus.model || config.opencodeModel || 'qwen3.8-flash',
       reminders_active: true,
       last_heartbeat: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      ...dados,
     };
 
     // Garantia estrita de consistência: se não estiver conectado, nunca envia número
@@ -181,6 +279,23 @@ export async function publicarStatusBot(dados = {}) {
   } catch (err) {
     // Silencioso para não poluir o terminal
   }
+}
+
+async function claimDisconnectAction() {
+  const { data, error } = await supabase
+    .from('whatsapp_bot_session')
+    .update({
+      action_requested: null,
+      status: 'disconnected',
+      qr_code: null,
+      phone_connected: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', 'default')
+    .eq('action_requested', 'disconnect')
+    .select('id')
+    .maybeSingle();
+  return !error && Boolean(data);
 }
 
 /**
@@ -228,17 +343,9 @@ export function escutarAcoesAdmin(onForceDisconnect) {
           if (novo.action_requested === 'disconnect') {
             logAction('Admin Web', 'Solicitação de desconexão recebida pelo painel do site.');
 
-            // Reseta a solicitação no banco
-            await supabase
-              .from('whatsapp_bot_session')
-              .update({
-                action_requested: null,
-                status: 'disconnected',
-                qr_code: null,
-                phone_connected: null,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', 'default');
+            // Claim condicional: Realtime e polling podem observar o mesmo
+            // comando; apenas o worker que o remove atomicamente executa o reset.
+            if (!(await claimDisconnectAction())) return;
 
             // Limpa chaves e reinicializa
             try {
@@ -257,6 +364,7 @@ export function escutarAcoesAdmin(onForceDisconnect) {
     .subscribe();
 
   // 2. Polling de contingência a cada 5s para verificar action_requested e ai_enabled
+  carregarEstadoIA();
   const pollInterval = setInterval(async () => {
     try {
       const { data } = await supabase
@@ -273,16 +381,7 @@ export function escutarAcoesAdmin(onForceDisconnect) {
       if (data?.action_requested === 'disconnect') {
         logAction('Admin Web', 'Comando de desconexão detectado via polling.');
 
-        await supabase
-          .from('whatsapp_bot_session')
-          .update({
-            action_requested: null,
-            status: 'disconnected',
-            qr_code: null,
-            phone_connected: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', 'default');
+        if (!(await claimDisconnectAction())) return;
 
         try {
           if (fs.existsSync(authPath)) {
@@ -312,16 +411,22 @@ export function escutarAcoesAdmin(onForceDisconnect) {
         const row = payload?.new;
         if (row && row.phone) {
           const cleanPhone = String(row.phone).replace(/\D/g, '');
+          if (cleanPhone.length < 8 || cleanPhone.length > 15) return;
           if (row.ai_paused) {
-            pausedChatsCache.set(cleanPhone, {
+            guardarPausa(cleanPhone, {
               paused: true,
-              until: row.ai_paused_until ? new Date(row.ai_paused_until) : null,
+              until: row.ai_paused_until && Number.isFinite(new Date(row.ai_paused_until).getTime())
+                ? new Date(row.ai_paused_until)
+                : null,
             });
-            const infoPausa = row.ai_paused_until ? `até ${new Date(row.ai_paused_until).toLocaleTimeString('pt-BR')}` : 'permanentemente';
-            logAction('Controle Chat', `IA pausada para ${row.client_name || cleanPhone} (${infoPausa})`);
+            const pausaDate = row.ai_paused_until && Number.isFinite(new Date(row.ai_paused_until).getTime())
+              ? new Date(row.ai_paused_until)
+              : null;
+            const infoPausa = pausaDate ? `até ${pausaDate.toLocaleTimeString('pt-BR')}` : 'permanentemente';
+            logAction('Controle Chat', `IA pausada para ${sanitizeUntrustedText(String(row.client_name || cleanPhone), 120)} (${infoPausa})`);
           } else {
             pausedChatsCache.delete(cleanPhone);
-            logAction('Controle Chat', `IA reativada para ${row.client_name || cleanPhone}`);
+            logAction('Controle Chat', `IA reativada para ${sanitizeUntrustedText(String(row.client_name || cleanPhone), 120)}`);
           }
         }
       }

@@ -5,10 +5,69 @@
 
 import { supabase } from './supabase.js';
 import { sendHumanizedMessage, reactToMessage } from './queue.js';
-import { resolverJidWhatsApp } from './phone-utils.js';
+import { obterVariacoesTelefone, resolverJidWhatsApp } from './phone-utils.js';
 import { notificarLaraNovoAgendamento, obterConfiguracoesLara, normalizarTelefoneBR } from './notifications.js';
 import { invalidarCacheConfiguracoes } from './cache.js';
 import { logAction, logInfo, logWarn, logError } from './terminal.js';
+import { sanitizeSearchTerm, sanitizeUntrustedText } from './security-utils.js';
+
+const actorAuthorizationCache = new Map();
+const ACTOR_AUTH_CACHE_TTL_MS = 15 * 1000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value) {
+  return typeof value === 'string' && UUID_RE.test(value.trim());
+}
+
+function textoSeguro(value, maxLength = 300, fallback = '') {
+  const safe = sanitizeUntrustedText(String(value ?? ''), maxLength).trim();
+  return safe || fallback;
+}
+
+function horaValida(value) {
+  return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.trim());
+}
+
+function dataYmdValida(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+/**
+ * Confirma o número que originou a mensagem diretamente no Postgres.
+ * O modelo nunca é a autoridade: sem a RPC de autorização, a ação falha
+ * fechada e nenhum dado administrativo é consultado ou alterado.
+ */
+async function autorizarAtor(actorPhone) {
+  const normalized = normalizarTelefoneBR(actorPhone);
+  if (!normalized || normalized.length < 12 || normalized.length > 13) {
+    return { ok: false, erro: 'Identidade da profissional não confirmada.' };
+  }
+
+  const cached = actorAuthorizationCache.get(normalized);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.authorized
+      ? { ok: true }
+      : { ok: false, erro: 'Número não autorizado para ações administrativas.' };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('is_authorized_lara_phone', { p_phone: normalized });
+    const authorized = !error && data === true;
+    actorAuthorizationCache.set(normalized, {
+      authorized,
+      expiresAt: Date.now() + ACTOR_AUTH_CACHE_TTL_MS,
+    });
+    if (authorized) return { ok: true };
+    if (error) logWarn('Copilot', `Falha ao validar identidade administrativa: ${error.message}`);
+  } catch (error) {
+    logWarn('Copilot', `Falha ao validar identidade administrativa: ${error?.message || error}`);
+  }
+
+  return { ok: false, erro: 'Número não autorizado para ações administrativas.' };
+}
 
 /**
  * Retorna data no fuso de Brasília (America/Sao_Paulo) em YYYY-MM-DD
@@ -40,10 +99,11 @@ function normalizarDataAlvo(dataInformada) {
   if (limpo === 'hoje') return obterDataBrasilia(0);
   if (limpo === 'amanha' || limpo === 'amanhã') return obterDataBrasilia(1);
   if (limpo === 'depois_de_amanha' || limpo === 'depois de amanhã') return obterDataBrasilia(2);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(limpo)) return limpo;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(limpo) && dataYmdValida(limpo)) return limpo;
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(limpo)) {
     const [d, m, y] = limpo.split('/');
-    return `${y}-${m}-${d}`;
+    const converted = `${y}-${m}-${d}`;
+    if (dataYmdValida(converted)) return converted;
   }
   return obterDataBrasilia(0);
 }
@@ -87,7 +147,8 @@ export async function consultarAgendaProfissional({ data = 'hoje', actor_phone }
       .in('status', ['scheduled', 'confirmed'])
       .gte('starts_at', startIso)
       .lte('starts_at', endIso)
-      .order('starts_at', { ascending: true });
+      .order('starts_at', { ascending: true })
+      .limit(100);
 
     if (error) {
       logError('Copilot', `Erro ao consultar agenda: ${error.message}`);
@@ -137,13 +198,13 @@ export async function consultarAgendaProfissional({ data = 'hoje', actor_phone }
         horario: `${horaInicio} às ${horaFim}`,
         hora_inicio: horaInicio,
         hora_fim: horaFim,
-        cliente: ag.client_name,
-        telefone: ag.client_phone,
-        procedimento: ag.service?.name || (ag.client_name.includes('[Bloqueio]') ? 'Bloqueio de Horário' : 'Procedimento'),
-        valor: ag.service?.price_label || '',
-        status: ag.status,
-        origem: ag.origin === 'whatsapp_bot' ? 'WhatsApp' : 'Site',
-        observacoes: ag.notes || '',
+         cliente: textoSeguro(ag.client_name, 100, 'Cliente'),
+         telefone: textoSeguro(ag.client_phone, 30, 'Não informado'),
+         procedimento: textoSeguro(ag.service?.name || (String(ag.client_name || '').includes('[Bloqueio]') ? 'Bloqueio de Horário' : 'Procedimento'), 100, 'Procedimento'),
+         valor: textoSeguro(ag.service?.price_label, 80),
+         status: ['scheduled', 'confirmed'].includes(ag.status) ? ag.status : 'unknown',
+         origem: ag.origin === 'whatsapp_bot' ? 'WhatsApp' : 'Site',
+         observacoes: textoSeguro(ag.notes, 300),
       };
     });
 
@@ -214,10 +275,10 @@ export async function consultarProximoAtendimento({ actor_phone } = {}) {
       tem_proximo: true,
       agendamento: {
         appointment_id: data.id,
-        cliente: data.client_name,
-        telefone: data.client_phone,
-        procedimento: data.service?.name || 'Procedimento',
-        valor: data.service?.price_label || '',
+        cliente: textoSeguro(data.client_name, 100, 'Cliente'),
+        telefone: textoSeguro(data.client_phone, 30, 'Não informado'),
+        procedimento: textoSeguro(data.service?.name, 100, 'Procedimento'),
+        valor: textoSeguro(data.service?.price_label, 80),
         data: dataFmt,
         horario: horaFmt,
         minutos_restantes: diffMinutos,
@@ -237,6 +298,7 @@ export async function cancelarAgendamentoProfissional({
   appointment_id,
   nome_cliente,
   motivo = 'Cancelado a pedido da Lara',
+  confirmacao_expressa = false,
   actor_phone,
 } = {}) {
   try {
@@ -244,10 +306,19 @@ export async function cancelarAgendamentoProfissional({
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
 
+    if (confirmacao_expressa !== true) {
+      return {
+        ok: false,
+        confirmacao_necessaria: true,
+        mensagem: 'Confirma o cancelamento deste agendamento? Responda sim, cancelar ou não.',
+      };
+    }
+
     let targetId = appointment_id;
 
     if (!targetId && nome_cliente) {
-      const nomeLimpo = String(nome_cliente).trim();
+      const nomeLimpo = sanitizeSearchTerm(nome_cliente, 100);
+      if (!nomeLimpo) return { ok: false, erro: 'Nome ou telefone inválido para busca.' };
       const digitos = nomeLimpo.replace(/\D/g, '');
       const agoraMenos1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -257,11 +328,8 @@ export async function cancelarAgendamentoProfissional({
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', agoraMenos1Dia);
 
-      if (digitos.length >= 8) {
-        const last8 = digitos.slice(-8);
-        const p1 = last8.slice(0, 4);
-        const p2 = last8.slice(4);
-        query = query.or(`client_name.ilike.%${nomeLimpo}%,client_phone.ilike.%${last8}%,client_phone.ilike.%${p1}-${p2}%,client_phone.ilike.%${digitos}%`);
+      if (digitos.length >= 10 && digitos.length <= 15) {
+        query = query.in('client_phone', obterVariacoesTelefone(digitos));
       } else {
         query = query.ilike('client_name', `%${nomeLimpo}%`);
       }
@@ -304,14 +372,17 @@ export async function cancelarAgendamentoProfissional({
       return { ok: false, erro: 'Informe o ID ou o nome da cliente para cancelar.' };
     }
 
+    const targetIdText = String(targetId).trim();
+    if (!isUuid(targetIdText)) return { ok: false, erro: 'Agendamento inválido.' };
+    const motivoSeguro = textoSeguro(motivo, 300, 'Cancelado a pedido da Lara');
     const { data, error } = await supabase.rpc('cancel_appointment_as_owner', {
       p_actor_phone: actor_phone,
-      p_appointment_id: targetId,
-      p_reason: motivo,
+      p_appointment_id: targetIdText,
+      p_reason: motivoSeguro,
     });
 
     if (error) {
-      return { ok: false, erro: error.message || 'Erro ao cancelar agendamento.' };
+      return { ok: false, erro: 'Não foi possível cancelar o agendamento agora.' };
     }
 
     return {
@@ -321,7 +392,7 @@ export async function cancelarAgendamentoProfissional({
       dados: data,
     };
   } catch (err) {
-    return { ok: false, erro: err?.message || 'Erro ao processar cancelamento.' };
+    return { ok: false, erro: 'Erro ao processar cancelamento.' };
   }
 }
 
@@ -350,7 +421,8 @@ export async function cancelarVariosAgendamentosProfissional({
       .in('status', ['scheduled', 'confirmed'])
       .gte('starts_at', startIso)
       .lte('starts_at', endIso)
-      .order('starts_at', { ascending: true });
+      .order('starts_at', { ascending: true })
+      .limit(100);
 
     if (listErr) {
       return { ok: false, erro: 'Erro ao consultar agendamentos.' };
@@ -392,15 +464,17 @@ export async function cancelarVariosAgendamentosProfissional({
     }
 
     // Executa atomicamente via RPC segura
-    const ids = lista.map((i) => i.id);
+    const ids = agendamentosPendentes.map((i) => i.id).filter((id) => isUuid(id));
+    if (ids.length === 0) return { ok: false, erro: 'Nenhum agendamento válido para cancelar.' };
+    const motivoSeguro = textoSeguro(motivo, 300, 'Cancelamento geral pela Lara');
     const { data: resRpc, error: rpcErr } = await supabase.rpc('batch_cancel_appointments_as_owner', {
       p_actor_phone: actor_phone,
       p_appointment_ids: ids,
-      p_reason: motivo,
+      p_reason: motivoSeguro,
     });
 
     if (rpcErr) {
-      return { ok: false, erro: rpcErr.message || 'Erro ao cancelar agendamentos em lote.' };
+      return { ok: false, erro: 'Não foi possível cancelar os agendamentos em lote agora.' };
     }
 
     return {
@@ -433,7 +507,8 @@ export async function confirmarAgendamentoProfissional({
     let targetId = appointment_id;
 
     if (!targetId && nome_cliente) {
-      const nomeLimpo = String(nome_cliente).trim();
+      const nomeLimpo = sanitizeSearchTerm(nome_cliente, 100);
+      if (!nomeLimpo) return { ok: false, erro: 'Nome da cliente inválido para busca.' };
       const agoraMenos1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       const { data: matches } = await supabase
@@ -441,7 +516,7 @@ export async function confirmarAgendamentoProfissional({
         .select('id, starts_at, client_name, service:services(name)')
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', agoraMenos1Dia)
-        .ilike('client_name', `%${nomeLimpo}%`)
+        .ilike('client_name', `%${sanitizeSearchTerm(nomeLimpo, 100)}%`)
         .order('starts_at', { ascending: true });
 
       if (!matches || matches.length === 0) {
@@ -463,15 +538,18 @@ export async function confirmarAgendamentoProfissional({
     if (!targetId) {
       return { ok: false, erro: 'Informe o ID ou nome da cliente para confirmar.' };
     }
+    const targetIdText = String(targetId).trim();
+    if (!isUuid(targetIdText)) return { ok: false, erro: 'Agendamento inválido.' };
+    const observacoesSeguras = textoSeguro(observacoes, 500);
 
     const { data: resRpc, error } = await supabase.rpc('confirm_appointment_as_owner', {
       p_actor_phone: actor_phone,
-      p_appointment_id: targetId,
-      p_notes: observacoes,
+      p_appointment_id: targetIdText,
+      p_notes: observacoesSeguras,
     });
 
     if (error) {
-      return { ok: false, erro: error.message };
+      return { ok: false, erro: 'Não foi possível confirmar o agendamento agora.' };
     }
 
     return {
@@ -493,6 +571,7 @@ export async function remarcarAgendamentoProfissional({
   appointment_id,
   nome_cliente,
   novo_starts_at,
+  confirmacao_expressa = false,
   actor_phone,
 } = {}) {
   try {
@@ -500,10 +579,19 @@ export async function remarcarAgendamentoProfissional({
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
 
+    if (confirmacao_expressa !== true) {
+      return {
+        ok: false,
+        confirmacao_necessaria: true,
+        mensagem: 'Confirma a troca para o novo dia e horário? Responda sim, confirmar ou não.',
+      };
+    }
+
     let targetId = appointment_id;
 
     if (!targetId && nome_cliente) {
-      const nomeLimpo = String(nome_cliente).trim();
+      const nomeLimpo = sanitizeSearchTerm(nome_cliente, 100);
+      if (!nomeLimpo) return { ok: false, erro: 'Nome ou telefone inválido para busca.' };
       const digitos = nomeLimpo.replace(/\D/g, '');
       const agoraMenos1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -513,11 +601,8 @@ export async function remarcarAgendamentoProfissional({
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', agoraMenos1Dia);
 
-      if (digitos.length >= 8) {
-        const last8 = digitos.slice(-8);
-        const p1 = last8.slice(0, 4);
-        const p2 = last8.slice(4);
-        query = query.or(`client_name.ilike.%${nomeLimpo}%,client_phone.ilike.%${last8}%,client_phone.ilike.%${p1}-${p2}%,client_phone.ilike.%${digitos}%`);
+      if (digitos.length >= 10 && digitos.length <= 15) {
+        query = query.in('client_phone', obterVariacoesTelefone(digitos));
       } else {
         query = query.ilike('client_name', `%${nomeLimpo}%`);
       }
@@ -549,11 +634,17 @@ export async function remarcarAgendamentoProfissional({
     if (!targetId || !novo_starts_at) {
       return { ok: false, erro: 'Informe a cliente e o novo horário para remarcar.' };
     }
+    const targetIdText = String(targetId).trim();
+    if (!isUuid(targetIdText)) return { ok: false, erro: 'Agendamento inválido.' };
+    const startsAtText = String(novo_starts_at).trim();
+    if (startsAtText.length > 80 || Number.isNaN(new Date(startsAtText).getTime())) {
+      return { ok: false, erro: 'Novo horário inválido.' };
+    }
 
     const { data, error } = await supabase.rpc('reschedule_appointment_as_owner', {
       p_actor_phone: actor_phone,
-      p_appointment_id: targetId,
-      p_new_starts_at: novo_starts_at,
+      p_appointment_id: targetIdText,
+      p_new_starts_at: startsAtText,
     });
 
     if (error) {
@@ -564,7 +655,7 @@ export async function remarcarAgendamentoProfissional({
           erro: 'Atenção, Lara! Esse novo horário acabou de ser reservado ou já está ocupado. Por favor, escolha outro horário.',
         };
       }
-      return { ok: false, erro: error.message || 'Não foi possível reagendar no momento.' };
+      return { ok: false, erro: 'Não foi possível reagendar no momento.' };
     }
 
     return {
@@ -574,7 +665,7 @@ export async function remarcarAgendamentoProfissional({
       dados: data,
     };
   } catch (err) {
-    return { ok: false, erro: err?.message || 'Erro ao processar reagendamento.' };
+    return { ok: false, erro: 'Erro ao processar reagendamento.' };
   }
 }
 
@@ -595,18 +686,26 @@ export async function bloquearHorarioProfissional({
     }
 
     const dataYmd = normalizarDataAlvo(data);
-    const startIso = `${dataYmd}T${hora_inicio}:00-03:00`;
-    const endIso = `${dataYmd}T${hora_fim}:00-03:00`;
+    if (!horaValida(String(hora_inicio)) || !horaValida(String(hora_fim))) {
+      return { ok: false, erro: 'Informe horários válidos no formato HH:MM.' };
+    }
+    const horaInicioSeguro = String(hora_inicio).trim();
+    const horaFimSeguro = String(hora_fim).trim();
+    if (horaFimSeguro <= horaInicioSeguro) {
+      return { ok: false, erro: 'O horário final deve ser posterior ao inicial.' };
+    }
+    const startIso = `${dataYmd}T${horaInicioSeguro}:00-03:00`;
+    const endIso = `${dataYmd}T${horaFimSeguro}:00-03:00`;
 
     const { data: resRpc, error } = await supabase.rpc('block_schedule_as_owner', {
       p_actor_phone: actor_phone,
       p_starts_at: startIso,
       p_ends_at: endIso,
-      p_reason: motivo,
+      p_reason: textoSeguro(motivo, 300, 'Intervalo de almoço'),
     });
 
     if (error) {
-      return { ok: false, erro: error.message || 'Falha ao bloquear horário.' };
+      return { ok: false, erro: 'Falha ao bloquear horário.' };
     }
 
     return resRpc;
@@ -630,14 +729,16 @@ export async function desbloquearHorarioProfissional({
 
     const id = block_id || appointment_id;
     if (!id) return { ok: false, erro: 'ID do bloqueio não informado.' };
+    const idText = String(id).trim();
+    if (!isUuid(idText)) return { ok: false, erro: 'ID do bloqueio inválido.' };
 
     const { data, error } = await supabase.rpc('cancel_appointment_as_owner', {
       p_actor_phone: actor_phone,
-      p_appointment_id: id,
+      p_appointment_id: idText,
       p_reason: 'Desbloqueio pela Lara',
     });
 
-    if (error) return { ok: false, erro: error.message };
+    if (error) return { ok: false, erro: 'Não foi possível desbloquear o horário agora.' };
     return { ok: true, sucesso: true, mensagem: 'Horário desbloqueado com sucesso na agenda.' };
   } catch (err) {
     return { ok: false, erro: 'Erro ao desbloquear horário.' };
@@ -656,6 +757,9 @@ export async function consultarDisponibilidadeProfissional({
   try {
     if (!actor_phone) {
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
+    }
+    if (!['manha', 'tarde', 'todos'].includes(periodo_dia)) {
+      return { ok: false, erro: 'Período inválido. Use manhã, tarde ou todos.' };
     }
 
     const dataYmd = normalizarDataAlvo(data);
@@ -720,7 +824,8 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
     const termoBruto = busca || termo_busca || cliente_nome || nome || '';
     if (!termoBruto || !String(termoBruto).trim()) return { ok: false, erro: 'Informe o nome ou telefone da cliente.' };
 
-    const termo = String(termoBruto).trim();
+    const termo = sanitizeSearchTerm(termoBruto, 100);
+    if (!termo) return { ok: false, erro: 'Informe um nome ou telefone válido.' };
     const termoDigitos = termo.replace(/\D/g, '');
 
     // 1. Tenta buscar via RPC inteligente (normaliza números com e sem 9, formatos com pontuação e nomes)
@@ -728,7 +833,7 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('search_client_by_term', { p_term: termo });
       if (!rpcErr && rpcData && rpcData.length > 0) {
-        clientes = rpcData;
+        clientes = rpcData.slice(0, 10);
       }
     } catch (e) {
       // Fallback em caso de erro na RPC
@@ -740,11 +845,8 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
         .from('clients')
         .select('id, name, phone, email, notes, origin, created_at');
 
-      if (termoDigitos.length >= 8) {
-        const last8 = termoDigitos.slice(-8);
-        const p1 = last8.slice(0, 4);
-        const p2 = last8.slice(4);
-        query = query.or(`phone.ilike.%${last8}%,phone.ilike.%${p1}-${p2}%,phone.ilike.%${termoDigitos}%,name.ilike.%${termo}%`);
+      if (termoDigitos.length >= 10 && termoDigitos.length <= 15) {
+        query = query.in('phone', obterVariacoesTelefone(termoDigitos));
       } else {
         query = query.ilike('name', `%${termo}%`);
       }
@@ -770,18 +872,27 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
 
     const cliente = clientes[0];
 
-    // Busca agendamentos associados (por client_id, nome ou telefone)
-    const last8Digits = (cliente.phone || termoDigitos).replace(/\D/g, '').slice(-8);
-    const condicoesOr = [`client_id.eq.${cliente.id}`, `client_name.ilike.%${cliente.name}%`];
-    if (last8Digits) {
-      condicoesOr.push(`client_phone.ilike.%${last8Digits}%`);
+    // Busca agendamentos associados usando identificadores canônicos. Evita
+    // casar apenas os últimos dígitos, o que poderia misturar clientes.
+    const condicoesOr = [];
+    const clienteIdText = String(cliente.id || '').trim();
+    if (isUuid(clienteIdText)) condicoesOr.push(`client_id.eq.${clienteIdText}`);
+    const nomeClienteSeguro = sanitizeSearchTerm(cliente.name, 100);
+    if (nomeClienteSeguro) condicoesOr.push(`client_name.ilike.*${nomeClienteSeguro}*`);
+    const telefoneCliente = String(cliente.phone || '').replace(/\D/g, '');
+    for (const variant of obterVariacoesTelefone(telefoneCliente || termoDigitos)) {
+      condicoesOr.push(`client_phone.eq.${variant}`);
+    }
+    if (condicoesOr.length === 0) {
+      return { ok: false, erro: 'Não foi possível identificar os agendamentos dessa cliente.' };
     }
 
     const { data: agendamentos } = await supabase
       .from('appointments')
       .select('id, starts_at, status, notes, service:services(name, price_label)')
       .or(condicoesOr.join(','))
-      .order('starts_at', { ascending: false });
+      .order('starts_at', { ascending: false })
+      .limit(100);
 
     const concluidos = (agendamentos || []).filter((a) => a.status === 'completed');
     const futuros = (agendamentos || []).filter((a) => ['scheduled', 'confirmed'].includes(a.status) && new Date(a.starts_at) >= new Date());
@@ -849,7 +960,7 @@ export async function listarClientesInativasProfissional({ dias_sem_vir = 60, ac
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
 
-    const dias = Number(dias_sem_vir) || 60;
+    const dias = Math.min(Math.max(Number(dias_sem_vir) || 60, 1), 3650);
     const dataLimite = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
     const agoraIso = new Date().toISOString();
 
@@ -858,7 +969,8 @@ export async function listarClientesInativasProfissional({ dias_sem_vir = 60, ac
       .select('client_id, client_name, client_phone, starts_at, service:services(name)')
       .eq('status', 'completed')
       .lte('starts_at', dataLimite)
-      .order('starts_at', { ascending: false });
+      .order('starts_at', { ascending: false })
+      .limit(500);
 
     if (error || !ultimosAgs) {
       return { ok: false, erro: 'Erro ao buscar clientes inativas.' };
@@ -868,7 +980,8 @@ export async function listarClientesInativasProfissional({ dias_sem_vir = 60, ac
       .from('appointments')
       .select('client_id')
       .in('status', ['scheduled', 'confirmed'])
-      .gte('starts_at', agoraIso);
+      .gte('starts_at', agoraIso)
+      .limit(1000);
 
     const idsComFuturo = new Set((futuros || []).map((f) => f.client_id).filter(Boolean));
     const vistas = new Set();
@@ -885,9 +998,9 @@ export async function listarClientesInativasProfissional({ dias_sem_vir = 60, ac
       const dataFmt = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
 
       resultado.push({
-        cliente: ag.client_name,
-        telefone: ag.client_phone,
-        ultimo_servico: ag.service?.name || 'Procedimento',
+        cliente: textoSeguro(ag.client_name, 100, 'Cliente'),
+        telefone: textoSeguro(ag.client_phone, 30, 'Não informado'),
+        ultimo_servico: textoSeguro(ag.service?.name, 100, 'Procedimento'),
         ultima_visita: dataFmt,
         dias_sem_vir: diasAtras,
       });
@@ -917,6 +1030,9 @@ export async function consultarResumoFinanceiroProfissional({ periodo = 'semana'
   try {
     if (!actor_phone) {
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
+    }
+    if (!['hoje', 'amanha', 'mes', 'semana'].includes(periodo)) {
+      return { ok: false, erro: 'Período financeiro inválido.' };
     }
 
     let inicioIso, fimIso, labelPeriodo;
@@ -1023,14 +1139,18 @@ export async function enviarMensagemParaCliente({ sock, telefone_cliente, mensag
     }
     if (!sock) return { ok: false, erro: 'Conexão de WhatsApp indisponível.' };
     if (!telefone_cliente || !mensagem) return { ok: false, erro: 'Telefone e mensagem são obrigatórios.' };
+    const telefoneClienteSeguro = normalizarTelefoneBR(telefone_cliente);
+    if (!telefoneClienteSeguro) return { ok: false, erro: 'Telefone do cliente inválido para envio no WhatsApp.' };
+    const mensagemSegura = textoSeguro(mensagem, 1500);
+    if (!mensagemSegura) return { ok: false, erro: 'Mensagem vazia para envio.' };
 
-    const targetJid = await resolverJidWhatsApp(sock, telefone_cliente);
+    const targetJid = await resolverJidWhatsApp(sock, telefoneClienteSeguro);
     if (!targetJid) return { ok: false, erro: 'Telefone do cliente inválido para envio no WhatsApp.' };
 
-    await sendHumanizedMessage(sock, targetJid, mensagem, { senderType: 'system' });
+    await sendHumanizedMessage(sock, targetJid, mensagemSegura, { senderType: 'system' });
     return { ok: true, sucesso: true, mensagem: 'Mensagem enviada com sucesso para a cliente!' };
   } catch (err) {
-    return { ok: false, erro: err?.message || 'Falha ao enviar mensagem para cliente.' };
+    return { ok: false, erro: 'Falha ao enviar mensagem para cliente.' };
   }
 }
 
@@ -1062,13 +1182,21 @@ export async function configurarNotificacoesProfissional({
     }
     if (novo_numero_lara) {
       const clean = String(novo_numero_lara).replace(/\D/g, '');
+      if (clean.length < 10 || clean.length > 15 || !normalizarTelefoneBR(clean)) {
+        return { ok: false, erro: 'Novo número da Lara inválido.' };
+      }
       updateSession.lara_phone = clean;
       updateSettings.lara_phone = clean;
     }
 
     if (Object.keys(updateSession).length > 0) {
-      await supabase.from('whatsapp_bot_session').update(updateSession).eq('id', 'default');
-      await supabase.from('site_settings').update(updateSettings).eq('id', 'global');
+      const [{ error: sessionError }, { error: settingsError }] = await Promise.all([
+        supabase.from('whatsapp_bot_session').update(updateSession).eq('id', 'default'),
+        supabase.from('site_settings').update(updateSettings).eq('id', 'global'),
+      ]);
+      if (sessionError || settingsError) {
+        return { ok: false, erro: 'Não foi possível salvar as preferências agora.' };
+      }
       invalidarCacheConfiguracoes();
     }
 
@@ -1098,32 +1226,49 @@ export async function configurarRotinaAutomaticaProfissional({
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
 
+    const tiposPermitidos = new Set(['daily_agenda_briefing', 'financial_report', 'inactive_clients_alert']);
+    if (typeof tipo !== 'string' || !tiposPermitidos.has(tipo)) {
+      return { ok: false, erro: 'Tipo de rotina inválido.' };
+    }
+    if (!horaValida(String(horario))) {
+      return { ok: false, erro: 'Informe um horário válido no formato HH:MM.' };
+    }
+    const diasSeguros = Array.isArray(dias_semana)
+      ? [...new Set(dias_semana.map(Number).filter((dia) => Number.isInteger(dia) && dia >= 0 && dia <= 6))].slice(0, 7)
+      : [];
+    if (diasSeguros.length === 0) {
+      return { ok: false, erro: 'Informe ao menos um dia válido para a rotina.' };
+    }
+    const tituloSeguro = textoSeguro(titulo, 100, 'Rotina da agenda');
+    const actorPhoneSeguro = normalizarTelefoneBR(actor_phone);
+    if (!actorPhoneSeguro) return { ok: false, erro: 'Identidade da profissional não confirmada.' };
+
     const { data, error } = await supabase
       .from('lara_scheduled_routines')
       .upsert(
         {
-          actor_phone,
-          title: titulo,
+          actor_phone: actorPhoneSeguro,
+          title: tituloSeguro,
           routine_type: tipo,
-          time_of_day: horario,
-          days_of_week: dias_semana,
+          time_of_day: String(horario).trim(),
+          days_of_week: diasSeguros,
           active: true,
           created_via: 'whatsapp',
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'routine_type' }
       )
-      .select()
+      .select('id, actor_phone, title, routine_type, time_of_day, days_of_week, active, last_run_at, created_via, updated_at')
       .single();
 
     if (error) {
-      return { ok: false, erro: error.message };
+      return { ok: false, erro: 'Não foi possível configurar a rotina agora.' };
     }
 
     return {
       ok: true,
       sucesso: true,
-      mensagem: `Rotina configurada com sucesso! Todo dia às ${horario} você receberá o ${titulo}.`,
+      mensagem: `Rotina configurada com sucesso! Todo dia às ${String(horario).trim()} você receberá o ${tituloSeguro}.`,
       rotina: data,
     };
   } catch (err) {
@@ -1139,14 +1284,17 @@ export async function listarRotinasAutomaticasProfissional({ actor_phone } = {})
     if (!actor_phone) {
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
+    const actorPhoneSeguro = normalizarTelefoneBR(actor_phone);
+    if (!actorPhoneSeguro) return { ok: false, erro: 'Identidade da profissional não confirmada.' };
 
     const { data, error } = await supabase
       .from('lara_scheduled_routines')
-      .select('*')
+      .select('id, actor_phone, title, routine_type, time_of_day, days_of_week, active, last_run_at, created_via, updated_at')
       .eq('active', true)
+      .eq('actor_phone', actorPhoneSeguro)
       .order('time_of_day', { ascending: true });
 
-    if (error) return { ok: false, erro: error.message };
+    if (error) return { ok: false, erro: 'Não foi possível listar as rotinas agora.' };
 
     return {
       ok: true,
@@ -1166,13 +1314,20 @@ export async function desativarRotinaAutomaticaProfissional({ tipo = 'daily_agen
     if (!actor_phone) {
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
+    const tiposPermitidos = new Set(['daily_agenda_briefing', 'financial_report', 'inactive_clients_alert']);
+    if (typeof tipo !== 'string' || !tiposPermitidos.has(tipo)) {
+      return { ok: false, erro: 'Tipo de rotina inválido.' };
+    }
+    const actorPhoneSeguro = normalizarTelefoneBR(actor_phone);
+    if (!actorPhoneSeguro) return { ok: false, erro: 'Identidade da profissional não confirmada.' };
 
     const { error } = await supabase
       .from('lara_scheduled_routines')
       .update({ active: false, updated_at: new Date().toISOString() })
-      .eq('routine_type', tipo);
+      .eq('routine_type', tipo)
+      .eq('actor_phone', actorPhoneSeguro);
 
-    if (error) return { ok: false, erro: error.message };
+    if (error) return { ok: false, erro: 'Não foi possível desativar a rotina agora.' };
     return { ok: true, sucesso: true, mensagem: 'Rotina automática desativada com sucesso.' };
   } catch (err) {
     return { ok: false, erro: 'Erro ao desativar rotina.' };
@@ -1259,7 +1414,7 @@ export const ferramentasProfissionalSchema = [
     type: 'function',
     function: {
       name: 'cancelarAgendamentoProfissional',
-      description: 'Cancela um agendamento específico de uma cliente no sistema e libera o horário. Se houver mais de uma cliente com o mesmo nome, o sistema retorna opções para desambiguação.',
+      description: 'Cancela um agendamento específico de uma cliente no sistema e libera o horário. Primeiro consulte/desambigue, peça confirmação expressa da Lara e só então envie confirmacao_expressa=true.',
       parameters: {
         type: 'object',
         properties: {
@@ -1274,6 +1429,10 @@ export const ferramentasProfissionalSchema = [
           motivo: {
             type: 'string',
             description: 'Motivo do cancelamento informado pela Lara.',
+          },
+          confirmacao_expressa: {
+            type: 'boolean',
+            description: 'Defina como true somente depois de a Lara confirmar claramente o cancelamento.',
           },
         },
       },
@@ -1308,7 +1467,7 @@ export const ferramentasProfissionalSchema = [
     type: 'function',
     function: {
       name: 'remarcarAgendamentoProfissional',
-      description: 'Reagenda o atendimento de uma cliente para um novo horário disponível com lock de concorrência e revalidação atômica no banco.',
+      description: 'Reagenda o atendimento de uma cliente para um novo horário disponível com lock de concorrência e revalidação atômica no banco. Peça confirmação expressa antes de executar.',
       parameters: {
         type: 'object',
         properties: {
@@ -1323,6 +1482,10 @@ export const ferramentasProfissionalSchema = [
           novo_starts_at: {
             type: 'string',
             description: 'Novo dia e horário de início no formato ISO (ex: "2026-09-12T15:00:00-03:00").',
+          },
+          confirmacao_expressa: {
+            type: 'boolean',
+            description: 'Defina como true somente depois de a Lara confirmar expressamente a troca.',
           },
         },
         required: ['novo_starts_at'],
@@ -1514,7 +1677,10 @@ export async function executarFerramentaProfissional(nome, args = {}, context = 
     };
   }
 
-  const baseArgs = { ...args, actor_phone: actorPhone };
+  const authorization = await autorizarAtor(actorPhone);
+  if (!authorization.ok) return authorization;
+
+  const baseArgs = { ...args, actor_phone: normalizarTelefoneBR(actorPhone) };
 
   switch (nome) {
     case 'consultarAgendaProfissional':

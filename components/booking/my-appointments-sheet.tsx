@@ -1,6 +1,7 @@
 'use client';
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Side sheet keeps its existing visual structure. */
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, type SyntheticEvent } from 'react';
 import { X, Search, CalendarDays, Clock3, Phone, AlertCircle, Loader2, MessageCircle } from 'lucide-react';
 import { formatBrPhone } from './client-form';
 import { whatsappUrl } from '@/lib/studio';
@@ -40,14 +41,7 @@ export function MyAppointmentsSheet({
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (isOpen && initialPhone && initialPhone.replace(/\D/g, '').length >= 8) {
-      setPhone(initialPhone);
-      fetchAppointments(initialPhone);
-    }
-  }, [isOpen, initialPhone]);
-
-  async function fetchAppointments(searchPhone: string) {
+  const fetchAppointments = useCallback(async (searchPhone: string) => {
     const clean = searchPhone.replace(/\D/g, '');
     if (clean.length < 8) {
       setError('Informe seu número de WhatsApp.');
@@ -71,18 +65,39 @@ export function MyAppointmentsSheet({
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || !initialPhone || initialPhone.replace(/\D/g, '').length < 8) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setPhone(initialPhone);
+      void fetchAppointments(initialPhone);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, initialPhone, fetchAppointments]);
+
+  function handleSearch(e: SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    void fetchAppointments(phone);
   }
 
-  function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    fetchAppointments(phone);
-  }
+  const whatsappDestination = whatsappUrl('Olá, Lara! Gostaria de uma informação sobre meu agendamento.');
+  const whatsappExternal = whatsappDestination.startsWith('https://wa.me/');
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-end bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md h-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] border-l border-[#d6d6cf] p-6 md:p-8 overflow-y-auto flex flex-col justify-between shadow-2xl">
+      <div
+        className="relative w-full max-w-md h-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] border-l border-[#d6d6cf] p-6 md:p-8 overflow-y-auto flex flex-col justify-between shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="my-appointments-title"
+      >
         <div>
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-[#d6d6cf]">
@@ -90,7 +105,7 @@ export function MyAppointmentsSheet({
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ember)]">
                 Área da Cliente
               </span>
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-obsidian)] mt-0.5">
+              <h3 id="my-appointments-title" className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-obsidian)] mt-0.5">
                 Meus Agendamentos
               </h3>
             </div>
@@ -106,13 +121,14 @@ export function MyAppointmentsSheet({
 
           {/* Search by WhatsApp */}
           <form onSubmit={handleSearch} className="my-6 space-y-2">
-            <label className="block text-xs font-medium text-[#595952]">
+            <label htmlFor="my-appointments-phone" className="block text-xs font-medium text-[#595952]">
               Digite seu WhatsApp para localizar seus horários:
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8c8c84]" />
                 <input
+                  id="my-appointments-phone"
                   type="tel"
                   required
                   value={phone}
@@ -124,13 +140,14 @@ export function MyAppointmentsSheet({
               <button
                 type="submit"
                 disabled={loading}
+                aria-busy={loading}
                 className="px-5 py-2.5 rounded-full text-white font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-sm hover:opacity-90 active:scale-95 transition-all bg-[var(--color-obsidian)]"
               >
                 {loading ? <Loader2 size={13} className="animate-spin text-white" /> : <Search size={13} className="text-white" />}
                 <span className="text-white">Buscar</span>
               </button>
             </div>
-            {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
+            {error && <p className="text-xs text-rose-600 mt-1" role="alert">{error}</p>}
           </form>
 
           {/* Results */}
@@ -210,9 +227,9 @@ export function MyAppointmentsSheet({
             Deseja reagendar ou tirar dúvidas?
           </p>
           <a
-            href={whatsappUrl('Olá, Lara! Gostaria de uma informação sobre meu agendamento.')}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={whatsappDestination}
+            target={whatsappExternal ? '_blank' : undefined}
+            rel={whatsappExternal ? 'noopener noreferrer' : undefined}
             className="w-full py-3 px-4 rounded-full bg-white hover:bg-[#e2e2df] border border-[#d6d6cf] text-[var(--color-obsidian)] text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             <MessageCircle size={15} className="text-[#25D366]" />

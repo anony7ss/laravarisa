@@ -4,8 +4,14 @@
 
 import { registrarMensagemChat } from './web-sync.js';
 import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
+import { isSafeWhatsAppJid, isSupportedMediaBuffer } from './security-utils.js';
 
 const queues = new Map();
+const MAX_PENDING_PER_JID = 16;
+const MAX_ACTIVE_JIDS = 2000;
+const MAX_TEXT_CHARS = 6000;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 16 * 1024 * 1024;
 
 /**
  * Função utilitária para aguardar ms
@@ -20,19 +26,41 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * @returns {Promise<any>}
  */
 function enqueue(jid, task) {
-  const previous = queues.get(jid) || Promise.resolve();
+  if (!isSafeWhatsAppJid(jid)) {
+    return Promise.reject(new Error('Destinatário WhatsApp inválido'));
+  }
+
+  let state = queues.get(jid);
+  if (!state) {
+    if (queues.size >= MAX_ACTIVE_JIDS) {
+      return Promise.reject(new Error('Fila temporariamente cheia'));
+    }
+    state = { tail: Promise.resolve(), pending: 0 };
+    queues.set(jid, state);
+  }
+
+  if (state.pending >= MAX_PENDING_PER_JID) {
+    return Promise.reject(new Error('Muitas mensagens pendentes para este destinatário'));
+  }
+
+  const previous = state.tail;
+  state.pending += 1;
   const current = previous
     .catch((err) => {
       console.error(`[queue] Erro na execução anterior para ${jid}:`, err);
     })
     .then(task);
 
-  queues.set(jid, current);
-  current.finally(() => {
-    if (queues.get(jid) === current) {
+  const cleanup = () => {
+    state.pending = Math.max(0, state.pending - 1);
+    if (state.pending === 0 && queues.get(jid) === state) {
       queues.delete(jid);
     }
-  });
+  };
+  // Não crie uma Promise rejeitada órfã com .finally(): em caso de falha no
+  // envio, o cleanup precisa acontecer sem gerar outro unhandledRejection.
+  current.then(cleanup, cleanup);
+  state.tail = current;
 
   return current;
 }
@@ -45,12 +73,12 @@ function enqueue(jid, task) {
  * @returns {Promise<any>}
  */
 export async function sendHumanizedMessage(sock, jid, text, options = {}) {
-  if (!sock || !jid || !text) {
+  if (!sock || !jid || typeof text !== 'string' || !text.trim()) {
     throw new Error('Parâmetros inválidos: sock, jid e text são obrigatórios');
   }
 
   // Sanitiza quebras de linha, asteriscos bugados e reduz emojis em pelo menos 80%
-  let formattedText = sanitizarMensagemWhatsApp(text, {
+  let formattedText = sanitizarMensagemWhatsApp(text.slice(0, MAX_TEXT_CHARS), {
     isProfissional: options.isProfissional || Boolean(options.senderType === 'bot_copilot'),
     maxEmojis: options.maxEmojis ?? 1,
   });
@@ -105,9 +133,19 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
  * @returns {Promise<any>}
  */
 export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
-  if (!sock || !jid || !audioBuffer) {
+  if (!sock || !jid || !Buffer.isBuffer(audioBuffer) || audioBuffer.length === 0) {
     throw new Error('Parâmetros inválidos: sock, jid e audioBuffer são obrigatórios');
   }
+  if (audioBuffer.length > MAX_AUDIO_BYTES) {
+    throw new Error('Áudio excede o limite permitido');
+  }
+  if (!isSupportedMediaBuffer(audioBuffer, 'audio')) {
+    throw new Error('Formato de áudio não autorizado');
+  }
+  const voiceMime = typeof options.mimetype === 'string' &&
+    /^audio\/(?:ogg|opus|mpeg|mp4|x-m4a|webm)(?:;|$)/i.test(options.mimetype)
+    ? options.mimetype.slice(0, 80)
+    : 'audio/ogg; codecs=opus';
 
   return enqueue(jid, async () => {
     if (!options.skipRecording && !options.immediate) {
@@ -130,13 +168,11 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
     // 3. Envia a nota de voz como PTT (Push To Talk - microfone do WhatsApp)
     const sent = await sock.sendMessage(jid, {
       audio: audioBuffer,
-      mimetype: options.mimetype || 'audio/ogg; codecs=opus',
+      mimetype: voiceMime,
       ptt: true,
     });
 
     if (!options.skipChatLog) {
-      const mime = options.mimetype || 'audio/ogg; codecs=opus';
-      const audioDataUrl = audioBuffer ? `data:${mime};base64,${audioBuffer.toString('base64')}` : null;
       registrarMensagemChat({
         phone: jid,
         remoteJid: jid,
@@ -145,7 +181,65 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
         senderType: 'bot_ai',
         content: options.transcription || '🎤 [Nota de voz enviada]',
         mediaType: 'audio',
-        mediaUrl: audioDataUrl,
+      });
+    }
+
+    return sent;
+  });
+}
+
+/** Envia uma mídia aprovada pelo painel e registra o evento no chat. */
+export async function sendHumanizedMedia(sock, jid, mediaBuffer, options = {}) {
+  if (!sock || !jid || !mediaBuffer || !Buffer.isBuffer(mediaBuffer)) {
+    throw new Error('Parâmetros inválidos para envio de mídia');
+  }
+
+  const mediaType = options.mediaType;
+  if (mediaType !== 'audio' && mediaType !== 'image') {
+    throw new Error('Tipo de mídia não autorizado');
+  }
+  const maxBytes = mediaType === 'audio' ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
+  if (mediaBuffer.length === 0 || mediaBuffer.length > maxBytes) {
+    throw new Error('Mídia excede o limite permitido');
+  }
+  if (!isSupportedMediaBuffer(mediaBuffer, mediaType)) {
+    throw new Error('Conteúdo de mídia inválido');
+  }
+  const defaultMime = mediaType === 'audio' ? 'audio/ogg; codecs=opus' : 'image/webp';
+  const mediaMimePattern = mediaType === 'audio'
+    ? /^audio\/(?:ogg|opus|mpeg|mp4|x-m4a|webm)(?:;|$)/i
+    : /^image\/(?:webp|png|jpeg|jpg|gif)(?:;|$)/i;
+  const mediaMime = typeof options.mimetype === 'string' && mediaMimePattern.test(options.mimetype)
+    ? options.mimetype.slice(0, 80)
+    : defaultMime;
+  const caption = options.caption
+    ? sanitizarMensagemWhatsApp(String(options.caption).slice(0, MAX_TEXT_CHARS), { maxEmojis: 1 })
+    : '';
+
+  return enqueue(jid, async () => {
+    if (!options.immediate && typeof sock.sendPresenceUpdate === 'function') {
+      try {
+        sock.sendPresenceUpdate('composing', jid).catch(() => {});
+        await sleep(120);
+        sock.sendPresenceUpdate('paused', jid).catch(() => {});
+      } catch {}
+    }
+
+    const payload = mediaType === 'audio'
+      ? { audio: mediaBuffer, mimetype: mediaMime, ptt: true }
+      : { image: mediaBuffer, mimetype: mediaMime, ...(caption ? { caption } : {}) };
+    const sent = await sock.sendMessage(jid, payload);
+
+    if (!options.skipChatLog) {
+      registrarMensagemChat({
+        phone: jid,
+        remoteJid: jid,
+        senderName: 'Lara Varisa',
+        fromMe: true,
+        senderType: options.senderType || 'admin_manual',
+        content: caption || (mediaType === 'audio' ? '🎤 [Áudio enviado]' : '📷 [Imagem enviada]'),
+        mediaType,
+        mediaUrl: options.mediaUrl || null,
       });
     }
 
@@ -161,8 +255,9 @@ export async function sendHumanizedVoice(sock, jid, audioBuffer, options = {}) {
  */
 export async function reactToMessage(sock, key, emoji = '💕') {
   if (!sock || !key || !key.id || !key.remoteJid) return;
+  if (!isSafeWhatsAppJid(String(key.remoteJid))) return;
   try {
-    await sock.sendMessage(key.remoteJid, {
+    await sock.sendMessage(String(key.remoteJid).trim(), {
       react: {
         text: emoji,
         key,
@@ -176,6 +271,6 @@ export async function reactToMessage(sock, key, emoji = '💕') {
 export default {
   sendHumanizedMessage,
   sendHumanizedVoice,
+  sendHumanizedMedia,
   reactToMessage,
 };
-

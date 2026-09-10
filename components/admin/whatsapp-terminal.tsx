@@ -12,7 +12,6 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { WhatsAppSession } from './whatsapp-manager';
 
 export interface WhatsAppLogItem {
@@ -61,43 +60,12 @@ export function WhatsAppTerminal({ session }: { session: WhatsAppSession }) {
   useEffect(() => {
     fetchLogs(false);
 
-    // Polling de contingência a cada 3.5s para streaming ininterrupto mesmo com queda de Realtime
+    // Polling frequente mantém o terminal atualizado sem acesso direto ao banco.
     const pollTimer = setInterval(() => {
       fetchLogs(true);
     }, 3500);
 
     return () => clearInterval(pollTimer);
-  }, []);
-
-  // Realtime
-  useEffect(() => {
-    const supabase = createBrowserSupabase();
-    if (!supabase) return;
-
-    const channel = supabase
-      .channel('whatsapp_terminal_live_logs')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'whatsapp_logs',
-        },
-        (payload) => {
-          const newLog = payload.new as WhatsAppLogItem;
-          if (newLog) {
-            setLogs((prev) => {
-              if (prev.some((l) => l.id === newLog.id)) return prev;
-              return [...prev.slice(-250), newLog];
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   // Auto-scroll

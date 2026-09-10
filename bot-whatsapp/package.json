@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "test": "node test-guardrails.js"
+    "test": "node test-guardrails.js",
+    "test:integration": "node test-fallback-and-site-sync.js && node test-lifecycle.js"
   },
   "dependencies": {
     "@andresaya/edge-tts": "^1.8.0",

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
 import { getSessionClientName, setSessionClientName } from './memory.js';
+import { isSafeWhatsAppJid, sanitizeSearchTerm, sanitizeUntrustedText } from './security-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,15 @@ const supabase = (config.supabaseUrl && config.supabaseServiceRoleKey)
 const lidToPhoneMap = new Map();
 const phoneToLidMap = new Map();
 const knownNamesMap = new Map();
+const MAX_PHONE_CACHE_ENTRIES = 5000;
+
+function setBounded(map, key, value) {
+  if (!key || value == null) return;
+  map.set(key, value);
+  while (map.size > MAX_PHONE_CACHE_ENTRIES) {
+    map.delete(map.keys().next().value);
+  }
+}
 
 /**
  * Extrai APENAS o primeiro nome do cliente, limpando emojis, sobrenomes e caracteres especiais.
@@ -65,15 +75,15 @@ export function extrairPrimeiroNome(nome) {
 export async function resolverNomeCliente(jid, phone, rawPushName = '') {
   const cleanJid = String(jid || '').split('@')[0].replace(/\D/g, '');
   const cleanPhone = String(phone || '').replace(/\D/g, '');
-  const primeiroNome = extrairPrimeiroNome(rawPushName);
+  const primeiroNome = extrairPrimeiroNome(sanitizeUntrustedText(rawPushName, 120));
 
   // 1. Se o WhatsApp enviou um nome real válido
   if (primeiroNome && primeiroNome !== 'Cliente' && primeiroNome !== 'Contato') {
     if (cleanJid) {
-      knownNamesMap.set(cleanJid, primeiroNome);
+      setBounded(knownNamesMap, cleanJid, primeiroNome);
       setSessionClientName(jid, primeiroNome);
     }
-    if (cleanPhone) knownNamesMap.set(cleanPhone, primeiroNome);
+    if (cleanPhone) setBounded(knownNamesMap, cleanPhone, primeiroNome);
     return primeiroNome;
   }
 
@@ -99,7 +109,7 @@ export async function resolverNomeCliente(jid, phone, rawPushName = '') {
   if (supabase) {
     try {
       // 4a. Busca na tabela whatsapp_lid_mapping
-      if (cleanJid) {
+      if (cleanJid && isLid(jid)) {
         const { data: lidRow } = await supabase
           .from('whatsapp_lid_mapping')
           .select('name')
@@ -108,8 +118,8 @@ export async function resolverNomeCliente(jid, phone, rawPushName = '') {
 
         const nomeLid = extrairPrimeiroNome(lidRow?.name);
         if (nomeLid && nomeLid !== 'Cliente' && nomeLid !== 'Contato') {
-          knownNamesMap.set(cleanJid, nomeLid);
-          if (cleanPhone) knownNamesMap.set(cleanPhone, nomeLid);
+          setBounded(knownNamesMap, cleanJid, nomeLid);
+          if (cleanPhone) setBounded(knownNamesMap, cleanPhone, nomeLid);
           setSessionClientName(jid, nomeLid);
           return nomeLid;
         }
@@ -117,42 +127,40 @@ export async function resolverNomeCliente(jid, phone, rawPushName = '') {
 
       // 4b. Busca na tabela clients
       if (cleanPhone) {
-        const phoneVariants = [cleanPhone];
-        if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
-          phoneVariants.push(cleanPhone.slice(2));
-        } else if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
-          phoneVariants.push(`55${cleanPhone}`);
-        }
+        const phoneVariants = obterVariacoesTelefone(cleanPhone);
+        if (phoneVariants.length === 0) return 'Cliente';
 
-        const { data: clientRow } = await supabase
-          .from('clients')
-          .select('name')
-          .in('phone', phoneVariants)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // As duas fontes são independentes; consultar em paralelo reduz a
+        // latência da primeira mensagem de um contato sem nome visível.
+        const [{ data: clientRow }, { data: aptRow }] = await Promise.all([
+          supabase
+            .from('clients')
+            .select('name')
+            .in('phone', phoneVariants)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from('appointments')
+            .select('client_name')
+            .in('client_phone', phoneVariants)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
         const nomeClient = extrairPrimeiroNome(clientRow?.name);
         if (nomeClient && nomeClient !== 'Cliente' && nomeClient !== 'Contato') {
-          knownNamesMap.set(cleanPhone, nomeClient);
-          if (cleanJid) knownNamesMap.set(cleanJid, nomeClient);
+          setBounded(knownNamesMap, cleanPhone, nomeClient);
+          if (cleanJid) setBounded(knownNamesMap, cleanJid, nomeClient);
           setSessionClientName(jid, nomeClient);
           return nomeClient;
         }
 
-        // 4c. Busca na tabela appointments
-        const { data: aptRow } = await supabase
-          .from('appointments')
-          .select('client_name')
-          .in('client_phone', phoneVariants)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
         const nomeApt = extrairPrimeiroNome(aptRow?.client_name);
         if (nomeApt && nomeApt !== 'Cliente' && nomeApt !== 'Contato') {
-          knownNamesMap.set(cleanPhone, nomeApt);
-          if (cleanJid) knownNamesMap.set(cleanJid, nomeApt);
+          setBounded(knownNamesMap, cleanPhone, nomeApt);
+          if (cleanJid) setBounded(knownNamesMap, cleanJid, nomeApt);
           setSessionClientName(jid, nomeApt);
           return nomeApt;
         }
@@ -165,7 +173,7 @@ export async function resolverNomeCliente(jid, phone, rawPushName = '') {
 
 export function obterVariacoesTelefone(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
-  if (!digits || digits.length < 8) return digits ? [digits] : [];
+  if (!digits || digits.length < 8 || digits.length > 15) return [];
 
   const variants = new Set();
   variants.add(digits);
@@ -192,6 +200,20 @@ export function obterVariacoesTelefone(phone) {
 }
 
 /**
+ * Compara telefones sem usar sufixos arbitrários. As únicas equivalências
+ * aceitas são as variantes brasileiras canônicas (com/sem DDI 55 e o nono
+ * dígito), sempre preservando o DDD completo.
+ */
+export function telefonesCorrespondemBR(first, second) {
+  const firstDigits = String(first || '').replace(/\D/g, '');
+  const secondDigits = String(second || '').replace(/\D/g, '');
+  if (!firstDigits || !secondDigits) return false;
+  const firstVariants = obterVariacoesTelefone(firstDigits);
+  const secondVariants = new Set(obterVariacoesTelefone(secondDigits));
+  return firstVariants.length > 0 && firstVariants.some((value) => secondVariants.has(value));
+}
+
+/**
  * Carrega todos os mapeamentos existentes no banco de dados Supabase na inicialização
  */
 export async function carregarMapeamentosBanco() {
@@ -204,11 +226,11 @@ export async function carregarMapeamentosBanco() {
       for (const row of data) {
         const cleanL = String(row.lid || '').replace(/\D/g, '');
         const cleanP = String(row.phone || '').replace(/\D/g, '');
-        if (cleanL && cleanP) {
-          lidToPhoneMap.set(cleanL, cleanP);
+        if (/^\d{6,20}$/.test(cleanL) && obterVariacoesTelefone(cleanP).length > 0) {
+          setBounded(lidToPhoneMap, cleanL, cleanP);
           const vars = obterVariacoesTelefone(cleanP);
           for (const v of vars) {
-            phoneToLidMap.set(v, cleanL);
+            setBounded(phoneToLidMap, v, cleanL);
           }
         }
       }
@@ -240,6 +262,7 @@ export async function isClienteComprovado(phone) {
     const clean = String(phone).replace(/\D/g, '');
     if (!clean) return { comprovado: false };
     const variants = obterVariacoesTelefone(clean);
+    if (variants.length === 0) return { comprovado: false };
 
     // 1. Verifica na tabela clients
     const { data: cData } = await supabase
@@ -265,16 +288,16 @@ export async function isClienteComprovado(phone) {
       return { comprovado: true, name: aData.client_name || null };
     }
 
-    // 3. Verifica na tabela anamnese
+    // 3. Verifica na ficha de anamnese
     const { data: anData } = await supabase
-      .from('anamnese')
-      .select('id, nome')
-      .in('whatsapp', variants)
+      .from('anamnesis')
+      .select('id, client_name')
+      .in('client_phone', variants)
       .limit(1)
       .maybeSingle();
 
     if (anData?.id) {
-      return { comprovado: true, name: anData.nome || null };
+      return { comprovado: true, name: anData.client_name || null };
     }
 
     return { comprovado: false };
@@ -295,10 +318,11 @@ export async function registrarMapeamentoLid({ lid, phone, name = null }) {
   if (!cleanLid || !cleanPhone || cleanLid === cleanPhone) return;
 
   // 1. Mantém em memória de execução para permitir funcionamento dinâmico durante a sessão
-  lidToPhoneMap.set(cleanLid, cleanPhone);
+  if (!/^\d{6,20}$/.test(cleanLid) || obterVariacoesTelefone(cleanPhone).length === 0) return;
+  setBounded(lidToPhoneMap, cleanLid, cleanPhone);
   const vars = obterVariacoesTelefone(cleanPhone);
   for (const v of vars) {
-    phoneToLidMap.set(v, cleanLid);
+    setBounded(phoneToLidMap, v, cleanLid);
   }
 
   // 2. No banco de dados Supabase, SOMENTE persiste se for comprovadamente cliente do estúdio
@@ -371,9 +395,9 @@ export async function resolverTelefoneParaLidAsync(phoneOrJid) {
       if (lidRow?.lid) {
         const foundLid = String(lidRow.lid).replace(/\D/g, '');
         for (const v of variants) {
-          phoneToLidMap.set(v, foundLid);
+          setBounded(phoneToLidMap, v, foundLid);
         }
-        lidToPhoneMap.set(foundLid, clean);
+        setBounded(lidToPhoneMap, foundLid, clean);
         return foundLid;
       }
 
@@ -391,9 +415,9 @@ export async function resolverTelefoneParaLidAsync(phoneOrJid) {
         const lidFromMsg = String(msgRow.remote_jid).split('@')[0].replace(/\D/g, '');
         if (lidFromMsg && isLid(lidFromMsg)) {
           for (const v of variants) {
-            phoneToLidMap.set(v, lidFromMsg);
+            setBounded(phoneToLidMap, v, lidFromMsg);
           }
-          lidToPhoneMap.set(lidFromMsg, clean);
+          setBounded(lidToPhoneMap, lidFromMsg, clean);
           registrarMapeamentoLid({ lid: lidFromMsg, phone: clean });
           return lidFromMsg;
         }
@@ -426,17 +450,18 @@ export async function resolverLidParaTelefoneAsync(lidOrJid, pushName = '') {
 
       if (row?.phone) {
         const p = String(row.phone).replace(/\D/g, '');
-        lidToPhoneMap.set(cleanLid, p);
-        phoneToLidMap.set(p, cleanLid);
+        setBounded(lidToPhoneMap, cleanLid, p);
+        setBounded(phoneToLidMap, p, cleanLid);
         return p;
       }
 
       // 2. Se tem nome visível, busca se o cliente já está cadastrado
-      if (pushName && pushName !== 'Cliente' && pushName !== 'Contato') {
+      const safePushName = sanitizeSearchTerm(pushName, 80);
+      if (safePushName && safePushName !== 'Cliente' && safePushName !== 'Contato') {
         const { data: client } = await supabase
           .from('clients')
           .select('phone')
-          .ilike('name', `%${pushName}%`)
+          .ilike('name', `%${safePushName}%`)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -451,7 +476,7 @@ export async function resolverLidParaTelefoneAsync(lidOrJid, pushName = '') {
         const { data: apt } = await supabase
           .from('appointments')
           .select('client_phone')
-          .ilike('client_name', `%${pushName}%`)
+          .ilike('client_name', `%${safePushName}%`)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -493,11 +518,12 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
 
   // 1. Se já for JID no formato @lid
   if (rawStr.endsWith('@lid')) {
-    return rawStr;
+    return isSafeWhatsAppJid(rawStr) ? rawStr : null;
   }
 
   // Se já for JID @s.whatsapp.net, verifica se este contato na verdade usa LID ativo
   if (rawStr.endsWith('@s.whatsapp.net')) {
+    if (!isSafeWhatsAppJid(rawStr)) return null;
     const pDigits = rawStr.split('@')[0].replace(/\D/g, '');
     const mappedLid = resolverTelefoneParaLid(pDigits) || await resolverTelefoneParaLidAsync(pDigits);
     if (mappedLid && hasExistingSession(mappedLid)) {
@@ -567,11 +593,13 @@ export async function resolverJidWhatsApp(sock, telefoneRaw) {
         try {
           const checkSem9 = await sock.onWhatsApp(sem9);
           if (checkSem9 && checkSem9[0]?.exists) {
-            return checkSem9[0].jid || sem9;
+      const jidSem9 = checkSem9[0].jid || sem9;
+      if (isSafeWhatsAppJid(jidSem9)) return jidSem9;
           }
           const checkCom9 = await sock.onWhatsApp(com9);
           if (checkCom9 && checkCom9[0]?.exists) {
-            return checkCom9[0].jid || com9;
+      const jidCom9 = checkCom9[0].jid || com9;
+      if (isSafeWhatsAppJid(jidCom9)) return jidCom9;
           }
         } catch {}
       }

@@ -1,8 +1,18 @@
 import { NextRequest } from 'next/server';
 import { createPublicSupabase } from '@/lib/supabase/server';
-import { jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import {
+  checkRateLimit,
+  getClientIp,
+  hasValidOrigin,
+  jsonError,
+  NO_STORE_HEADERS,
+} from '@/lib/security';
 
 export async function GET(request: NextRequest) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
+  const rateCheck = checkRateLimit(`booking-slots:${getClientIp(request)}`, 60, 60 * 1000);
+  if (!rateCheck.allowed) return jsonError('Muitas consultas de horários. Aguarde um instante.', 429);
+
   const { searchParams } = new URL(request.url);
   const dateStr = searchParams.get('date');
   const durationParam = searchParams.get('duration');
@@ -17,8 +27,40 @@ export async function GET(request: NextRequest) {
   }
 
   const selectedDate = new Date(`${dateStr}T12:00:00Z`);
-  if (isNaN(selectedDate.getTime())) {
+  const year = Number(dateStr.slice(0, 4));
+  const month = Number(dateStr.slice(5, 7));
+  const day = Number(dateStr.slice(8, 10));
+  if (
+    isNaN(selectedDate.getTime()) ||
+    selectedDate.getUTCFullYear() !== year ||
+    selectedDate.getUTCMonth() + 1 !== month ||
+    selectedDate.getUTCDate() !== day
+  ) {
     return jsonError('Data inválida.', 400);
+  }
+
+  const saoPauloDateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const todayInSaoPaulo = [
+    saoPauloDateParts.find((part) => part.type === 'year')?.value,
+    saoPauloDateParts.find((part) => part.type === 'month')?.value,
+    saoPauloDateParts.find((part) => part.type === 'day')?.value,
+  ].join('-');
+  if (dateStr < todayInSaoPaulo) {
+    return Response.json(
+      {
+        ok: true,
+        date: dateStr,
+        closed: true,
+        message: 'Escolha uma data a partir de hoje.',
+        slots: [],
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   }
 
   const supabase = createPublicSupabase();
@@ -37,7 +79,7 @@ export async function GET(request: NextRequest) {
     try {
       const { data: s } = await supabase
         .from('public_site_settings')
-        .select('*')
+        .select('booking_enabled, booking_closed_message, open_days, max_future_days, open_time, close_time, break_start, break_end')
         .eq('id', 'global')
         .maybeSingle();
       settings = s;
@@ -75,13 +117,16 @@ export async function GET(request: NextRequest) {
       'sextas-feiras',
       'sábados',
     ];
-    return Response.json({
-      ok: true,
-      date: dateStr,
-      closed: true,
-      message: `O estúdio não realiza atendimentos aos ${dayNames[dow]}.`,
-      slots: [],
-    });
+    return Response.json(
+      {
+        ok: true,
+        date: dateStr,
+        closed: true,
+        message: `O estúdio não realiza atendimentos aos ${dayNames[dow]}.`,
+        slots: [],
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   }
 
   // 3. Check future days limit
@@ -92,13 +137,16 @@ export async function GET(request: NextRequest) {
     (targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
   if (diffDays > maxDays) {
-    return Response.json({
-      ok: true,
-      date: dateStr,
-      closed: true,
-      message: `Agenda aberta apenas para os próximos ${maxDays} dias.`,
-      slots: [],
-    });
+    return Response.json(
+      {
+        ok: true,
+        date: dateStr,
+        closed: true,
+        message: `Agenda aberta apenas para os próximos ${maxDays} dias.`,
+        slots: [],
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   }
 
   if (supabase) {

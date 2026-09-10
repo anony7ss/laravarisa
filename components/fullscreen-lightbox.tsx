@@ -46,6 +46,9 @@ export function FullscreenLightbox({
   // References for Before/After Slider
   const sliderContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingSlider = useRef(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -87,16 +90,51 @@ export function FullscreenLightbox({
     onNavigate((activeIndex + 1) % total);
   }, [activeIndex, onNavigate, total]);
 
+  const trapFocus = useCallback((event: KeyboardEvent) => {
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, []);
+
   useEffect(() => {
     if (activeIndex === null) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab') trapFocus(e);
+      else if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowLeft') prevPhoto();
       else if (e.key === 'ArrowRight') nextPhoto();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeIndex, onClose, prevPhoto, nextPhoto]);
+  }, [activeIndex, onClose, prevPhoto, nextPhoto, trapFocus]);
+
+  // Put focus inside the dialog and restore it to the triggering gallery card.
+  useEffect(() => {
+    if (activeIndex === null) {
+      previouslyFocusedRef.current?.focus({ preventScroll: true });
+      previouslyFocusedRef.current = null;
+      return;
+    }
+
+    if (!previouslyFocusedRef.current && document.activeElement instanceof HTMLElement) {
+      previouslyFocusedRef.current = document.activeElement;
+    }
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [activeIndex]);
 
   // Zoom helpers
   const handleZoomIn = () => {
@@ -116,7 +154,7 @@ export function FullscreenLightbox({
     setPan({ x: 0, y: 0 });
   };
 
-  const handleDoubleTapOrClick = (clientX: number, clientY: number) => {
+  const handleDoubleTapOrClick = (_clientX: number, _clientY: number) => {
     if (zoom > 1) {
       handleResetZoom();
     } else {
@@ -290,10 +328,12 @@ export function FullscreenLightbox({
 
   return createPortal(
     <div
+      ref={dialogRef}
       className="fullscreen-lightbox"
       role="dialog"
       aria-modal="true"
-      aria-label={`${currentPhoto.title} — Visualizador de alta resolução`}
+      aria-labelledby="lightbox-title"
+      tabIndex={-1}
     >
       {/* Top Header */}
       <header className="lightbox-top">
@@ -304,13 +344,14 @@ export function FullscreenLightbox({
         </div>
 
         <div className="lightbox-title-wrap">
-          <h2 className="lightbox-title">{currentPhoto.title}</h2>
+          <h2 id="lightbox-title" className="lightbox-title">{currentPhoto.title}</h2>
           {currentPhoto.subtitle && (
             <p className="lightbox-subtitle">{currentPhoto.subtitle}</p>
           )}
         </div>
 
         <button
+          ref={closeButtonRef}
           className="lightbox-close-btn"
           onClick={onClose}
           aria-label="Fechar visualizador (Esc)"
@@ -423,6 +464,32 @@ export function FullscreenLightbox({
                 <div
                   className="lightbox-slider-divider"
                   style={{ left: `${sliderPos}%` }}
+                  role="slider"
+                  aria-label="Comparar antes e depois"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(sliderPos)}
+                  aria-valuetext={`${Math.round(sliderPos)}% antes`}
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSliderPos((value) => Math.max(0, value - 5));
+                    } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSliderPos((value) => Math.min(100, value + 5));
+                    } else if (event.key === 'Home') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSliderPos(0);
+                    } else if (event.key === 'End') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSliderPos(100);
+                    }
+                  }}
                 >
                   <div className="lightbox-slider-grip">
                     <SlidersHorizontal size={14} />
@@ -461,6 +528,7 @@ export function FullscreenLightbox({
             type="button"
             className={`mode-tab ${comparisonMode === 'split' ? 'active' : ''}`}
             onClick={() => setComparisonMode('split')}
+            aria-pressed={comparisonMode === 'split'}
           >
             ✦ Deslizar
           </button>
@@ -468,6 +536,7 @@ export function FullscreenLightbox({
             type="button"
             className={`mode-tab ${comparisonMode === 'before' ? 'active' : ''}`}
             onClick={() => setComparisonMode('before')}
+            aria-pressed={comparisonMode === 'before'}
           >
             Só Antes
           </button>
@@ -475,6 +544,7 @@ export function FullscreenLightbox({
             type="button"
             className={`mode-tab ${comparisonMode === 'after' ? 'active' : ''}`}
             onClick={() => setComparisonMode('after')}
+            aria-pressed={comparisonMode === 'after'}
           >
             Só Depois
           </button>

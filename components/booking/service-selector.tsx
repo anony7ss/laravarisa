@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clock3 } from 'lucide-react';
+import { Clock3 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
 export type ServiceItem = {
@@ -50,6 +50,8 @@ export function ServiceSelector({
             <button
               key={service.id}
               type="button"
+              aria-label={`${isSelected ? 'Selecionado: ' : ''}${service.name}, ${service.price}, duração ${service.duration}`}
+              aria-pressed={isSelected}
               onClick={() => {
                 triggerHaptic('light');
                 onSelectService(service);

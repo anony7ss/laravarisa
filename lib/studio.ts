@@ -1,9 +1,11 @@
-const WHATSAPP_NUMBER =
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '5551989601662';
+// O número comercial é configuração de ambiente/site_settings. Nunca use um
+// número de exemplo: isso poderia direcionar uma cliente para o contato errado.
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
 
 export function whatsappUrl(message: string, phone = WHATSAPP_NUMBER) {
   const digits = (phone || '').replace(/\D/g, '');
-  const recipient = /^\d{10,15}$/.test(digits) ? digits : '5551989601662';
+  const recipient = /^\d{10,15}$/.test(digits) ? digits : null;
+  if (!recipient) return '#contato';
   return `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`;
 }
 
@@ -12,7 +14,7 @@ export const studio = {
   bookingUrl: whatsappUrl('Olá, Lara! Quero agendar meu horário.'),
   whatsapp: 'Agendar pelo WhatsApp',
   whatsappNumber: WHATSAPP_NUMBER,
-  whatsappFormatted: '(51) 98960-1662',
+  whatsappFormatted: '',
   instagram: '@laravarisa.lashes',
   instagramUrl: 'https://www.instagram.com/laravarisa.lashes/',
   email: 'contato@laravarisa.com.br',
@@ -31,10 +33,10 @@ export type StudioSettings = typeof studio;
 export function formatStudioSettings(dbSettings?: Record<string, any> | null): StudioSettings {
   if (!dbSettings) return studio;
 
-  const phone = (dbSettings.whatsapp_phone || dbSettings.studio_phone || WHATSAPP_NUMBER).replace(/\D/g, '');
+  const phone = String(dbSettings.whatsapp_phone || dbSettings.studio_phone || WHATSAPP_NUMBER).replace(/\D/g, '');
   const formattedPhone = phone.length >= 10
     ? phone.replace(/^55/, '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-    : studio.whatsappFormatted;
+    : '';
 
   const email = (dbSettings.studio_email || studio.email).trim();
 
@@ -42,7 +44,7 @@ export function formatStudioSettings(dbSettings?: Record<string, any> | null): S
     name: dbSettings.studio_name?.trim() || studio.name,
     bookingUrl: whatsappUrl('Olá, Lara! Quero agendar meu horário.', phone),
     whatsapp: 'Agendar pelo WhatsApp',
-    whatsappNumber: phone || WHATSAPP_NUMBER,
+    whatsappNumber: phone,
     whatsappFormatted: formattedPhone,
     instagram: dbSettings.studio_instagram?.trim() || studio.instagram,
     instagramUrl: dbSettings.studio_instagram_url?.trim() || studio.instagramUrl,
@@ -199,5 +201,4 @@ export function getStudioScheduleInfo(settings?: {
     bookingEnabled,
   };
 }
-
 

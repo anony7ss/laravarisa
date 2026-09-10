@@ -4,6 +4,7 @@ import { sendHumanizedMessage } from './queue.js';
 import { logSiteBooking, logInfo, logWarn, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
 import { notificarLaraNovoAgendamento } from './notifications.js';
+import { sanitizeUntrustedText } from './security-utils.js';
 import {
   obterServicosEmCache,
   obterConfiguracoesEmCache,
@@ -19,8 +20,8 @@ if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
  * Cliente Supabase com permissões administrativas (Service Role)
  */
 export const supabase = createClient(
-  config.supabaseUrl || 'https://placeholder.supabase.co',
-  config.supabaseServiceRoleKey || 'placeholder-key',
+  config.supabaseUrl || 'http://127.0.0.1:9',
+  config.supabaseServiceRoleKey || 'disabled-service-role-key',
   {
   auth: {
     persistSession: false,
@@ -34,6 +35,8 @@ export const supabase = createClient(
 });
 
 const agendamentosNotificados = new Set();
+const agendamentosEmProcessamento = new Set();
+const MAX_AGENDAMENTOS_NOTIFICADOS = 10_000;
 let realtimeChannel = null;
 let currentSocket = null;
 let isRealtimeHealthy = false;
@@ -58,7 +61,7 @@ export async function verificarAgendamentosPendentes(sock) {
     const sessentaMinAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data: recentes, error } = await supabase
       .from('appointments')
-      .select('*')
+      .select('id, service_id, client_name, client_phone, starts_at, ends_at, origin, whatsapp_notification_sent_at')
       .eq('origin', 'web')
       .is('whatsapp_notification_sent_at', null)
       .gte('created_at', sessentaMinAtras)
@@ -80,8 +83,9 @@ export async function verificarAgendamentosPendentes(sock) {
 }
 
 /**
- * Executa o agendador de verificação contínua ultra-rápida (600ms)
- * garantindo percepção instantânea de agendamentos mesmo em oscilações de WebSocket
+ * Executa o fallback de verificação para quando o Realtime estiver indisponível.
+ * O canal Realtime entrega novos agendamentos imediatamente; o polling fica
+ * progressivo para evitar consultas desnecessárias e carga no banco.
  */
 function agendarProximaVerificacao() {
   if (adaptivePollTimer) {
@@ -89,12 +93,17 @@ function agendarProximaVerificacao() {
     adaptivePollTimer = null;
   }
 
-  // Frequência ultra-rápida de 600ms
-  const delay = isCheckingPending ? 300 : 600;
+  const delay = isRealtimeHealthy
+    ? 10000
+    : PROGRESSIVE_DELAYS[Math.min(progressiveDelayIndex, PROGRESSIVE_DELAYS.length - 1)];
+  if (!isRealtimeHealthy) {
+    progressiveDelayIndex = Math.min(progressiveDelayIndex + 1, PROGRESSIVE_DELAYS.length - 1);
+  }
 
   adaptivePollTimer = setTimeout(async () => {
     if (!currentSocket) return;
-    await verificarAgendamentosPendentes(currentSocket);
+    const processed = await verificarAgendamentosPendentes(currentSocket);
+    if (processed) progressiveDelayIndex = 0;
     agendarProximaVerificacao();
   }, delay);
 
@@ -105,7 +114,7 @@ function agendarProximaVerificacao() {
 
 /**
  * Inicia a sincronização inteligente e instantânea dos agendamentos vindos do site.
- * Combina Realtime (WebSockets) com heartbeat ultra-rápido de 600ms.
+ * Combina Realtime (WebSockets) com um fallback de polling progressivo.
  * 
  * @param {any} sock Instância ativa do Baileys Socket
  * @returns {any} Canal Realtime do Supabase
@@ -200,7 +209,29 @@ export function iniciarSincronizacaoSite(sock) {
  * @param {any} agendamento Objeto de agendamento retornado pelo Supabase
  * @returns {Promise<{ ok: boolean, mensagem?: string, jid?: string }>}
  */
+/**
+ * Deduplica eventos Realtime e polling que chegam no mesmo instante para a
+ * mesma reserva. O lock é liberado mesmo quando o envio falha, permitindo
+ * uma nova tentativa no próximo ciclo.
+ */
 export async function notificarAgendamentoSite(sock, agendamento) {
+  const id = typeof agendamento?.id === 'string' && agendamento.id.length <= 120
+    ? agendamento.id
+    : null;
+  if (!id) return { ok: false, erro: 'Agendamento sem identificador.' };
+  if (agendamentosNotificados.has(id) || agendamentosEmProcessamento.has(id)) {
+    return { ok: true, duplicado: true };
+  }
+
+  agendamentosEmProcessamento.add(id);
+  try {
+    return await notificarAgendamentoSiteInterno(sock, agendamento);
+  } finally {
+    agendamentosEmProcessamento.delete(id);
+  }
+}
+
+async function notificarAgendamentoSiteInterno(sock, agendamento) {
   const activeSock = sock || currentSocket;
   if (!activeSock || !agendamento) {
     return { ok: false, erro: 'Socket ou agendamento não fornecido.' };
@@ -219,10 +250,10 @@ export async function notificarAgendamentoSite(sock, agendamento) {
     return { ok: false, ignorado: true };
   }
 
-  const telefoneRaw = agendamento.client_phone || '';
+  const telefoneRaw = typeof agendamento.client_phone === 'string' ? agendamento.client_phone : '';
   const cleanPhone = telefoneRaw.replace(/\D/g, '');
 
-  if (!cleanPhone || cleanPhone.length < 8) {
+  if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
     logWarn('Notificação', `Telefone inválido para agendamento #${agendamento.id}`);
     return { ok: false, erro: 'Telefone inválido' };
   }
@@ -241,7 +272,7 @@ export async function notificarAgendamentoSite(sock, agendamento) {
       const servicos = await obterServicosEmCache();
       const s = servicos.find((item) => item.id === agendamento.service_id);
       if (s?.nome) {
-        nomeServico = s.nome;
+        nomeServico = sanitizeUntrustedText(s.nome, 120);
       }
     } catch (err) {
       console.warn('[supabase-notificar] Falha ao consultar serviço pelo ID:', err?.message || err);
@@ -250,6 +281,9 @@ export async function notificarAgendamentoSite(sock, agendamento) {
 
   // Formatação elegante de data e hora em pt-BR (fuso de Brasília/São Paulo)
   const dataObj = new Date(agendamento.starts_at);
+  if (Number.isNaN(dataObj.getTime())) {
+    return { ok: false, erro: 'Data do agendamento inválida' };
+  }
   const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     weekday: 'long',
@@ -263,14 +297,15 @@ export async function notificarAgendamentoSite(sock, agendamento) {
     minute: '2-digit',
   });
 
-  const primeiroNome = (agendamento.client_name || 'Cliente').trim().split(' ')[0];
+  const nomeBruto = typeof agendamento.client_name === 'string' ? agendamento.client_name : 'Cliente';
+  const primeiroNome = sanitizeUntrustedText(nomeBruto.trim().split(' ')[0], 80) || 'Cliente';
 
   // Consulta template customizado configurado no painel do site com cache em memória
   let templateMensagem = null;
   try {
     const st = await obterConfiguracoesEmCache();
     if (st?.whatsapp_booking_message) {
-      templateMensagem = st.whatsapp_booking_message;
+      templateMensagem = sanitizeUntrustedText(st.whatsapp_booking_message, 1000);
     }
   } catch (err) {
     console.warn('[supabase-notificar] Aviso ao buscar template em site_settings:', err?.message || err);
@@ -284,7 +319,7 @@ export async function notificarAgendamentoSite(sock, agendamento) {
     .replaceAll('{procedimento}', nomeServico)
     .replaceAll('{data}', dataFormatada)
     .replaceAll('{horario}', horaFormatada)
-    .replaceAll('{local}', config.studioCity)
+    .replaceAll('{local}', sanitizeUntrustedText(config.studioCity, 120))
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n')
@@ -300,6 +335,9 @@ export async function notificarAgendamentoSite(sock, agendamento) {
 
   // Registra no banco para NUNCA reenviar em caso de reinício
   agendamentosNotificados.add(agendamento.id);
+  while (agendamentosNotificados.size > MAX_AGENDAMENTOS_NOTIFICADOS) {
+    agendamentosNotificados.delete(agendamentosNotificados.values().next().value);
+  }
   try {
     const updateData = { whatsapp_notification_sent_at: new Date().toISOString() };
 

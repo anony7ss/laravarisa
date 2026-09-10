@@ -21,7 +21,6 @@ import {
   Lock,
 } from 'lucide-react';
 import { adminRequest } from './api';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
 
 export type MainViewMode = 'calendar' | 'kanban';
@@ -321,7 +320,9 @@ export function AppointmentsManager({
     }
   }, []);
 
-  // Sincronização automática em TEMPO REAL (Realtime Supabase + Polling inteligente a cada 6s)
+  // Sincronização automática por API. O navegador não recebe credenciais nem
+  // abre canais diretos com o banco; o endpoint aplica a mesma autorização do
+  // restante do painel.
   useEffect(() => {
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden) {
@@ -337,33 +338,10 @@ export function AppointmentsManager({
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
 
-    const supabase = createBrowserSupabase();
-    let channel: any = null;
-
-    if (supabase) {
-      channel = supabase
-        .channel('realtime_admin_appointments_live')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'appointments',
-          },
-          () => {
-            fetchFreshAppointments();
-          },
-        )
-        .subscribe();
-    }
-
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
     };
   }, [fetchFreshAppointments]);
 
@@ -587,7 +565,7 @@ export function AppointmentsManager({
   }, [items]);
 
   async function handleClearCancelledAndNoShow() {
-    if (role === 'viewer') return;
+    if (role !== 'admin') return;
     setClearingCancelled(true);
     setError('');
     isUpdatingRef.current = true;
@@ -838,6 +816,7 @@ export function AppointmentsManager({
   }, [items, kanbanScope, month, today]);
 
   async function updateStatus(id: string, newStatus: AppointmentRow['status']) {
+    if (role === 'viewer') return;
     const previous = items;
     setItems((list) =>
       list.map((item) =>
@@ -869,6 +848,7 @@ export function AppointmentsManager({
   }
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     isUpdatingRef.current = true;
     try {
       await adminRequest(`/api/admin/appointments/${id}`, { method: 'DELETE' });
@@ -1091,7 +1071,7 @@ export function AppointmentsManager({
           >
             Todos ({items.length})
           </button>
-          {totalCancelledCount > 0 && role !== 'viewer' && (
+          {totalCancelledCount > 0 && role === 'admin' && (
             <button
               type="button"
               className="admin-filter-pill danger"
@@ -1127,7 +1107,7 @@ export function AppointmentsManager({
               Receita prevista: R$ {weekRevenue}
             </span>
           )}
-          {totalCancelledCount > 0 && role !== 'viewer' && (
+          {totalCancelledCount > 0 && role === 'admin' && (
             <button
               type="button"
               className="admin-filter-pill danger"
@@ -1163,7 +1143,7 @@ export function AppointmentsManager({
               Receita prevista: R$ {dayRevenue}
             </span>
           )}
-          {totalCancelledCount > 0 && role !== 'viewer' && (
+          {totalCancelledCount > 0 && role === 'admin' && (
             <button
               type="button"
               className="admin-filter-pill danger"
@@ -1213,7 +1193,7 @@ export function AppointmentsManager({
             <i className="confirmed" />
             <strong>{confirmed}</strong> confirmados
           </button>
-          {totalCancelledCount > 0 && role !== 'viewer' && (
+          {totalCancelledCount > 0 && role === 'admin' && (
             <button
               type="button"
               className="admin-filter-pill danger"
@@ -1268,7 +1248,7 @@ export function AppointmentsManager({
                       <h3 style={{ margin: 0 }}>{col.title}</h3>
                       <span className="admin-kanban-badge">{colItems.length}</span>
                     </div>
-                    {col.id === 'cancelled' && colItems.length > 0 && role !== 'viewer' && (
+                    {col.id === 'cancelled' && colItems.length > 0 && role === 'admin' && (
                       <button
                         type="button"
                         onClick={() => setClearCancelledModalOpen(true)}

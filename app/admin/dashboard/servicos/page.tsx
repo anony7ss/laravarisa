@@ -6,8 +6,9 @@ export default async function ServicesAdminPage() {
   const { supabase, profile } = await requireStaff();
   const { data } = await supabase
     .from('services')
-    .select('*')
-    .order('sort_order');
+    .select('id, slug, name, category, description, price_label, duration_label, duration_minutes, maintenance, intensity, sort_order, active')
+    .order('sort_order')
+    .limit(5000);
   return (
     <main className="admin-page">
       <div className="admin-page-title">

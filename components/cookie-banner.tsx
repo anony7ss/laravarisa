@@ -14,7 +14,12 @@ export function CookieBanner() {
     // Não exibe no painel administrativo
     if (pathname?.startsWith('/admin')) return;
 
-    const hasConsent = localStorage.getItem('cookie-consent');
+    let hasConsent = '';
+    try {
+      hasConsent = localStorage.getItem('cookie-consent') || '';
+    } catch {
+      // Storage may be unavailable in private or embedded browser contexts.
+    }
     if (!hasConsent) {
       // Delay suave para exibição
       const timer = setTimeout(() => setShow(true), 1500);
@@ -25,10 +30,14 @@ export function CookieBanner() {
   if (!show || pathname?.startsWith('/admin')) return null;
 
   const saveConsent = (analytics: boolean) => {
-    localStorage.setItem(
-      'cookie-consent',
-      JSON.stringify({ essential: true, analytics, savedAt: new Date().toISOString() }),
-    );
+    try {
+      localStorage.setItem(
+        'cookie-consent',
+        JSON.stringify({ essential: true, analytics, savedAt: new Date().toISOString() }),
+      );
+    } catch {
+      // Keep the choice for this session even when persistent storage fails.
+    }
     setShow(false);
     setShowChoices(false);
   };

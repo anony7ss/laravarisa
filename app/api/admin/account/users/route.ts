@@ -1,6 +1,9 @@
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
+import { staffCreateSchema, staffUpdateSchema } from '@/lib/validation';
+
+const MAX_BODY_BYTES = 20_000;
 
 export async function GET(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -29,34 +32,22 @@ export async function POST(request: Request) {
     return jsonError('Apenas administradores podem cadastrar novos membros.', 403);
   }
 
-  let body: {
-    email?: string;
-    password?: string;
-    full_name?: string;
-    role?: 'admin' | 'editor' | 'viewer';
-    phone?: string;
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('Dados inválidos.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
-
-  const { email, password, full_name, role = 'editor', phone } = body;
-
-  if (!email || !password || !full_name) {
-    return jsonError('Nome, e-mail e senha são obrigatórios.', 422);
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Dados inválidos.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
+  const body = bodyResult.data;
 
-  if (password.length < 6) {
-    return jsonError('A senha deve ter no mínimo 6 caracteres.', 422);
-  }
-
-  if (!['admin', 'editor', 'viewer'].includes(role)) {
-    return jsonError('Cargo inválido.', 422);
-  }
-
-  const cleanPhone = phone ? phone.replace(/\D/g, '') : null;
+  const parsed = staffCreateSchema.safeParse(body);
+  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || 'Revise os dados informados.', 422);
+  const { email, password, full_name, role, phone } = parsed.data;
+  const cleanPhone = phone.replace(/\D/g, '');
 
   const { data, error } = await staff.supabase.rpc('create_staff_user', {
     new_email: email.trim().toLowerCase(),
@@ -72,7 +63,7 @@ export async function POST(request: Request) {
     if (msg.includes('unique') || msg.includes('already registered') || msg.includes('já existe')) {
       return jsonError('Já existe um usuário cadastrado com este e-mail.', 409);
     }
-    return jsonError(error.message || 'Erro ao criar usuário.', 500);
+    return jsonError('Não foi possível criar o usuário.', 500);
   }
 
   return Response.json(
@@ -90,40 +81,31 @@ export async function PATCH(request: Request) {
     return jsonError('Apenas administradores podem alterar permissões.', 403);
   }
 
-  let body: {
-    target_user_id?: string;
-    role?: 'admin' | 'editor' | 'viewer';
-    password?: string;
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('Dados inválidos.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
-
-  const { target_user_id, role, password } = body;
-
-  if (!target_user_id) {
-    return jsonError('ID do usuário alvo é obrigatório.', 422);
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Dados inválidos.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
+  const body = bodyResult.data;
 
-  if (role && !['admin', 'editor', 'viewer'].includes(role)) {
-    return jsonError('Cargo inválido.', 422);
-  }
-
-  if (password && password.length < 6) {
-    return jsonError('A nova senha deve ter no mínimo 6 caracteres.', 422);
-  }
+  const parsed = staffUpdateSchema.safeParse(body);
+  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || 'Revise os dados informados.', 422);
+  const { target_user_id, role, password } = parsed.data;
 
   const { data, error } = await staff.supabase.rpc('admin_update_team_user', {
     target_user_id,
-    new_role: role || null,
-    new_password: password || null,
+    new_role: role ?? null,
+    new_password: password ?? null,
   });
 
   if (error) {
     console.error('[Admin Update User Error]:', error);
-    return jsonError(error.message || 'Erro ao atualizar usuário.', 500);
+    return jsonError('Não foi possível atualizar o usuário.', 500);
   }
 
   serverCache.delete(`staff_profile:${target_user_id}`);

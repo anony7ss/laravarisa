@@ -1,6 +1,9 @@
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
+import { profileUpdateSchema } from '@/lib/validation';
+
+const MAX_BODY_BYTES = 10_000;
 
 export async function GET(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -33,34 +36,34 @@ export async function PATCH(request: Request) {
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
 
-  let body: { full_name?: string; phone?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('Dados inválidos.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Dados inválidos.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const body = bodyResult.data;
+
+  const parsed = profileUpdateSchema.safeParse(body);
+  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || 'Revise os dados informados.', 422);
 
   const updates: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
 
-  if (typeof body.full_name === 'string') {
-    const trimmed = body.full_name.trim();
-    if (trimmed.length < 2) {
-      return jsonError('O nome deve ter pelo menos 2 caracteres.', 422);
-    }
-    updates.full_name = trimmed;
+  if (parsed.data.full_name !== undefined) {
+    updates.full_name = parsed.data.full_name;
   }
 
-  if (typeof body.phone !== 'undefined') {
-    if (body.phone === null || body.phone.trim() === '') {
+  if (parsed.data.phone !== undefined) {
+    if (parsed.data.phone === null || parsed.data.phone.trim() === '') {
       updates.phone = null;
     } else {
-      const cleanPhone = body.phone.replace(/\D/g, '');
-      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-        return jsonError('Telefone inválido. Digite DDD + número (ex: 11999998888).', 422);
-      }
-      updates.phone = cleanPhone;
+      updates.phone = parsed.data.phone.replace(/\D/g, '');
     }
   }
 

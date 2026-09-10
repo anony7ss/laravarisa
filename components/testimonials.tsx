@@ -12,6 +12,7 @@ export function Testimonials() {
 
   useEffect(() => {
     if (items.length <= 1) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const timer = setInterval(() => {
       setCurrentIndex((i) => (i + 1) % items.length);
     }, 6000);
@@ -20,11 +21,15 @@ export function Testimonials() {
 
   useEffect(() => {
     if (!carouselRef.current) return;
-    gsap.to(carouselRef.current, {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tween = gsap.to(carouselRef.current, {
       xPercent: -100 * currentIndex,
-      duration: 0.8,
+      duration: reducedMotion ? 0 : 0.8,
       ease: 'power3.inOut',
     });
+    return () => {
+      tween.kill();
+    };
   }, [currentIndex]);
 
   if (!items.length) return null;
@@ -55,7 +60,7 @@ export function Testimonials() {
                     />
                   ))}
                 </div>
-                <p className="testimonial-content">"{item.content}"</p>
+                <p className="testimonial-content">“{item.content}”</p>
                 <div className="testimonial-author">
                   <strong>{item.client_name}</strong>
                   {item.client_role && <span>{item.client_role}</span>}

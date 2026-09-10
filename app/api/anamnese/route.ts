@@ -5,10 +5,11 @@ import {
   hasValidOrigin,
   jsonError,
   NO_STORE_HEADERS,
+  readJsonBody,
   sanitizeText,
   verifyTurnstile,
 } from '@/lib/security';
-import { createPublicSupabase } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase/server';
 
 function stringValue(value: unknown) {
   return typeof value === 'string' ? value : '';
@@ -16,9 +17,6 @@ function stringValue(value: unknown) {
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
-
-  const contentLength = Number(request.headers.get('content-length') || '0');
-  if (contentLength > 15_000) return jsonError('Conteúdo muito grande.', 413);
 
   if (!request.headers.get('content-type')?.includes('application/json')) {
     return jsonError('Formato inválido.', 415);
@@ -31,12 +29,21 @@ export async function POST(request: Request) {
     return jsonError('Muitas tentativas. Aguarde alguns minutos antes de reenviar.', 429);
   }
 
-  let body: Record<string, unknown>;
-  try {
-    body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  const bodyResult = await readJsonBody(request, 15_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  if (
+    !bodyResult.data ||
+    typeof bodyResult.data !== 'object' ||
+    Array.isArray(bodyResult.data)
+  ) {
     return jsonError('JSON inválido.', 400);
   }
+  const body = bodyResult.data as Record<string, unknown>;
 
   const rawData = {
     client_name: sanitizeText(stringValue(body.client_name)),
@@ -63,7 +70,9 @@ export async function POST(request: Request) {
     return jsonError('Revise os campos obrigatórios da ficha.', 422);
   }
 
-  const supabase = createPublicSupabase();
+  // The write RPC is private in Postgres so direct anonymous PostgREST calls
+  // cannot bypass this route's origin, Turnstile and IP protections.
+  const supabase = createAdminSupabase();
   if (!supabase) {
     return jsonError('Serviço temporariamente indisponível.', 503);
   }

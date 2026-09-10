@@ -8,6 +8,16 @@ import {
 } from 'lucide-react';
 import { requireStaff } from '@/lib/admin-auth';
 import { RevenueChart } from '@/components/admin/revenue-chart';
+import { normalizeCanonicalPhone } from '@/lib/phone-utils';
+
+function parsePriceLabel(label: string | null | undefined): number {
+  const value = String(label || '')
+    .replace(/[^\d,.]/g, '')
+    .replace(/\.(?=\d{3}(?:\D|$))/g, '')
+    .replace(',', '.');
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export default async function DashboardPage() {
   const { supabase, profile } = await requireStaff();
@@ -21,12 +31,12 @@ export default async function DashboardPage() {
   const [leads, clients, appointments, recentLeads, completedAppointments, services, maintenance] = await Promise.all([
     supabase
       .from('leads')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('status', 'new'),
-    supabase.from('clients').select('*', { count: 'exact', head: true }),
+    supabase.from('clients').select('id', { count: 'exact', head: true }),
     supabase
       .from('appointments')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .gte('starts_at', now.toISOString())
       .lt('starts_at', end.toISOString())
       .neq('status', 'cancelled'),
@@ -42,14 +52,15 @@ export default async function DashboardPage() {
       .gte('starts_at', sixMonthsAgo.toISOString()),
     supabase
       .from('services')
-      .select('slug, price_label'),
+      .select('id, price_label'),
     supabase
       .from('appointments')
       .select('id, client_name, client_phone, starts_at')
       .eq('status', 'completed')
       .lte('starts_at', new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString())
       .gte('starts_at', new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString())
-      .order('starts_at', { ascending: false }),
+      .order('starts_at', { ascending: false })
+      .limit(20),
   ]);
 
   // Calculate revenue per month
@@ -63,18 +74,17 @@ export default async function DashboardPage() {
     };
   });
 
-  const servicesMap = new Map((services.data || []).map(s => {
-    // extract number from "R$ 150"
-    const match = s.price_label.match(/\d+/);
-    return [s.slug, match ? parseInt(match[0], 10) : 0];
-  }));
+  const servicesMap = new Map((services.data || []).map((service) => [
+    service.id,
+    parsePriceLabel(service.price_label),
+  ]));
 
   (completedAppointments.data || []).forEach(apt => {
     const d = new Date(apt.starts_at);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     const month = monthsData.find(m => m.key === key);
     if (month && apt.service_id) {
-      month.value += servicesMap.get(apt.service_id) || 150; // default 150 if not found
+      month.value += servicesMap.get(apt.service_id) || 0;
     }
   });
 
@@ -141,9 +151,9 @@ export default async function DashboardPage() {
           <div className="admin-simple-list">
             {maintenance.data.map((apt) => {
               const daysAgo = Math.floor((now.getTime() - new Date(apt.starts_at).getTime()) / (1000 * 3600 * 24));
-              const phoneStr = apt.client_phone.replace(/\D/g, '');
+              const phoneStr = normalizeCanonicalPhone(apt.client_phone || '');
               const message = `Oiii ${apt.client_name.split(' ')[0]}! Tudo bem? Faz ${daysAgo} dias que fizemos seus cílios. Já estão precisando de manutenção? Vamos agendar? 🥰`;
-              const waLink = phoneStr ? `https://wa.me/55${phoneStr}?text=${encodeURIComponent(message)}` : '#';
+              const waLink = phoneStr ? `https://wa.me/${phoneStr}?text=${encodeURIComponent(message)}` : null;
               
               return (
                 <div key={apt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -151,15 +161,19 @@ export default async function DashboardPage() {
                     <strong style={{ display: 'block' }}>{apt.client_name}</strong>
                     <span style={{ fontSize: '12px', color: '#888' }}>Há {daysAgo} dias (em {new Date(apt.starts_at).toLocaleDateString('pt-BR')})</span>
                   </div>
-                  <a 
-                    href={waLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="admin-primary"
-                    style={{ background: '#25D366', color: '#fff', padding: '6px 12px', fontSize: '13px' }}
-                  >
-                    Mandar WhatsApp
-                  </a>
+                  {waLink ? (
+                    <a
+                      href={waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="admin-primary"
+                      style={{ background: '#25D366', color: '#fff', padding: '6px 12px', fontSize: '13px' }}
+                    >
+                      Mandar WhatsApp
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--admin-muted)', fontSize: '12px' }}>Sem telefone</span>
+                  )}
                 </div>
               );
             })}

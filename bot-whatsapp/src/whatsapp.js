@@ -21,7 +21,7 @@ const authPath = path.resolve(__dirname, '../auth_info_baileys');
 import { logInfo, logSuccess, logWarn, logError } from './terminal.js';
 import { publicarStatusBot } from './web-sync.js';
 import { isLid, registrarMapeamentoLid, resolverLidParaTelefone } from './phone-utils.js';
-import { supabase } from './supabase.js';
+import { isSafeWhatsAppJid } from './security-utils.js';
 
 const makeWASocket = typeof baileysPkg === 'function' ? baileysPkg : (baileysPkg?.default || baileysPkg);
 
@@ -32,10 +32,19 @@ let preKeyInterval = null;
 // Isso impede o erro "Aguardando mensagem. Essa ação pode levar alguns instantes. Saiba mais"
 const messageStore = new Map();
 const MAX_MESSAGE_STORE = 5000;
+const MAX_MESSAGE_STORE_ITEM_CHARS = 128 * 1024;
 
-function saveToMessageStore(id, message) {
+function saveToMessageStore(id, message, remoteJid = null) {
   if (!id || !message) return;
-  messageStore.set(id, message);
+  if (remoteJid && !isSafeWhatsAppJid(String(remoteJid))) return;
+  const idText = String(id);
+  if (idText.length > 200) return;
+  try {
+    if (JSON.stringify(message).length > MAX_MESSAGE_STORE_ITEM_CHARS) return;
+  } catch {
+    return;
+  }
+  messageStore.set(idText, message);
   if (messageStore.size > MAX_MESSAGE_STORE) {
     const oldestKey = messageStore.keys().next().value;
     messageStore.delete(oldestKey);
@@ -68,6 +77,9 @@ function ehMensagemDuplicada(msgId) {
       }
     }
   }
+  while (mensagensProcessadas.size > 10000) {
+    mensagensProcessadas.delete(mensagensProcessadas.keys().next().value);
+  }
   return false;
 }
 
@@ -82,7 +94,7 @@ export function limparSessaoDesincronizada(idOuJid) {
     let remCount = 0;
     for (const f of files) {
       if (
-        (f.startsWith(`session-${raw}`) || (raw.length >= 8 && f.includes(raw.slice(-8)))) &&
+        f.startsWith(`session-${raw}`) &&
         f.endsWith('.json')
       ) {
         try {
@@ -172,7 +184,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     generateHighQualityLinkPreview: true,
     syncFullHistory: false,
     shouldSyncHistoryMessage: () => false,
-    shouldIgnoreJid: (jid) => isJidBroadcast(jid) || isJidStatusBroadcast(jid) || isJidNewsletter(jid),
+    shouldIgnoreJid: (jid) => isJidBroadcast(jid) || isJidStatusBroadcast(jid) || isJidNewsletter(jid) || String(jid || '').endsWith('@g.us'),
     msgRetryCounterCache,
     markOnlineOnConnect: true,
     keepAliveIntervalMs: 15000,
@@ -186,24 +198,8 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
         return messageStore.get(key.id);
       }
 
-      // 2. Consulta no Supabase whatsapp_messages para responder ao retry e resolver "Aguardando mensagem"
-      if (supabase) {
-        try {
-          const { data } = await supabase
-            .from('whatsapp_messages')
-            .select('content')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (data?.content) {
-            return {
-              conversation: data.content,
-            };
-          }
-        } catch {}
-      }
-
+      // Não devolva a última mensagem do banco sem filtrar pelo ID: isso
+      // poderia entregar uma conversa de outra cliente a um retry incorreto.
       return undefined;
     },
   });
@@ -213,7 +209,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
   sock.sendMessage = async (...args) => {
     const sent = await originalSendMessage(...args);
     if (sent?.key?.id && sent?.message) {
-      saveToMessageStore(sent.key.id, sent.message);
+      saveToMessageStore(sent.key.id, sent.message, args[0]);
     }
     return sent;
   };
@@ -358,10 +354,11 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
 
   // Filtra e processa mensagens recebidas
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (!Array.isArray(messages)) return;
     // Armazena todas as mensagens recebidas para responder a retries caso o WhatsApp requisite
     for (const msg of messages) {
       if (msg?.key?.id && msg?.message) {
-        saveToMessageStore(msg.key.id, msg.message);
+        saveToMessageStore(msg.key.id, msg.message, msg.key.remoteJid);
       }
     }
 
@@ -394,6 +391,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
       }
 
       if (!jid) continue;
+      if (!isSafeWhatsAppJid(jid)) continue;
 
       // 2. Ignora mensagens de grupos (@g.us)
       if (jid.endsWith('@g.us')) continue;

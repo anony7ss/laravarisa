@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   const adminClient = createAdminSupabase();
   const authClient = createPublicSupabase();
-  if (!adminClient && !authClient) return jsonError('Serviço indisponível.', 503);
+  if (!adminClient) return jsonError('Serviço indisponível.', 503);
 
   if (authClient && pendingData.access_token && pendingData.refresh_token) {
     try {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const db = adminClient || authClient!;
+  const db = adminClient;
 
   const { data: profile, error } = await db
     .from('profiles')
@@ -74,8 +74,8 @@ export async function POST(request: Request) {
 
   await db.from('whatsapp_outbox').insert({
     phone: cleanPhone,
-    client_name: profile.full_name || 'Admin Astra',
-    message: `*Astra Admin - Novo Código de Segurança*\n\nSeu novo código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos.`,
+    client_name: profile.full_name || 'Lara Varisa Admin',
+    message: `*Painel Lara Varisa - Novo Código de Segurança*\n\nSeu novo código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos.`,
     message_type: '2fa_code',
     status: 'pending',
   });

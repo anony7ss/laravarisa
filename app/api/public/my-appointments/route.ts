@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { createPublicSupabase } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase/server';
 import {
   checkRateLimit,
   getClientIp,
@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
     return jsonError('Telefone inválido. Digite um número completo com DDD.', 400);
   }
 
-  const supabase = createPublicSupabase();
+  // The phone lookup returns private appointment metadata. Keep the RPC
+  // private in Postgres and call it only after this route's IP throttling.
+  const supabase = createAdminSupabase();
   if (!supabase) {
     return jsonError('Serviço temporariamente indisponível.', 503);
   }

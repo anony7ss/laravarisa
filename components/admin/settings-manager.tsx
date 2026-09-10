@@ -204,7 +204,7 @@ export function SettingsManager({
       ),
 
       // Notificações para a Lara & Painel
-      lara_phone: String(form.get('lara_phone') || '5551989601662').replace(/\D/g, ''),
+      lara_phone: String(form.get('lara_phone') || '').replace(/\D/g, ''),
       notify_lara_on_new_booking: form.get('notify_lara_on_new_booking') === 'on',
       notify_lara_on_human_transfer: form.get('notify_lara_on_human_transfer') === 'on',
       notify_admin_sound: form.get('notify_admin_sound') === 'on',
@@ -716,9 +716,9 @@ export function SettingsManager({
             WhatsApp Comercial do Estúdio
             <input
               name="whatsapp_phone"
-              defaultValue={settings?.whatsapp_phone || '5551989601662'}
+              defaultValue={settings?.whatsapp_phone || ''}
               disabled={role !== 'admin'}
-              placeholder="Ex: 5551989601662"
+              placeholder="Ex: 55 + DDD + número"
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
               Número do WhatsApp conectado ao robô de atendimento
@@ -731,7 +731,7 @@ export function SettingsManager({
               name="lara_phone"
               defaultValue={settings?.lara_phone || ''}
               disabled={role !== 'admin'}
-              placeholder="Ex: 5551989601662 (vazio para desativar)"
+              placeholder="Ex: 55 + DDD + número (vazio para desativar)"
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
               Seu número pessoal autorizado para receber alertas e comandar a IA
@@ -1206,9 +1206,9 @@ export function SettingsManager({
             Telefone WhatsApp Comercial (DDI + DDD + Número)
             <input
               name="whatsapp_phone"
-              defaultValue={settings?.whatsapp_phone || '5551989601662'}
+              defaultValue={settings?.whatsapp_phone || ''}
               disabled={role !== 'admin'}
-              placeholder="Ex: 5551989601662"
+              placeholder="Ex: 55 + DDD + número"
             />
           </label>
 

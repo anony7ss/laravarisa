@@ -1,7 +1,119 @@
 import { createHash, createHmac } from 'node:crypto';
 
+export const NO_STORE_HEADERS = {
+  'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
+  Pragma: 'no-cache',
+} as const;
+
 export function jsonError(message: string, status: number) {
-  return Response.json({ ok: false, error: message }, { status });
+  return Response.json({ ok: false, error: message }, {
+    status,
+    headers: NO_STORE_HEADERS,
+  });
+}
+
+export type JsonBodyResult =
+  | { ok: true; data: unknown }
+  | { ok: false; reason: 'too_large' | 'invalid' };
+
+type RequestBytesResult =
+  | { ok: true; bytes: Uint8Array }
+  | { ok: false; reason: 'too_large' | 'invalid' };
+
+async function readRequestBytes(
+  request: Request,
+  maxBytes: number,
+): Promise<RequestBytesResult> {
+  const declaredLength = request.headers.get('content-length')?.trim();
+  if (declaredLength) {
+    if (!/^\d+$/.test(declaredLength)) return { ok: false, reason: 'invalid' };
+    const length = Number(declaredLength);
+    if (!Number.isSafeInteger(length) || length > maxBytes) {
+      return { ok: false, reason: 'too_large' };
+    }
+  }
+
+  if (!request.body) return { ok: false, reason: 'invalid' };
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // O limite já foi atingido; o cancelamento é apenas uma otimização.
+        }
+        return { ok: false, reason: 'too_large' };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { ok: true, bytes };
+}
+
+/**
+ * Lê JSON sem confiar apenas no cabeçalho Content-Length.
+ * Requests chunked podem omitir esse cabeçalho, então o stream é interrompido
+ * assim que ultrapassa o limite definido pela rota.
+ */
+export async function readJsonBody(
+  request: Request,
+  maxBytes: number,
+): Promise<JsonBodyResult> {
+  const bodyResult = await readRequestBytes(request, maxBytes);
+  if (!bodyResult.ok) return bodyResult;
+
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bodyResult.bytes);
+    return { ok: true, data: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
+}
+
+export type FormDataBodyResult =
+  | { ok: true; data: FormData }
+  | { ok: false; reason: 'too_large' | 'invalid' };
+
+/**
+ * Parseia multipart somente depois de limitar o corpo inteiro. O parser nativo
+ * de FormData é mantido, mas não pode receber um stream sem limite.
+ */
+export async function readFormData(
+  request: Request,
+  maxBytes: number,
+): Promise<FormDataBodyResult> {
+  const contentType = request.headers.get('content-type') || '';
+  if (!/^multipart\/form-data\s*;/i.test(contentType)) {
+    return { ok: false, reason: 'invalid' };
+  }
+  const bodyResult = await readRequestBytes(request, maxBytes);
+  if (!bodyResult.ok) return bodyResult;
+  try {
+    const form = await new Response(bodyResult.bytes as unknown as BodyInit, {
+      headers: { 'content-type': contentType },
+    }).formData();
+    return { ok: true, data: form };
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
 }
 
 const TRUSTED_PRODUCTION_HOSTNAMES = new Set([
@@ -72,11 +184,7 @@ export function hasValidOrigin(request: Request): boolean {
 export function leadFingerprint(request: Request, email: string) {
   const secret = process.env.LEAD_HASH_SECRET;
   if (!secret || secret.length < 32) return null;
-  const forwarded = request.headers
-    .get('x-forwarded-for')
-    ?.split(',')[0]
-    ?.trim();
-  const ip = forwarded || request.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = getClientIp(request);
   const userAgent = request.headers.get('user-agent') ?? 'unknown';
   return createHmac('sha256', secret)
     .update(`${ip}|${userAgent}|${email}`)
@@ -122,13 +230,17 @@ export async function verifyTurnstile(token: string, request: Request) {
   const body = new URLSearchParams({ secret, response: token });
   const ip = request.headers.get('cf-connecting-ip');
   if (ip) body.set('remoteip', ip);
-  const response = await fetch(
-    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-    { method: 'POST', body },
-  );
-  if (!response.ok) return false;
-  const result = (await response.json()) as { success?: boolean };
-  return result.success === true;
+  try {
+    const response = await fetch(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      { method: 'POST', body, signal: AbortSignal.timeout(8_000) },
+    );
+    if (!response.ok) return false;
+    const result = (await response.json()) as { success?: boolean };
+    return result.success === true;
+  } catch {
+    return false;
+  }
 }
 
 export function getClientIp(request: Request): string {
@@ -136,7 +248,9 @@ export function getClientIp(request: Request): string {
     request.headers.get('x-nf-client-connection-ip'),
     request.headers.get('cf-connecting-ip'),
     request.headers.get('x-real-ip'),
-    request.headers.get('x-forwarded-for')?.split(',')[0],
+    process.env.TRUST_PROXY_HEADERS === 'true'
+      ? request.headers.get('x-forwarded-for')?.split(',')[0]
+      : null,
   ];
   const value = candidates.find((candidate) => candidate && /^[a-f0-9:.]{3,64}$/i.test(candidate.trim()));
   return value?.trim() || '127.0.0.1';
@@ -201,7 +315,58 @@ export function sanitizeText(input: string): string {
     .trim();
 }
 
-export const NO_STORE_HEADERS = {
-  'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
-  Pragma: 'no-cache',
-} as const;
+function containsUnsafeUrlCharacters(value: string): boolean {
+  return Array.from(value).some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 0x20 || '<>"\'`'.includes(character);
+  });
+}
+
+/**
+ * Normaliza URLs provenientes de conteúdo persistido antes de entregá-las ao
+ * navegador. Dados armazenados podem ter sido alterados fora do painel, então
+ * a validação do formulário administrativo não deve ser a única barreira.
+ */
+export function safePublicUrl(value: unknown, fallback = ''): string {
+  if (typeof value !== 'string') return fallback;
+  const candidate = value.trim();
+  if (!candidate || candidate.length > 2_000 || containsUnsafeUrlCharacters(candidate)) {
+    return fallback;
+  }
+
+  if (candidate.startsWith('/') && !candidate.startsWith('//')) {
+    return candidate;
+  }
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return fallback;
+    return parsed.toString();
+  } catch {
+    return fallback;
+  }
+}
+
+export function safePublicHttpsUrl(value: unknown, fallback = ''): string {
+  const normalized = safePublicUrl(value, fallback);
+  if (!normalized) return '';
+  if (normalized.startsWith('/')) return fallback;
+  return normalized;
+}
+
+/** Referência de imagem pública: caminho local, URL HTTPS ou chave do Storage. */
+export function safePublicAssetPath(value: unknown, fallback = ''): string {
+  const normalized = safePublicUrl(value, '');
+  if (normalized) return normalized;
+  if (typeof value !== 'string') return fallback;
+  const candidate = value.trim();
+  if (
+    candidate.length >= 1 &&
+    candidate.length <= 500 &&
+    !candidate.includes('..') &&
+    /^[a-zA-Z0-9][a-zA-Z0-9/_ .-]*$/.test(candidate)
+  ) {
+    return candidate;
+  }
+  return fallback;
+}

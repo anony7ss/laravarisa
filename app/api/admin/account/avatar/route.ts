@@ -4,18 +4,26 @@ import {
   imageMimeFromMagic,
   jsonError,
   NO_STORE_HEADERS,
-  safeStorageName,
+  readFormData,
 } from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_PIXELS = 40_000_000;
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
 
-  const form = await request.formData();
+  const formResult = await readFormData(request, MAX_BYTES + 64 * 1024);
+  if (!formResult.ok) {
+    return jsonError(
+      formResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Formulário inválido.',
+      formResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const form = formResult.data;
   const file = form.get('file');
   if (!(file instanceof File)) return jsonError('Arquivo de foto ausente.', 400);
   if (file.size < 1 || file.size > MAX_BYTES)
@@ -27,13 +35,14 @@ export async function POST(request: Request) {
 
   try {
     const sharp = (await import('sharp')).default;
-    const webpBuffer = await sharp(bytes)
+    const webpBuffer = await sharp(bytes, { limitInputPixels: MAX_IMAGE_PIXELS })
       .resize(256, 256, { fit: 'cover', position: 'center' })
       .webp({ quality: 85 })
       .toBuffer();
     bytes = new Uint8Array(webpBuffer);
   } catch (err) {
     console.error('[Avatar Resize Error]:', err);
+    return jsonError('Não foi possível processar a imagem.', 415);
   }
 
   const fileName = `avatar-${staff.user.id}-${Date.now()}.webp`;

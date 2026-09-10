@@ -5,11 +5,40 @@
 
 const TTL_MS = 60 * 60 * 1000; // 60 minutos
 const MAX_MESSAGES_PER_SESSION = 50;
+const MAX_SESSIONS = 2000;
+const MAX_MESSAGE_CHARS = 6000;
+const MAX_STATE_CHARS = 32 * 1024;
+const ALLOWED_MESSAGE_ROLES = new Set(['user', 'assistant', 'system', 'tool']);
+
+function cloneBounded(value, maxChars = MAX_STATE_CHARS) {
+  try {
+    const serialized = JSON.stringify(value);
+    if (!serialized || serialized.length > maxChars) return null;
+    return JSON.parse(serialized);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * @type {Map<string, { messages: Array<{ role: string, content: string, timestamp: number, [key: string]: any }>, lastActivity: number }>}
  */
 const sessions = new Map();
+
+function evictOldestSessionsIfNeeded() {
+  while (sessions.size > MAX_SESSIONS) {
+    let oldestKey = null;
+    let oldestActivity = Infinity;
+    for (const [key, session] of sessions) {
+      if (session.lastActivity < oldestActivity) {
+        oldestActivity = session.lastActivity;
+        oldestKey = key;
+      }
+    }
+    if (!oldestKey) break;
+    sessions.delete(oldestKey);
+  }
+}
 
 /**
  * Retorna o histórico de mensagens de um contato
@@ -28,7 +57,7 @@ export function getHistory(jid) {
     return [];
   }
 
-  return session.messages;
+  return session.messages.map((message) => ({ ...message }));
 }
 
 /**
@@ -50,14 +79,26 @@ export function addMessage(jid, role, content, extra = {}) {
       lastActivity: Date.now(),
     };
     sessions.set(jid, session);
+    evictOldestSessionsIfNeeded();
   }
 
   const messageEntry = {
-    role,
-    content,
+    role: ALLOWED_MESSAGE_ROLES.has(role) ? role : 'user',
+    content: String(content ?? '').normalize('NFKC').slice(0, MAX_MESSAGE_CHARS),
     timestamp: Date.now(),
-    ...(extra && typeof extra === 'object' ? extra : {}),
   };
+
+  // Somente metadados usados pelo cliente OpenAI podem atravessar a fronteira
+  // da memória. Impede que uma chamada futura sobrescreva role/conteúdo/data.
+  if (extra && typeof extra === 'object') {
+    if (Array.isArray(extra.tool_calls)) {
+      const safeToolCalls = cloneBounded(extra.tool_calls, 12 * 1024);
+      if (safeToolCalls) messageEntry.tool_calls = safeToolCalls;
+    }
+    if (typeof extra.tool_call_id === 'string') {
+      messageEntry.tool_call_id = extra.tool_call_id.slice(0, 120);
+    }
+  }
 
   session.messages.push(messageEntry);
 
@@ -93,7 +134,7 @@ export function getState(jid) {
     sessions.delete(jid);
     return null;
   }
-  return session.state || null;
+  return cloneBounded(session.state) || null;
 }
 
 /**
@@ -111,8 +152,11 @@ export function setState(jid, state) {
       lastActivity: Date.now(),
     };
     sessions.set(jid, session);
+    evictOldestSessionsIfNeeded();
   }
-  session.state = state;
+  const stateSeguro = state && typeof state === 'object' ? cloneBounded(state) : null;
+  if (!stateSeguro) return null;
+  session.state = stateSeguro;
   session.lastActivity = Date.now();
   return session.state;
 }
@@ -144,6 +188,7 @@ export function setSessionClientName(jid, name) {
       lastActivity: Date.now(),
     };
     sessions.set(jid, session);
+    evictOldestSessionsIfNeeded();
   } else {
     session.clientName = name;
   }

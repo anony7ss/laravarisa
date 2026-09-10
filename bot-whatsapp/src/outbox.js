@@ -4,16 +4,45 @@
 
 import { supabase } from './supabase.js';
 import config from './config.js';
-import { sendHumanizedMessage } from './queue.js';
+import { sendHumanizedMessage, sendHumanizedMedia } from './queue.js';
 import { logAction, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
+import { isSupportedMediaBuffer, readResponseBodyWithLimit, sanitizeUntrustedText } from './security-utils.js';
 
 let isProcessing = false;
-let pollingInterval = null;
 let realtimeSubscription = null;
 let currentSocket = null;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
+
+async function carregarMidia(url, mediaType) {
+  if (!url || typeof url !== 'string') throw new Error('URL de mídia ausente');
+  const parsed = new URL(url);
+  const configured = config.supabaseUrl ? new URL(config.supabaseUrl) : null;
+  if (
+    parsed.protocol !== 'https:' ||
+    !configured ||
+    configured.protocol !== 'https:' ||
+    parsed.hostname !== configured.hostname ||
+    parsed.username ||
+    parsed.password
+  ) {
+    throw new Error('URL de mídia não autorizada');
+  }
+
+  const response = await fetch(parsed, { signal: AbortSignal.timeout(15000), redirect: 'error' });
+  if (!response.ok) throw new Error(`Falha ao baixar mídia (${response.status})`);
+  const contentType = String(response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
+  const expectedPrefix = mediaType === 'audio' ? 'audio/' : 'image/';
+  if (!contentType.startsWith(expectedPrefix)) {
+    throw new Error('Tipo de mídia não autorizado');
+  }
+  const buffer = await readResponseBodyWithLimit(response, MAX_MEDIA_BYTES);
+  if (buffer.length < 1 || buffer.length > MAX_MEDIA_BYTES) throw new Error('Mídia excede o limite permitido');
+  if (!isSupportedMediaBuffer(buffer, mediaType)) throw new Error('Conteúdo de mídia inválido');
+  return buffer;
+}
 
 /**
  * Processa mensagens pendentes na fila whatsapp_outbox
@@ -30,7 +59,7 @@ export async function processarFilaOutbox(sock) {
     // 1. Busca até 5 mensagens pendentes
     const { data: pendentes, error: errPendentes } = await supabase
       .from('whatsapp_outbox')
-      .select('*')
+      .select('id, phone, client_name, client_id, message, message_type, media_type, media_url, scheduled_for, status')
       .eq('status', 'pending')
       .or(`scheduled_for.lte.${agora},scheduled_for.is.null`)
       .order('created_at', { ascending: true })
@@ -55,11 +84,18 @@ export async function processarFilaOutbox(sock) {
         continue;
       }
 
-      // Marca como processando
-      await supabase
+      // Claim atômico: se outro worker já pegou a mensagem, não a envie duas vezes.
+      const { data: claimed, error: claimError } = await supabase
         .from('whatsapp_outbox')
         .update({ status: 'processing' })
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle();
+
+      if (claimError || !claimed) {
+        continue;
+      }
 
       try {
         const isUrgent =
@@ -75,14 +111,34 @@ export async function processarFilaOutbox(sock) {
           `Enviando [${item.message_type || 'msg'}] para ${item.client_name || item.phone} (${jid})...`
         );
 
-        await sendHumanizedMessage(sock, jid, item.message, {
-          immediate: isUrgent,
-          skipTyping: isUrgent,
-          minTyping: isUrgent ? 0 : 300,
-          maxTyping: isUrgent ? 0 : 800,
-          skipChatLog: item.message_type === 'direct',
-          senderType: 'system',
-        });
+        const mensagem = String(item.message || '').trim().slice(0, 4000);
+        if (!mensagem) {
+          throw new Error('Mensagem vazia na fila');
+        }
+
+        if (item.media_type && item.media_type !== 'text') {
+          if (item.media_type !== 'audio' && item.media_type !== 'image') {
+            throw new Error('Tipo de mídia não autorizado');
+          }
+          const mediaBuffer = await carregarMidia(item.media_url, item.media_type);
+          await sendHumanizedMedia(sock, jid, mediaBuffer, {
+            mediaType: item.media_type,
+            caption: mensagem,
+            mediaUrl: item.media_url,
+            immediate: isUrgent,
+            skipChatLog: item.message_type === 'direct',
+            senderType: item.message_type === 'direct' ? 'admin_manual' : 'system',
+          });
+        } else {
+          await sendHumanizedMessage(sock, jid, mensagem, {
+            immediate: isUrgent,
+            skipTyping: isUrgent,
+            minTyping: isUrgent ? 0 : 300,
+            maxTyping: isUrgent ? 0 : 800,
+            skipChatLog: item.message_type === 'direct',
+            senderType: 'system',
+          });
+        }
 
         await supabase
           .from('whatsapp_outbox')
@@ -91,7 +147,8 @@ export async function processarFilaOutbox(sock) {
             sent_at: new Date().toISOString(),
             error: null,
           })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .eq('status', 'processing');
 
         logAction(
           'Outbox WhatsApp',
@@ -113,10 +170,11 @@ export async function processarFilaOutbox(sock) {
           .from('whatsapp_outbox')
           .update({
             status: 'failed',
-            error: msgErro,
+            error: sanitizeUntrustedText(msgErro, 500),
             sent_at: new Date().toISOString(),
           })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .eq('status', 'processing');
       }
     }
     return true;
@@ -131,6 +189,8 @@ export async function processarFilaOutbox(sock) {
 
 let isRealtimeHealthy = false;
 let adaptiveTimer = null;
+const OUTBOX_FALLBACK_DELAYS = [4000, 8000, 15000, 30000];
+let fallbackDelayIndex = 0;
 
 function agendarProximaExecucaoOutbox() {
   if (adaptiveTimer) {
@@ -138,11 +198,16 @@ function agendarProximaExecucaoOutbox() {
     adaptiveTimer = null;
   }
 
-  // Frequência de ultra-resposta: 400ms para 2FA e códigos instantâneos
-  const delay = isProcessing ? 200 : 400;
+  const delay = isRealtimeHealthy
+    ? 5000
+    : OUTBOX_FALLBACK_DELAYS[Math.min(fallbackDelayIndex, OUTBOX_FALLBACK_DELAYS.length - 1)];
+  if (!isRealtimeHealthy) {
+    fallbackDelayIndex = Math.min(fallbackDelayIndex + 1, OUTBOX_FALLBACK_DELAYS.length - 1);
+  }
   adaptiveTimer = setTimeout(async () => {
     if (!currentSocket) return;
-    await processarFilaOutbox(currentSocket);
+    const processed = await processarFilaOutbox(currentSocket);
+    if (processed) fallbackDelayIndex = 0;
     agendarProximaExecucaoOutbox();
   }, delay);
 
@@ -183,8 +248,10 @@ export function iniciarProcessadorOutbox(sock) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           isRealtimeHealthy = true;
+          fallbackDelayIndex = 0;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           isRealtimeHealthy = false;
+          fallbackDelayIndex = 0;
         }
       });
   }

@@ -275,7 +275,7 @@ export function AccountManager({ initialProfile }: Props) {
 
       setTwoFactorStep('code_sent');
       setTwoFactorMessage({
-        text: data.message || 'Código enviado via WhatsApp pelo bot Astra!',
+        text: data.message || 'Código enviado via WhatsApp pelo bot Arla AI!',
         type: 'success',
       });
     } catch (err) {
@@ -602,10 +602,10 @@ export function AccountManager({ initialProfile }: Props) {
                   <input
                     type={showNewPass ? 'text' : 'password'}
                     required
-                    minLength={6}
+                    minLength={8}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo de 6 caracteres"
+                    placeholder="Mínimo de 8 caracteres"
                   />
                   <button
                     type="button"
@@ -622,7 +622,7 @@ export function AccountManager({ initialProfile }: Props) {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repita a nova senha"
@@ -999,8 +999,8 @@ export function AccountManager({ initialProfile }: Props) {
                   <input
                     type="text"
                     required
-                    minLength={6}
-                    placeholder="Mínimo 6 caracteres"
+                    minLength={8}
+                    placeholder="Mínimo 8 caracteres"
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                   />

@@ -1,4 +1,3 @@
-import { createServerSupabase } from '@/lib/supabase/server';
 import { requireStaff } from '@/lib/admin-auth';
 import { TestimonialsManager } from '@/components/admin/testimonials-manager';
 
@@ -10,7 +9,7 @@ export default async function TestimonialsPage() {
 
   const { data: testimonials } = await supabase
     .from('testimonials')
-    .select('*')
+    .select('id,client_name,client_role,content,rating,active,sort_order,created_at,updated_at')
     .order('sort_order', { ascending: true });
 
   return (

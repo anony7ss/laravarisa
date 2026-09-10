@@ -3,7 +3,7 @@
  * Padrão Visual: Clean, Moderno, Minimalista de Alto Padrão (Estilo Concierge/Executivo)
  * 
  * Regras:
- * 1. Pelo menos 1 emoji por mensagem (elegante e moderno: 🤍, 🌸, 💕, 📋), máximo 2.
+ * 1. No máximo 1 emoji por mensagem, somente quando fizer sentido.
  * 2. EMOJI PROIBIDO: ✨ (NUNCA usar).
  * 3. Sem poluição visual, sem asteriscos bugados ou marcadores repetidos.
  * 4. Marcadores de lista sempre padronizados com '• '.

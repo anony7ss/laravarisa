@@ -2,6 +2,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 @import './design-tokens.css';
 :root {
+  --font-anton: 'Anton';
+  --font-dm-sans: 'DM Sans';
   --font-display: var(--font-dm-sans), 'DM Sans', sans-serif;
   --font-body: var(--font-dm-sans), 'DM Sans', sans-serif;
   --color-ember: #c45424;

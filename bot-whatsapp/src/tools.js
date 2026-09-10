@@ -2,16 +2,18 @@ import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
 import { notificarLaraAtendimentoHumano, notificarLaraNovoAgendamento } from './notifications.js';
 import { reactToMessage, sendHumanizedMessage } from './queue.js';
-import { resolverJidWhatsApp } from './phone-utils.js';
+import { obterVariacoesTelefone, resolverJidWhatsApp } from './phone-utils.js';
 import { obterServicosEmCache, obterConfiguracoesEmCache, invalidarCacheConfiguracoes } from './cache.js';
+import { sanitizeUntrustedText } from './security-utils.js';
+
+const ISO_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
 
 // Inicialização do cliente Supabase para execução das ferramentas
-const supabaseUrl = config.supabaseUrl || 'https://placeholder.supabase.co';
-const supabaseKey =
-  config.supabaseServiceRoleKey ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  'placeholder-key';
+// The bot is allowed to use only the private service-role credential. The
+// process exits during startup when it is absent; the inert local values keep
+// module loading deterministic without ever falling back to a browser key.
+const supabaseUrl = config.supabaseUrl || 'http://127.0.0.1:9';
+const supabaseKey = config.supabaseServiceRoleKey || 'disabled-service-role-key';
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -33,7 +35,7 @@ export async function listarServicos() {
     };
   } catch (err) {
     console.error('[tools:listarServicos] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro interno ao listar serviços.' };
+    return { ok: false, erro: 'Não foi possível carregar os serviços agora.' };
   }
 }
 
@@ -44,7 +46,7 @@ export async function listarServicos() {
  */
 export async function consultarHorarios(data, duracaoMinutos = 120) {
   try {
-    if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(String(data))) {
       return {
         ok: false,
         mensagem: 'Por favor, informe uma data válida no formato YYYY-MM-DD.',
@@ -52,8 +54,20 @@ export async function consultarHorarios(data, duracaoMinutos = 120) {
     }
 
     // Validação de dia da semana no fuso de Brasília (America/Sao_Paulo)
-    const [year, month, day] = data.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
+    const [year, month, day] = String(data).split('-').map(Number);
+    const dateObj = new Date(Date.UTC(year, month - 1, day));
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day) ||
+      month < 1 || month > 12 ||
+      day < 1 || day > 31 ||
+      dateObj.getUTCFullYear() !== year ||
+      dateObj.getUTCMonth() !== month - 1 ||
+      dateObj.getUTCDate() !== day
+    ) {
+      return { ok: false, mensagem: 'Por favor, informe uma data válida.' };
+    }
     const diaSemana = dateObj.getDay();
 
     // Checa configurações do estúdio com cache em memória (aberto/fechado e dias de atendimento)
@@ -95,7 +109,7 @@ export async function consultarHorarios(data, duracaoMinutos = 120) {
       }
     }
 
-    const duration = Math.max(Number(duracaoMinutos) || 120, 30);
+    const duration = Math.min(Math.max(Number(duracaoMinutos) || 120, 30), 480);
 
     const { data: slots, error } = await supabase.rpc('get_public_available_slots', {
       p_date: data,
@@ -104,7 +118,7 @@ export async function consultarHorarios(data, duracaoMinutos = 120) {
 
     if (error) {
       console.error('[tools:consultarHorarios] Erro Supabase RPC:', error.message);
-      return { ok: false, mensagem: `Erro ao consultar horários: ${error.message}` };
+      return { ok: false, mensagem: 'Não foi possível consultar os horários agora.' };
     }
 
     if (!slots || slots.length === 0) {
@@ -139,7 +153,7 @@ export async function consultarHorarios(data, duracaoMinutos = 120) {
     };
   } catch (err) {
     console.error('[tools:consultarHorarios] Exceção:', err);
-    return { ok: false, mensagem: err.message || 'Erro ao verificar disponibilidade.' };
+    return { ok: false, mensagem: 'Não foi possível verificar a disponibilidade agora.' };
   }
 }
 
@@ -156,7 +170,7 @@ export async function criarAgendamento(params = {}) {
         ok: false,
         fechado: true,
         erro:
-          globalSettings.booking_closed_message ||
+          sanitizeUntrustedText(globalSettings.booking_closed_message || '', 500) ||
           'No momento os novos agendamentos estão temporariamente pausados. Fale com a Lara diretamente para verificar possíveis encaixes!',
       };
     }
@@ -173,7 +187,18 @@ export async function criarAgendamento(params = {}) {
     if (!startsAt) {
       return { ok: false, erro: 'Data e horário (starts_at) são obrigatórios.' };
     }
-    if (!clientName || clientName.trim().length < 2) {
+    const serviceIdText = String(serviceId).trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(serviceIdText)) {
+      return { ok: false, erro: 'Serviço inválido para agendamento.' };
+    }
+    if (typeof startsAt !== 'string' || startsAt.length > 80 || !ISO_DATE_TIME_RE.test(startsAt.trim()) || Number.isNaN(new Date(startsAt).getTime())) {
+      return { ok: false, erro: 'Data e horário inválidos para agendamento.' };
+    }
+    if (typeof clientName !== 'string' || !clientName.trim()) {
+      return { ok: false, erro: 'Nome da cliente é obrigatório.' };
+    }
+    const nomeSeguro = sanitizeUntrustedText(clientName, 100).trim();
+    if (!nomeSeguro || nomeSeguro.length < 2) {
       return { ok: false, erro: 'Nome da cliente é obrigatório.' };
     }
     if (!clientPhone) {
@@ -182,13 +207,17 @@ export async function criarAgendamento(params = {}) {
 
     // Higieniza telefone para dígitos
     const cleanPhone = String(clientPhone).replace(/\D/g, '');
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      return { ok: false, erro: 'Telefone da cliente inválido.' };
+    }
+    const notesSeguro = sanitizeUntrustedText(String(notes || ''), 500).trim();
 
     const rpcPayload = {
-      p_service_id: serviceId,
+      p_service_id: serviceIdText,
       p_starts_at: startsAt,
-      p_client_name: clientName.trim(),
+      p_client_name: nomeSeguro,
       p_client_phone: cleanPhone,
-      p_notes: notes ? notes.trim() : '',
+      p_notes: notesSeguro,
       p_origin: 'whatsapp_bot',
     };
 
@@ -204,13 +233,13 @@ export async function criarAgendamento(params = {}) {
 
     if (error) {
       console.error('[tools:criarAgendamento] Erro RPC:', error);
-      if (error.code === '23P01' || error.message.includes('reservado')) {
+      if (error.code === '23P01' || String(error.message || '').toLowerCase().includes('reservado')) {
         return {
           ok: false,
           erro: 'Esse horário acabou de ser reservado por outra cliente. Por favor, escolha outro horário.',
         };
       }
-      return { ok: false, erro: error.message || 'Não foi possível confirmar o agendamento.' };
+      return { ok: false, erro: 'Não foi possível confirmar o agendamento agora.' };
     }
 
     // Se agendado para as próximas 24h ou 2h, marca como já notificado/lembrado para não disparar lembrete imediato
@@ -243,14 +272,14 @@ export async function criarAgendamento(params = {}) {
     // Notifica também o WhatsApp pessoal da Lara em tempo real com ações interativas
     if (params.sock) {
       notificarLaraNovoAgendamento(params.sock, {
-        client_name: clientName,
+        client_name: nomeSeguro,
         client_phone: cleanPhone,
         starts_at: startsAt,
         service_name: data?.service_name,
         price_label: data?.price_label,
         duration_label: data?.duration_label,
         origin: 'whatsapp_bot',
-        notes: notes,
+        notes: notesSeguro,
       }).catch((errLara) => {
         console.warn('[tools:criarAgendamento] Aviso ao notificar Lara:', errLara?.message || errLara);
       });
@@ -264,7 +293,7 @@ export async function criarAgendamento(params = {}) {
     };
   } catch (err) {
     console.error('[tools:criarAgendamento] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro ao processar criação de agendamento.' };
+    return { ok: false, erro: 'Não foi possível processar o agendamento agora.' };
   }
 }
 
@@ -279,16 +308,14 @@ export async function consultarAgendamentoCliente(telefone) {
     }
 
     const cleanPhone = String(telefone).replace(/\D/g, '');
-    if (cleanPhone.length < 8) {
-      return { ok: false, mensagem: 'Número de telefone inválido.' };
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      return { ok: false, erro: 'Número de telefone inválido.' };
     }
 
     // Variantes com e sem DDI 55
-    const phoneVariants = [cleanPhone];
-    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
-      phoneVariants.push(cleanPhone.slice(2));
-    } else if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
-      phoneVariants.push(`55${cleanPhone}`);
+    const phoneVariants = obterVariacoesTelefone(cleanPhone);
+    if (phoneVariants.length === 0) {
+      return { ok: false, erro: 'Número de telefone inválido.' };
     }
 
     const nowIso = new Date().toISOString();
@@ -315,7 +342,8 @@ export async function consultarAgendamentoCliente(telefone) {
         .in('client_phone', phoneVariants)
         .in('status', ['scheduled', 'confirmed'])
         .gte('starts_at', nowIso)
-        .order('starts_at', { ascending: true });
+        .order('starts_at', { ascending: true })
+        .limit(20);
 
       if (error) {
         console.error('[tools:consultarAgendamentoCliente] Erro Supabase:', error.message);
@@ -332,7 +360,7 @@ export async function consultarAgendamentoCliente(telefone) {
       };
     }
 
-    const formatados = agendamentos.map((ag) => {
+    const formatados = agendamentos.slice(0, 20).map((ag) => {
       const dataObj = new Date(ag.starts_at);
       const dataStr = dataObj.toLocaleDateString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
@@ -366,7 +394,7 @@ export async function consultarAgendamentoCliente(telefone) {
     };
   } catch (err) {
     console.error('[tools:consultarAgendamentoCliente] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro ao buscar agendamentos.' };
+    return { ok: false, erro: 'Não foi possível buscar seus agendamentos agora.' };
   }
 }
 
@@ -375,20 +403,32 @@ export async function consultarAgendamentoCliente(telefone) {
  * Altera o status do agendamento para 'cancelled' no Supabase.
  * Libera o horário imediatamente na agenda para outras clientes.
  */
-export async function cancelarAgendamento(agendamentoId, motivo = '') {
+export async function cancelarAgendamento(agendamentoId, motivo = '', confirmacaoExpressa = false) {
   try {
+    if (confirmacaoExpressa !== true) {
+      return {
+        ok: false,
+        confirmacao_necessaria: true,
+        erro: 'Confirmação expressa da cliente é necessária antes de cancelar este agendamento.',
+      };
+    }
     if (!agendamentoId) {
       return { ok: false, erro: 'ID do agendamento não informado.' };
     }
+    const appointmentIdText = String(agendamentoId).trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentIdText)) {
+      return { ok: false, erro: 'Agendamento inválido.' };
+    }
+    const motivoSeguro = sanitizeUntrustedText(String(motivo || ''), 300).trim();
 
     const { data, error } = await supabase.rpc('cancel_appointment', {
-      p_appointment_id: agendamentoId,
-      p_reason: motivo ? String(motivo).trim() : '',
+      p_appointment_id: appointmentIdText,
+      p_reason: motivoSeguro,
     });
 
     if (error) {
       console.error('[tools:cancelarAgendamento] Erro RPC:', error.message);
-      return { ok: false, erro: error.message || 'Não foi possível cancelar o agendamento.' };
+      return { ok: false, erro: 'Não foi possível cancelar o agendamento agora.' };
     }
 
     return {
@@ -399,7 +439,7 @@ export async function cancelarAgendamento(agendamentoId, motivo = '') {
     };
   } catch (err) {
     console.error('[tools:cancelarAgendamento] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro ao processar cancelamento.' };
+    return { ok: false, erro: 'Não foi possível processar o cancelamento agora.' };
   }
 }
 
@@ -408,18 +448,26 @@ export async function cancelarAgendamento(agendamentoId, motivo = '') {
  * Cancela TODOS os agendamentos futuros do cliente de uma única vez em lote.
  * Executa em uma única chamada rápida sem precisar cancelar um a um.
  */
-export async function cancelarTodosAgendamentos(telefone, motivo = '') {
+export async function cancelarTodosAgendamentos(telefone, motivo = '', confirmacaoExpressa = false) {
   try {
+    if (confirmacaoExpressa !== true) {
+      return {
+        ok: false,
+        confirmacao_necessaria: true,
+        erro: 'Confirmação expressa da cliente é necessária antes de cancelar todos os agendamentos.',
+      };
+    }
     if (!telefone) {
       return { ok: false, erro: 'Telefone não informado para cancelamento.' };
     }
 
     const cleanPhone = String(telefone).replace(/\D/g, '');
-    const phoneVariants = [cleanPhone];
-    if (cleanPhone.startsWith('55') && cleanPhone.length >= 12) {
-      phoneVariants.push(cleanPhone.slice(2));
-    } else if (!cleanPhone.startsWith('55') && (cleanPhone.length === 10 || cleanPhone.length === 11)) {
-      phoneVariants.push(`55${cleanPhone}`);
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      return { ok: false, erro: 'Número de telefone inválido.' };
+    }
+    const phoneVariants = obterVariacoesTelefone(cleanPhone);
+    if (phoneVariants.length === 0) {
+      return { ok: false, erro: 'Número de telefone inválido.' };
     }
 
     const nowIso = new Date().toISOString();
@@ -429,7 +477,9 @@ export async function cancelarTodosAgendamentos(telefone, motivo = '') {
       .select('id, starts_at, service:services(name)')
       .in('client_phone', phoneVariants)
       .in('status', ['scheduled', 'confirmed'])
-      .gte('starts_at', nowIso);
+      .gte('starts_at', nowIso)
+      .order('starts_at', { ascending: true })
+      .limit(100);
 
     if (fetchErr) {
       console.error('[tools:cancelarTodosAgendamentos] Erro fetch:', fetchErr.message);
@@ -451,9 +501,13 @@ export async function cancelarTodosAgendamentos(telefone, motivo = '') {
       .from('appointments')
       .update({
         status: 'cancelled',
-        notes: motivo ? `Cancelamento geral pelo cliente: ${motivo}` : 'Cancelamento de todos os agendamentos via WhatsApp',
+        notes: motivo
+          ? `Cancelamento geral pelo cliente: ${sanitizeUntrustedText(String(motivo), 300).trim()}`
+          : 'Cancelamento de todos os agendamentos via WhatsApp',
       })
-      .in('id', ids);
+      .in('id', ids)
+      .in('status', ['scheduled', 'confirmed'])
+      .gte('starts_at', nowIso);
 
     if (updateErr) {
       console.error('[tools:cancelarTodosAgendamentos] Erro update:', updateErr.message);
@@ -468,7 +522,7 @@ export async function cancelarTodosAgendamentos(telefone, motivo = '') {
     };
   } catch (err) {
     console.error('[tools:cancelarTodosAgendamentos] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro ao cancelar agendamentos em lote.' };
+    return { ok: false, erro: 'Não foi possível cancelar os agendamentos agora.' };
   }
 }
 
@@ -477,15 +531,31 @@ export async function cancelarTodosAgendamentos(telefone, motivo = '') {
  * Altera a data/horário de um agendamento existente para um novo horário.
  * Utiliza a RPC atômica `reschedule_appointment` com lock de concorrência e liberação imediata.
  */
-export async function reagendarAgendamento(agendamentoId, novoStartsAt) {
+export async function reagendarAgendamento(agendamentoId, novoStartsAt, confirmacaoExpressa = false) {
   try {
+    if (confirmacaoExpressa !== true) {
+      return {
+        ok: false,
+        confirmacao_necessaria: true,
+        erro: 'Confirmação expressa da cliente é necessária antes de alterar o horário.',
+      };
+    }
     if (!agendamentoId || !novoStartsAt) {
       return { ok: false, erro: 'ID do agendamento ou novo horário não fornecido.' };
     }
+    const appointmentIdText = String(agendamentoId).trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appointmentIdText)) {
+      return { ok: false, erro: 'Agendamento inválido.' };
+    }
+    const startsAtText = String(novoStartsAt).trim();
+    const startsAtDate = new Date(startsAtText);
+    if (startsAtText.length > 80 || !ISO_DATE_TIME_RE.test(startsAtText) || Number.isNaN(startsAtDate.getTime())) {
+      return { ok: false, erro: 'Novo horário inválido.' };
+    }
 
     const { data, error } = await supabase.rpc('reschedule_appointment', {
-      p_appointment_id: agendamentoId,
-      p_new_starts_at: novoStartsAt,
+      p_appointment_id: appointmentIdText,
+      p_new_starts_at: startsAtText,
     });
 
     if (error) {
@@ -496,7 +566,7 @@ export async function reagendarAgendamento(agendamentoId, novoStartsAt) {
           erro: 'Esse novo horário acabou de ser reservado por outra cliente. Por favor, escolha outro horário.',
         };
       }
-      return { ok: false, erro: error.message || 'Não foi possível reagendar no momento.' };
+      return { ok: false, erro: 'Não foi possível reagendar no momento.' };
     }
 
     return {
@@ -507,7 +577,7 @@ export async function reagendarAgendamento(agendamentoId, novoStartsAt) {
     };
   } catch (err) {
     console.error('[tools:reagendarAgendamento] Exceção:', err);
-    return { ok: false, erro: err.message || 'Erro ao processar reagendamento.' };
+    return { ok: false, erro: 'Erro ao processar reagendamento.' };
   }
 }
 
@@ -609,6 +679,10 @@ export const ferramentasSchema = [
             type: 'string',
             description: 'ID UUID do agendamento a cancelar (obtido em consultarAgendamentoCliente).',
           },
+          confirmacao_expressa: {
+            type: 'boolean',
+            description: 'Defina como true somente depois de a cliente responder claramente que confirma o cancelamento.',
+          },
           motivo: {
             type: 'string',
             description: 'Motivo informado pela cliente (opcional).',
@@ -622,10 +696,14 @@ export const ferramentasSchema = [
     type: 'function',
     function: {
       name: 'cancelarTodosAgendamentos',
-      description: 'Cancela TODOS os agendamentos futuros do cliente de uma única vez em lote e libera todos os horários na agenda instantaneamente. Use esta ferramenta IMEDIATAMENTE sempre que o cliente disser "cancelar todos", "cancela tudo", "cancela meus agendamentos", "não vou a nenhum", etc.',
+      description: 'Consulta e, somente após confirmação expressa da cliente, cancela TODOS os agendamentos futuros dela em lote. Na primeira intenção, peça confirmação clara antes de executar.',
       parameters: {
         type: 'object',
         properties: {
+          confirmacao_expressa: {
+            type: 'boolean',
+            description: 'Defina como true somente depois de a cliente responder claramente que confirma o cancelamento de todos.',
+          },
           motivo: {
             type: 'string',
             description: 'Motivo do cancelamento geral (opcional).',
@@ -645,6 +723,10 @@ export const ferramentasSchema = [
           agendamento_id: {
             type: 'string',
             description: 'ID UUID do agendamento a ser alterado (obtido em consultarAgendamentoCliente).',
+          },
+          confirmacao_expressa: {
+            type: 'boolean',
+            description: 'Defina como true somente depois de a cliente confirmar expressamente a nova data e horário.',
           },
           novo_starts_at: {
             type: 'string',
@@ -673,12 +755,41 @@ export const ferramentasSchema = [
   },
 ];
 
+const INTERNAL_TOOL_ERROR_PATTERNS = [
+  /supabase|postgres|postgrest|pgrst|sqlstate|constraint|relation|schema|column|permission denied|fetch failed|http\s*5\d\d/i,
+  /service[_ -]?role|api[_ -]?key|access[_ -]?token|refresh[_ -]?token/i,
+];
+
+/** Remove mensagens de infraestrutura antes que um resultado de ferramenta
+ * volte ao modelo e possa ser repetido para uma cliente. Logs continuam com
+ * o erro técnico para diagnóstico interno.
+ */
+function sanitizarResultadoFerramenta(value, key = '') {
+  if (Array.isArray(value)) return value.map((item) => sanitizarResultadoFerramenta(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([entryKey, entryValue]) => [
+        entryKey,
+        sanitizarResultadoFerramenta(entryValue, entryKey),
+      ]),
+    );
+  }
+  if ((key === 'erro' || key === 'error' || key === 'stack') && typeof value === 'string') {
+    if (key === 'stack' || INTERNAL_TOOL_ERROR_PATTERNS.some((pattern) => pattern.test(value))) {
+      return 'Não foi possível concluir esta operação agora.';
+    }
+    return value.slice(0, 500);
+  }
+  return value;
+}
+
 /**
  * Despacha e executa uma ferramenta pelo nome
  */
 export async function executarFerramenta(nome, args = {}, context = {}) {
   try {
-    switch (nome) {
+    const result = await (async () => {
+      switch (nome) {
       case 'listarServicos':
         return await listarServicos();
 
@@ -703,7 +814,7 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
         return await consultarAgendamentoCliente(args.telefone || context.telefone);
 
       case 'cancelarAgendamento': {
-        const res = await cancelarAgendamento(args.agendamento_id, args.motivo);
+        const res = await cancelarAgendamento(args.agendamento_id, args.motivo, args.confirmacao_expressa);
         if (res.ok && context.sock && context.msgKey) {
           reactToMessage(context.sock, context.msgKey, '👌').catch(() => {});
         }
@@ -712,7 +823,7 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
 
       case 'cancelarTodosAgendamentos': {
         const phone = args.telefone || context.telefone;
-        const res = await cancelarTodosAgendamentos(phone, args.motivo);
+        const res = await cancelarTodosAgendamentos(phone, args.motivo, args.confirmacao_expressa);
         if (res.ok && context.sock && context.msgKey) {
           reactToMessage(context.sock, context.msgKey, '👌').catch(() => {});
         }
@@ -720,7 +831,7 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
       }
 
       case 'reagendarAgendamento': {
-        const res = await reagendarAgendamento(args.agendamento_id, args.novo_starts_at);
+        const res = await reagendarAgendamento(args.agendamento_id, args.novo_starts_at, args.confirmacao_expressa);
         if (res.ok && context.sock && context.msgKey) {
           reactToMessage(context.sock, context.msgKey, '🤍').catch(() => {});
         }
@@ -739,15 +850,17 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
         });
       }
 
-      default: {
+        default: {
         // Se for ferramenta profissional da Lara, despacha para executor dedicado
         const { executarFerramentaProfissional } = await import('./tools-professional.js');
         return await executarFerramentaProfissional(nome, args, context);
+        }
       }
-    }
+    })();
+    return sanitizarResultadoFerramenta(result);
   } catch (error) {
     console.error(`[tools:executarFerramenta] Erro ao executar "${nome}":`, error);
-    return { ok: false, erro: error?.message || 'Falha na execução da ferramenta.' };
+    return { ok: false, erro: 'Não foi possível concluir esta operação agora.' };
   }
 }
 

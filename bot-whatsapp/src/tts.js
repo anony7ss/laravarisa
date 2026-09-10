@@ -7,6 +7,12 @@ import { logAction, logError, logInfo, logWarn } from './terminal.js';
  */
 export const DEFAULT_VOICE = 'pt-BR-FranciscaNeural';
 
+const TTS_CACHE_TTL_MS = 15 * 60 * 1000;
+const TTS_CACHE_MAX_ITEMS = 24;
+const MAX_TTS_TEXT_CHARS = 3000;
+const MAX_TTS_AUDIO_BYTES = 16 * 1024 * 1024;
+const ttsCache = new Map();
+
 /**
  * Remove acentos e caracteres diacríticos para facilitar buscas e detecções semânticas.
  * @param {string} str 
@@ -67,7 +73,7 @@ export function limparTextoParaFala(texto) {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  return limpo;
+  return limpo.slice(0, MAX_TTS_TEXT_CHARS);
 }
 
 /**
@@ -80,6 +86,10 @@ export function limparTextoParaFala(texto) {
  */
 export function converterParaOggOpus(mp3Buffer) {
   return new Promise((resolve) => {
+    if (!Buffer.isBuffer(mp3Buffer) || mp3Buffer.length === 0 || mp3Buffer.length > MAX_TTS_AUDIO_BYTES) {
+      resolve({ buffer: Buffer.alloc(0), mimetype: 'audio/mpeg' });
+      return;
+    }
     try {
       const ffmpeg = spawn('ffmpeg', [
         '-y',
@@ -96,10 +106,28 @@ export function converterParaOggOpus(mp3Buffer) {
       ]);
 
       const chunks = [];
-      ffmpeg.stdout.on('data', (chunk) => chunks.push(chunk));
+      let totalBytes = 0;
+      let excedeuLimite = false;
+      const timeout = setTimeout(() => {
+        excedeuLimite = true;
+        ffmpeg.kill('SIGKILL');
+      }, 20_000);
+      timeout.unref?.();
+
+      ffmpeg.stdout.on('data', (chunk) => {
+        if (excedeuLimite) return;
+        totalBytes += chunk.length;
+        if (totalBytes > MAX_TTS_AUDIO_BYTES) {
+          excedeuLimite = true;
+          ffmpeg.kill('SIGKILL');
+          return;
+        }
+        chunks.push(chunk);
+      });
 
       ffmpeg.on('close', (code) => {
-        if (code === 0 && chunks.length > 0) {
+        clearTimeout(timeout);
+        if (code === 0 && !excedeuLimite && chunks.length > 0) {
           resolve({
             buffer: Buffer.concat(chunks),
             mimetype: 'audio/ogg; codecs=opus',
@@ -151,18 +179,42 @@ export async function gerarAudioVoz(texto, voz = DEFAULT_VOICE) {
 
   try {
     const vozEscolhida = (voz && voz.startsWith('pt-BR')) ? voz : DEFAULT_VOICE;
+    const cacheKey = `${vozEscolhida}\u0000${textoLimpo}`;
+    const cached = ttsCache.get(cacheKey);
+    if (cached && Date.now() - cached.createdAt < TTS_CACHE_TTL_MS) {
+      return {
+        sucesso: true,
+        buffer: Buffer.from(cached.buffer),
+        mimetype: cached.mimetype,
+        textoFalado: textoLimpo,
+      };
+    }
+    if (cached) ttsCache.delete(cacheKey);
+
     const tts = new EdgeTTS();
 
     // IMPORTANTE: O 2º parâmetro DEVE ser a voz pt-BR, senão o EdgeTTS usa a voz americana padrão en-US-AnaNeural!
     await tts.synthesize(textoLimpo, vozEscolhida);
     const mp3Buffer = await tts.toBuffer();
 
-    if (!mp3Buffer || mp3Buffer.length === 0) {
+    if (!mp3Buffer || mp3Buffer.length === 0 || mp3Buffer.length > MAX_TTS_AUDIO_BYTES) {
       throw new Error('Buffer de voz retornado pelo sintetizador está vazio.');
     }
 
     // Converte para OGG Opus nativo para tocar perfeitamente em celulares (WhatsApp mobile)
     const { buffer: audioFinal, mimetype } = await converterParaOggOpus(mp3Buffer);
+    if (!audioFinal || audioFinal.length === 0 || audioFinal.length > MAX_TTS_AUDIO_BYTES) {
+      throw new Error('Áudio sintetizado excede o limite permitido.');
+    }
+
+    ttsCache.set(cacheKey, {
+      buffer: Buffer.from(audioFinal),
+      mimetype,
+      createdAt: Date.now(),
+    });
+    while (ttsCache.size > TTS_CACHE_MAX_ITEMS) {
+      ttsCache.delete(ttsCache.keys().next().value);
+    }
 
     return {
       sucesso: true,
@@ -174,7 +226,7 @@ export async function gerarAudioVoz(texto, voz = DEFAULT_VOICE) {
     logError('TTS', `Falha ao gerar voz neural: ${err?.message || err}`);
     return {
       sucesso: false,
-      erro: err?.message || 'Erro desconhecido ao sintetizar voz',
+      erro: 'Não foi possível gerar o áudio agora.',
     };
   }
 }

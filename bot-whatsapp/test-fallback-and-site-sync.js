@@ -2,6 +2,7 @@ import { processarFallback } from './src/fallback.js';
 import { notificarAgendamentoSite, supabase } from './src/supabase.js';
 import { processarMensagemComIA } from './src/ai.js';
 import { consultarHorarios } from './src/tools.js';
+import config from './src/config.js';
 
 let testesPassados = 0;
 let totalTestes = 0;
@@ -18,6 +19,11 @@ function assert(condicao, descricao) {
 }
 
 async function runTests() {
+  if (process.env.RUN_BOT_INTEGRATION_TESTS !== '1' || !config.supabaseUrl || !config.supabaseServiceRoleKey) {
+    console.log('ℹ️ Teste de integração ignorado. Defina RUN_BOT_INTEGRATION_TESTS=1 e as credenciais do Supabase para executar testes que criam e removem dados.');
+    return;
+  }
+
   console.log('================================================================');
   console.log('🧪 INICIANDO TESTES DO MOTOR DE FALLBACK E SINCRONIZAÇÃO DO SITE');
   console.log('================================================================\n');

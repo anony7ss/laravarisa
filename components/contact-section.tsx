@@ -88,6 +88,14 @@ export function ContactSection() {
           <span>Fale com a Lara</span>
           <ArrowUpRight size={25} />
         </div>
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute -left-[9999px] h-px w-px opacity-0"
+        />
         {!sent ? (
           <>
             <div className="form-grid">
@@ -162,13 +170,13 @@ export function ContactSection() {
                 Política de Privacidade
               </Link>.
             </p>
-            <button className="button" type="submit" disabled={submitting}>
+            <button className="button" type="submit" disabled={submitting} aria-busy={submitting}>
               {submitting ? 'Enviando sua mensagem…' : 'Enviar dúvida'}
               {!submitting && <ArrowUpRight size={19} />}
             </button>
           </>
         ) : (
-          <div className="form-success-state" role="status" style={{ animation: 'fade-in 0.5s ease-out' }}>
+          <div className="form-success-state" aria-live="polite" style={{ animation: 'fade-in 0.5s ease-out' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#f6f6f2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: '#a02c00' }}>
               <Check size={24} />
             </div>

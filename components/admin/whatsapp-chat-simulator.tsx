@@ -30,7 +30,6 @@ import {
   X,
   FileText,
 } from 'lucide-react';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import type { WhatsAppSession } from './whatsapp-manager';
 import {
   areSamePhone,
@@ -207,12 +206,13 @@ function ChatAudioPlayer({ src, isMe }: { src: string; isMe: boolean }) {
 const QUICK_REPLIES = [
   'Olá! ✨ Em que posso te ajudar hoje?',
   'Seu agendamento está confirmado com sucesso! Te espero no estúdio. 💕',
-  'Chave PIX: 51989601662 (Studio Lara Varisa).',
-  'Nosso estúdio fica em Porto Alegre - RS. Ao chegar pode tocar o interfone!',
+  'Dados para pagamento: confira a chave PIX cadastrada antes de enviar.',
+  'Localização e instruções de chegada: confira os dados atualizados do estúdio.',
   'Lembre-se dos cuidados: não molhar os cílios nas primeiras 24h. 💖',
 ];
 
-export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession }) {
+export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSession; role: string }) {
+  const canManage = role !== 'viewer';
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -316,107 +316,18 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     }
   }, [selectedPhone]);
 
-  // 3. Realtime Supabase
+  // 3. Atualização periódica pela API protegida. Manter o banco fora do
+  // navegador evita expor chaves e concentra autorização no servidor.
   useEffect(() => {
-    const supabase = createBrowserSupabase();
-    if (!supabase) return;
+    if (!selectedPhone) return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) {
+        loadContacts();
+        loadConversation(selectedPhone);
+      }
+    }, 4000);
 
-    const msgChannel = supabase
-      .channel('wa_chat_live_messages')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'whatsapp_messages' },
-        (payload) => {
-          const newMsg = payload.new as ChatMessage;
-          if (!newMsg) return;
-
-          // Se a mensagem pertence à conversa atualmente selecionada
-          if (selectedPhone && areSamePhone(newMsg.phone, selectedPhone)) {
-            setMessages((prev) => {
-              // Já existe na lista pelo ID?
-              if (prev.some((m) => m.id === newMsg.id)) return prev;
-
-              // Se houver mensagem temporária otimista pendente igual, substitui
-              const optIndex = prev.findIndex(
-                (m) =>
-                  m.id.startsWith('temp-') &&
-                  m.from_me === newMsg.from_me &&
-                  m.content.trim() === newMsg.content.trim()
-              );
-              if (optIndex >= 0) {
-                const copy = [...prev];
-                copy[optIndex] = newMsg;
-                return copy;
-              }
-
-              return [...prev, newMsg];
-            });
-          }
-
-          setContacts((prev) => {
-            const idx = prev.findIndex((c) => areSamePhone(c.phone, newMsg.phone));
-            const canonicalPhone = normalizeCanonicalPhone(newMsg.phone) || newMsg.phone;
-            if (idx >= 0) {
-              const updated = [...prev];
-              updated[idx] = {
-                ...updated[idx],
-                lastMessage: newMsg.content || '',
-                lastTimestamp: newMsg.created_at,
-                fromMe: newMsg.from_me,
-              };
-              return updated.sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
-            } else {
-              const newC: ChatContact = {
-                phone: canonicalPhone,
-                name: newMsg.sender_name || 'Contato',
-                lastMessage: newMsg.content || '',
-                lastTimestamp: newMsg.created_at,
-                fromMe: newMsg.from_me,
-                mediaType: newMsg.media_type || 'text',
-                aiPaused: false,
-                aiPausedUntil: null,
-                clientId: null,
-              };
-              return [newC, ...prev];
-            }
-          });
-        }
-      )
-      .subscribe();
-
-    const controlChannel = supabase
-      .channel('wa_chat_live_controls')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'whatsapp_chat_control' },
-        (payload) => {
-          const row = payload.new as any;
-          if (row && row.phone) {
-            setContacts((prev) =>
-              prev.map((c) => {
-                if (areSamePhone(c.phone, row.phone)) {
-                  const isPaused = Boolean(
-                    row.ai_paused &&
-                    (!row.ai_paused_until || new Date(row.ai_paused_until).getTime() > Date.now())
-                  );
-                  return {
-                    ...c,
-                    aiPaused: isPaused,
-                    aiPausedUntil: row.ai_paused_until || null,
-                  };
-                }
-                return c;
-              })
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(msgChannel);
-      supabase.removeChannel(controlChannel);
-    };
+    return () => window.clearInterval(timer);
   }, [selectedPhone]);
 
   // Scroll para última mensagem SOMENTE dentro do container interno (sem rolar a janela/página inteira)
@@ -491,11 +402,13 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
   // Enviar mensagem manual (com suporte a texto e imagem)
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!canManage) return;
     if ((!inputText.trim() && !attachmentPreview) || !selectedPhone || sending) return;
 
     const messageText = inputText.trim();
-    const mediaBase64 = attachmentPreview?.base64 || null;
-    const mediaType = attachmentPreview ? 'image' : 'text';
+    const attachment = attachmentPreview;
+    const mediaBase64 = attachment?.base64 || null;
+    const mediaType = attachment ? 'image' : 'text';
 
     setInputText('');
     setAttachmentPreview(null);
@@ -517,6 +430,21 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
+      let mediaUrl: string | null = null;
+      if (attachment) {
+        const uploadForm = new FormData();
+        uploadForm.append('file', attachment.file);
+        const uploadRes = await fetch('/api/admin/whatsapp/media', {
+          method: 'POST',
+          body: uploadForm,
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || !uploadData.ok || typeof uploadData.url !== 'string') {
+          throw new Error(uploadData.error || 'Não foi possível enviar a imagem.');
+        }
+        mediaUrl = uploadData.url;
+      }
+
       const res = await fetch('/api/admin/whatsapp/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -526,7 +454,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
           client_name: effectiveContact?.name,
           message: messageText,
           media_type: mediaType,
-          media_url: mediaBase64,
+          media_url: mediaUrl,
         }),
       });
       const data = await res.json();
@@ -556,6 +484,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
 
   // Pausar ou reativar IA para este contato
   const handleToggleAi = async (paused: boolean, hours: number | null = null) => {
+    if (!canManage) return;
     if (!selectedPhone || pausingAi) return;
     setPausingAi(true);
 
@@ -599,6 +528,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
   // Criar nova conversa
   const handleCreateNewChat = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) return;
     const clean = newChatPhone.replace(/\D/g, '');
     if (clean.length < 10) {
       alert('Por favor digite um número de WhatsApp com DDD válido.');
@@ -761,26 +691,28 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
               {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setShowNewChatModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '6px 12px',
-                borderRadius: '999px',
-                border: '1px solid var(--admin-line, #2a2a26)',
-                background: 'var(--admin-soft, #242420)',
-                color: 'var(--admin-ink, #f7f7f2)',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              <Plus size={13} />
-              <span>Nova</span>
-            </button>
+            {canManage && (
+              <button
+                type="button"
+                onClick={() => setShowNewChatModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  borderRadius: '999px',
+                  border: '1px solid var(--admin-line, #2a2a26)',
+                  background: 'var(--admin-soft, #242420)',
+                  color: 'var(--admin-ink, #f7f7f2)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <Plus size={13} />
+                <span>Nova</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1053,7 +985,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 </button>
 
                 {/* Botão de Controle de IA */}
-                <button
+                {canManage && <button
                   type="button"
                   onClick={() => setShowPauseModal(true)}
                   style={{
@@ -1080,7 +1012,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                     }}
                   />
                   <span>{effectiveContact.aiPaused ? 'IA Pausada' : 'IA Ativa'}</span>
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -1099,7 +1031,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 }}
               >
                 <span>Atendimento humano manual ativado para este cliente.</span>
-                <button
+                {canManage && <button
                   type="button"
                   onClick={() => handleToggleAi(false)}
                   disabled={pausingAi}
@@ -1114,7 +1046,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                   }}
                 >
                   Reativar IA
-                </button>
+                </button>}
               </div>
             )}
 
@@ -1409,7 +1341,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
             </div>
 
             {/* Preview de Imagem Anexada */}
-            {attachmentPreview && (
+            {canManage && attachmentPreview && (
               <div
                 style={{
                   padding: '8px 14px',
@@ -1464,15 +1396,15 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 gap: '8px',
               }}
             >
-              <input
+              {canManage && <input
                 type="file"
                 ref={fileInputRef}
                 accept="image/*"
                 onChange={handleFileSelect}
                 style={{ display: 'none' }}
-              />
+              />}
 
-              <button
+              {canManage && <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 style={{
@@ -1491,13 +1423,14 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 title="Anexar foto da galeria"
               >
                 <ImageIcon size={17} />
-              </button>
+              </button>}
 
               <input
                 type="text"
                 placeholder={attachmentPreview ? "Adicione uma legenda (opcional)..." : "Escreva uma mensagem..."}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                disabled={!canManage}
                 style={{
                   flex: 1,
                   padding: '10px 14px',
@@ -1510,7 +1443,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 }}
               />
 
-              <button
+              {canManage && <button
                 type="submit"
                 disabled={(!inputText.trim() && !attachmentPreview) || sending}
                 style={{
@@ -1529,7 +1462,7 @@ export function WhatsAppChatSimulator({ session }: { session: WhatsAppSession })
                 }}
               >
                 {sending ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
-              </button>
+              </button>}
             </form>
           </>
         ) : (

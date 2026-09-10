@@ -7,7 +7,8 @@ update auth.users
 set encrypted_password = extensions.crypt('SUA_NOVA_SENHA_AQUI', extensions.gen_salt('bf', 10)),
     email_confirmed_at = coalesce(email_confirmed_at, now()),
     updated_at = now()
-where lower(email) = lower('gabriel@gmail.com');
+where id = 'e5e70f48-dce7-4e49-ab29-9ec69cdb7bb2'
+  and lower(email) = lower('teste@gmail.com');
 
 commit;
 
@@ -15,4 +16,5 @@ commit;
 select u.id, u.email, u.email_confirmed_at, p.role
 from auth.users u
 left join public.profiles p on p.id = u.id
-where lower(u.email) = lower('gabriel@gmail.com');
+where u.id = 'e5e70f48-dce7-4e49-ab29-9ec69cdb7bb2'
+  and lower(u.email) = lower('teste@gmail.com');

@@ -1,20 +1,29 @@
 import { z } from 'zod';
 import { requireStaff } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
 
 const broadcastPayloadSchema = z.object({
-  campaign_name: z.string().max(100).optional(),
-  message_template: z.string().min(5).max(2000),
+  campaign_name: z.string().trim().max(100).optional(),
+  message_template: z.string().trim().min(5).max(1500),
   recipients: z.array(
     z.object({
       id: z.uuid().optional(),
-      name: z.string(),
-      phone: z.string(),
+      name: z.string().trim().min(1).max(100),
+      phone: z
+        .string()
+        .trim()
+        .min(10)
+        .max(24)
+        .refine((value) => {
+          const digits = value.replace(/\D/g, '');
+          return digits.length >= 10 && digits.length <= 15;
+        }, 'Telefone inválido.'),
     })
   ).min(1).max(500),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await requireStaff();
   const supabase = staff.supabase;
 
@@ -39,6 +48,11 @@ export async function GET() {
       .limit(30),
   ]);
 
+  if (pendingRes.error || sentRes.error || failedRes.error || recentRes.error) {
+    console.error('[Broadcast GET Error]:', pendingRes.error || sentRes.error || failedRes.error || recentRes.error);
+    return jsonError('Não foi possível carregar a fila de disparos.', 500);
+  }
+
   return Response.json(
     {
       ok: true,
@@ -58,12 +72,17 @@ export async function POST(request: Request) {
   const staff = await requireStaff();
   if (staff.profile.role === 'viewer') return jsonError('Sem permissão.', 403);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, 600_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const body = bodyResult.data;
 
   const parsed = broadcastPayloadSchema.safeParse(body);
   if (!parsed.success) {
@@ -84,6 +103,10 @@ export async function POST(request: Request) {
       .replaceAll('{telefone}', r.phone)
       .trim();
 
+    if (text.length > 1500) {
+      return null;
+    }
+
     return {
       phone: rawPhone,
       client_name: fullName,
@@ -95,12 +118,17 @@ export async function POST(request: Request) {
     };
   });
 
+  if (rowsToInsert.some((row) => row === null)) {
+    return jsonError('A mensagem ficou longa demais para um ou mais destinatários.', 422);
+  }
+
   const { error } = await staff.supabase
     .from('whatsapp_outbox')
-    .insert(rowsToInsert);
+    .insert(rowsToInsert.filter((row): row is NonNullable<typeof row> => row !== null));
 
   if (error) {
-    return jsonError(`Erro ao enfileirar disparos: ${error.message}`, 500);
+    console.error('[Broadcast POST Error]:', error);
+    return jsonError('Não foi possível enfileirar os disparos.', 500);
   }
 
   return Response.json(
@@ -121,7 +149,8 @@ export async function DELETE(request: Request) {
     .neq('id', '00000000-0000-0000-0000-000000000000');
 
   if (error) {
-    return jsonError(`Erro ao limpar fila de disparos: ${error.message}`, 500);
+    console.error('[Broadcast DELETE Error]:', error);
+    return jsonError('Não foi possível limpar a fila de disparos.', 500);
   }
 
   return Response.json(

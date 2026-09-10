@@ -24,6 +24,54 @@ import { verificarSegurancaEntrada } from './guardrails.js';
 import { notificarLaraAtendimentoHumano } from './notifications.js';
 import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
 import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
+import { isSafeWhatsAppJid, sanitizeUntrustedText } from './security-utils.js';
+
+const MAX_FALLBACK_INPUT_CHARS = 6000;
+const MAX_CATALOG_ITEMS = 100;
+
+/**
+ * Valores de catálogo/configuração chegam do banco e nunca devem conseguir
+ * criar novas linhas, markdown ou controles no texto enviado à cliente.
+ * Mantemos acentos e pontuação de preço, mas removemos formatação ambígua.
+ */
+function campoSeguro(value, maxLength = 240, fallback = '') {
+  const clean = sanitizeUntrustedText(String(value ?? ''), maxLength)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\\*_~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clean || fallback;
+}
+
+function horarioSeguro(value) {
+  const horario = campoSeguro(value, 20);
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(horario) || /^(?:[01]?\d|2[0-3])h(?:[0-5]\d)?$/i.test(horario)
+    ? horario
+    : null;
+}
+
+function servicoSeguro(servico = {}) {
+  const duracaoValor = servico?.duracao || (Number.isFinite(Number(servico?.duracao_minutos)) ? `${Number(servico.duracao_minutos)}min` : '');
+  return {
+    nome: campoSeguro(servico?.nome, 120, 'Procedimento'),
+    preco: campoSeguro(servico?.preco, 80, 'A consultar'),
+    duracao: campoSeguro(duracaoValor, 40, 'A consultar'),
+  };
+}
+
+function agendamentoSeguro(ag = {}) {
+  return {
+    procedimento: campoSeguro(ag?.procedimento, 120, 'procedimento'),
+    data: campoSeguro(ag?.data, 32, 'data a confirmar'),
+    horario: horarioSeguro(ag?.horario) || 'horário a confirmar',
+    valor: campoSeguro(ag?.valor, 80, 'A consultar'),
+  };
+}
+
+function mensagemSegura(value, fallback, maxLength = 600) {
+  const mensagem = sanitizeUntrustedText(String(value ?? ''), maxLength).trim();
+  return mensagem || fallback;
+}
 
 /**
  * Normaliza texto para caixa baixa, sem acentos e sem pontuação extra
@@ -31,7 +79,7 @@ import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
  * @returns {string}
  */
 function normalizarTexto(str = '') {
-  return String(str)
+  return sanitizeUntrustedText(String(str), MAX_FALLBACK_INPUT_CHARS)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -189,15 +237,16 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
     const matchNum = norm.match(/\b(?:opcao|número|numero)?\s*([1-9]\d?)\b/);
     if (matchNum) {
       const idx = parseInt(matchNum[1], 10) - 1;
-      if (idx >= 0 && idx < servicosAtivos.length) {
+      if (idx >= 0 && idx < Math.min(servicosAtivos.length, MAX_CATALOG_ITEMS)) {
         return servicosAtivos[idx];
       }
     }
   }
 
   // 2. Busca exata ou por inclusão no nome cadastrado no Supabase
-  for (const s of servicosAtivos) {
-    const nomeNorm = normalizarTexto(s.nome);
+  for (const s of servicosAtivos.slice(0, MAX_CATALOG_ITEMS)) {
+    const nomeNorm = normalizarTexto(s?.nome);
+    if (!nomeNorm) continue;
     if (norm.includes(nomeNorm)) {
       return s;
     }
@@ -218,14 +267,14 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
 
   for (const item of termosMap) {
     if (item.termos.some((t) => norm.includes(t))) {
-      const match = servicosAtivos.find((s) => normalizarTexto(s.nome).includes(item.chave));
+      const match = servicosAtivos.slice(0, MAX_CATALOG_ITEMS).find((s) => normalizarTexto(s?.nome).includes(item.chave));
       if (match) return match;
     }
   }
 
   // 4. Busca por tokens significativos do nome do serviço
-  for (const s of servicosAtivos) {
-    const tokens = normalizarTexto(s.nome).split(/\s+/).filter((t) => t.length > 3);
+  for (const s of servicosAtivos.slice(0, MAX_CATALOG_ITEMS)) {
+    const tokens = normalizarTexto(s?.nome).split(/\s+/).filter((t) => t.length > 3);
     for (const token of tokens) {
       if (norm.includes(token)) {
         return s;
@@ -247,11 +296,15 @@ function formatarCatalogoServicos(servicos = [], settings = null) {
     return 'No momento nosso catálogo de procedimentos está sendo atualizado no sistema. Fale com a Lara por aqui para mais informações!';
   }
 
-  const linhas = servicos.map((s) => `• ${s.nome}: ${s.preco} (${s.duracao || `${s.duracao_minutos}min`})`);
+  const linhas = servicos.slice(0, MAX_CATALOG_ITEMS).map((s) => {
+    const seguro = servicoSeguro(s);
+    return `• ${seguro.nome}: ${seguro.preco} (${seguro.duracao})`;
+  });
   let texto = `Os valores dos principais procedimentos:\n\n${linhas.join('\n')}`;
 
-  if (settings?.booking_promo_tag) {
-    texto += `\n\n🎁 *${settings.booking_promo_tag}*`;
+  const promocao = campoSeguro(settings?.booking_promo_tag, 160);
+  if (promocao) {
+    texto += `\n\n🎁 *${promocao}*`;
   }
 
   texto += '\n\nQual deles você gostaria de fazer?';
@@ -264,10 +317,10 @@ function formatarCatalogoServicos(servicos = [], settings = null) {
  * @returns {string}
  */
 function formatarLocalizacao(settings = null) {
-  const nome = settings?.studio_name || config.studioName || 'Studio Lara Varisa';
-  const endereco = settings?.studio_address || 'Atendimento presencial na Zona Norte';
-  const cidade = settings?.studio_city || 'Porto Alegre - RS';
-  const horarios = settings?.studio_hours || 'Segunda a sábado, das 09h às 19h (com agendamento)';
+  const nome = campoSeguro(settings?.studio_name || config.studioName, 120, 'Studio Lara Varisa');
+  const endereco = campoSeguro(settings?.studio_address, 180, 'Atendimento presencial na Zona Norte');
+  const cidade = campoSeguro(settings?.studio_city, 100, 'Porto Alegre - RS');
+  const horarios = campoSeguro(settings?.studio_hours, 180, 'Segunda a sábado, das 09h às 19h (com agendamento)');
 
   return `*${nome}*\n\n` +
     `📍 ${endereco}\n` +
@@ -298,19 +351,25 @@ function formatarCuidados() {
  * @returns {string}
  */
 function formatarListaHorarios(slots = [], dataFormatada = '') {
-  if (!slots || slots.length === 0) {
-    return `Para o dia ${dataFormatada} não temos mais horários livres no momento. Quer tentar outra data?`;
+  const dataSegura = campoSeguro(dataFormatada, 40, 'data selecionada');
+  const horariosSeguros = Array.isArray(slots)
+    ? slots
+        .map((slot) => horarioSeguro(slot?.horario || slot?.time_label))
+        .filter(Boolean)
+    : [];
+  if (horariosSeguros.length === 0) {
+    return `Para o dia ${dataSegura} não temos mais horários livres no momento. Quer tentar outra data?`;
   }
 
-  const manha = slots.filter((s) => (s.horario || s.time_label) < '12:00').map((s) => s.horario || s.time_label);
-  const tarde = slots.filter((s) => (s.horario || s.time_label) >= '12:00').map((s) => s.horario || s.time_label);
+  const manha = horariosSeguros.filter((horario) => horario < '12:00');
+  const tarde = horariosSeguros.filter((horario) => horario >= '12:00');
 
   let blocos = [];
   if (manha.length > 0) blocos.push(`Manhã: ${manha.join(', ')}`);
   if (tarde.length > 0) blocos.push(`Tarde: ${tarde.join(', ')}`);
 
-  const corpo = blocos.length > 0 ? blocos.join('\n') : slots.map((s) => `• ${s.horario || s.time_label}`).join('\n');
-  return `Para *${dataFormatada}*, temos esses horários disponíveis:\n\n${corpo}\n\nQual desses horários fica melhor pra você?`;
+  const corpo = blocos.length > 0 ? blocos.join('\n') : horariosSeguros.map((horario) => `• ${horario}`).join('\n');
+  return `Para *${dataSegura}*, temos esses horários disponíveis:\n\n${corpo}\n\nQual desses horários fica melhor pra você?`;
 }
 
 /**
@@ -321,11 +380,14 @@ function formatarListaHorarios(slots = [], dataFormatada = '') {
  * @returns {Promise<string>} Resposta humanizada da Arla AI
  */
 export async function processarFallback(texto = '', context = {}) {
+  texto = typeof texto === 'string' ? sanitizeUntrustedText(texto, MAX_FALLBACK_INPUT_CHARS) : '';
   const norm = normalizarTexto(texto);
-  const jid = context.jid || 'default';
-  const rawPushName = context.pushName || 'Cliente';
+  const jid = context.jid ? String(context.jid).trim() : 'default';
+  if (jid !== 'default' && !isSafeWhatsAppJid(jid)) return '';
+  const rawPushName = sanitizeUntrustedText(String(context.pushName || 'Cliente'), 120);
   const primeiroNome = extrairPrimeiroNome(rawPushName);
-  const telefone = context.telefone || String(jid).replace(/\D/g, '');
+  const telefoneInformado = sanitizeUntrustedText(String(context.telefone || ''), 30);
+  const telefone = telefoneInformado.replace(/\D/g, '').slice(0, 15) || String(jid).replace(/\D/g, '').slice(0, 15);
   const estadoAtual = getState(jid);
 
   // Verificação de segurança (recusa scripts, jailbreak, prompt injection)
@@ -335,14 +397,17 @@ export async function processarFallback(texto = '', context = {}) {
   }
 
   // 1. Dados vivos em cache de alta velocidade do Supabase
-  const servicosAtivos = (await obterServicosEmCache()) || [];
-  const configuracoes = await obterConfiguracoesEmCache();
+  const [servicosAtivos, configuracoes] = await Promise.all([
+    obterServicosEmCache(),
+    obterConfiguracoesEmCache(),
+  ]);
 
   // 1.1 Checagem de agendamentos pausados no estúdio
   const agendamentoPausado = configuracoes && configuracoes.booking_enabled === false;
-  const mensagemPausado =
-    configuracoes?.booking_closed_message ||
-    'Oi! No momento os novos agendamentos estão temporariamente pausados. Fale com a Lara diretamente para verificar possíveis encaixes!';
+  const mensagemPausado = mensagemSegura(
+    configuracoes?.booking_closed_message,
+    'Oi! No momento os novos agendamentos estão temporariamente pausados. Fale com a Lara diretamente para verificar possíveis encaixes!',
+  );
 
   // =========================================================================
   // 2. COMANDOS GLOBAIS DE INTERRUPÇÃO E ATENDIMENTO HUMANO
@@ -412,7 +477,7 @@ export async function processarFallback(texto = '', context = {}) {
 
   if (ehPerguntaCriador) {
     return sanitizarMensagemWhatsApp(
-      'Fui desenvolvida pelo 0xGabriel especialmente para o estúdio da Lara Varisa!'
+      'Esses detalhes técnicos são internos e não são compartilhados. Posso te ajudar com os procedimentos, horários e agendamento da Lara.'
     );
   }
 
@@ -515,8 +580,9 @@ export async function processarFallback(texto = '', context = {}) {
       norm.includes('custa') ||
       norm.includes('tabela'))
   ) {
+    const servicoDetalhes = servicoSeguro(servicoEspecifico);
     return sanitizarMensagemWhatsApp(
-      `O *${servicoEspecifico.nome}* está ${servicoEspecifico.preco} (${servicoEspecifico.duracao || `${servicoEspecifico.duracao_minutos}min`}). Quer agendar um horário?`
+      `O *${servicoDetalhes.nome}* está ${servicoDetalhes.preco} (${servicoDetalhes.duracao}). Quer agendar um horário?`
     );
   }
 
@@ -540,14 +606,29 @@ export async function processarFallback(texto = '', context = {}) {
     norm.includes('cancelar todas') ||
     norm.includes('desmarcar todos')
   ) {
-    if (estadoAtual) clearState(jid);
-    const resCancelAll = await cancelarTodosAgendamentos(telefone, 'Cancelamento total via WhatsApp');
-    if (resCancelAll.ok) {
-      return sanitizarMensagemWhatsApp(
-        'Todos os seus agendamentos foram cancelados com sucesso. Quando quiser marcar uma nova data, será um prazer te receber!'
-      );
+    const resCons = await consultarAgendamentoCliente(telefone);
+    if (!resCons.ok) {
+      return sanitizarMensagemWhatsApp(mensagemSegura(resCons.erro, 'Não consegui consultar seus agendamentos agora. Tente novamente em instantes.'));
     }
-    return sanitizarMensagemWhatsApp('Não encontrei agendamentos ativos para cancelar no seu número.');
+    if (!resCons.possui_agendamento || !resCons.agendamentos?.length) {
+      return sanitizarMensagemWhatsApp('Não encontrei agendamentos ativos para cancelar no seu número.');
+    }
+
+    setState(jid, {
+      step: 'CONFIRMAR_CANCELAMENTO_TODOS',
+      total: resCons.agendamentos.length,
+    });
+    const resumo = resCons.agendamentos
+      .slice(0, 5)
+      .map((ag) => {
+        const seguro = agendamentoSeguro(ag);
+        return `• ${seguro.procedimento} em ${seguro.data} às ${seguro.horario}`;
+      })
+      .join('\n');
+    const mais = resCons.agendamentos.length > 5 ? `\n• +${resCons.agendamentos.length - 5} outro(s)` : '';
+    return sanitizarMensagemWhatsApp(
+      `Encontrei ${resCons.agendamentos.length} agendamento(s) ativo(s):\n\n${resumo}${mais}\n\nConfirma cancelar todos? Responda *sim, cancelar* ou *não*.`
+    );
   }
 
   // 3.2 Cancelar agendamento específico
@@ -561,12 +642,13 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
+      const seguro = agendamentoSeguro(ag);
       setState(jid, {
         step: 'CONFIRMAR_CANCELAMENTO',
         appointmentId: ag.id,
       });
       return sanitizarMensagemWhatsApp(
-        `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`
+        `Você tem um agendamento de *${seguro.procedimento}* dia *${seguro.data} às ${seguro.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`
       );
     }
     return sanitizarMensagemWhatsApp(
@@ -587,7 +669,11 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const listaAg = resCons.agendamentos
-        .map((ag) => `• ${ag.procedimento} - ${ag.data} às ${ag.horario} (${ag.valor || 'A consultar'})`)
+        .slice(0, 20)
+        .map((ag) => {
+          const seguro = agendamentoSeguro(ag);
+          return `• ${seguro.procedimento}: ${seguro.data} às ${seguro.horario} (${seguro.valor})`;
+        })
         .join('\n');
       return sanitizarMensagemWhatsApp(
         `Oi, ${primeiroNome}! Seu agendamento:\n\n${listaAg}\n\nSe precisar remarcar ou cancelar, só me avisar.`
@@ -609,8 +695,18 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
+      const agSeguro = agendamentoSeguro(ag);
+      const servicoAtual = servicosAtivos.find((item) => normalizarTexto(item?.nome) === normalizarTexto(agSeguro.procedimento));
+      setState(jid, {
+        step: 'AGUARDANDO_DATA_REAGENDAMENTO',
+        appointmentId: ag.id,
+        serviceName: agSeguro.procedimento,
+        currentDate: agSeguro.data,
+        currentTime: agSeguro.horario,
+        serviceDuration: servicoAtual?.duracao_minutos || 120,
+      });
       return sanitizarMensagemWhatsApp(
-        `Oi, ${primeiroNome}! Seu agendamento atual é ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Para qual data você prefere mudar?`
+        `Oi, ${primeiroNome}! Seu agendamento atual é ${agSeguro.procedimento} dia ${agSeguro.data} às ${agSeguro.horario}. Para qual data você prefere mudar?`
       );
     }
     return sanitizarMensagemWhatsApp(
@@ -622,14 +718,92 @@ export async function processarFallback(texto = '', context = {}) {
   // 4. MÁQUINA DE ESTADOS MULTI-ETAPAS PARA AGENDAMENTO CONVERSACIONAL
   // =========================================================================
   if (estadoAtual) {
+    // 4.0 Reagendamento guiado: consulta, escolha do horário e confirmação final.
+    if (estadoAtual.step === 'AGUARDANDO_DATA_REAGENDAMENTO') {
+      const dataReagendamento = extrairData(texto);
+      if (!dataReagendamento) {
+        return sanitizarMensagemWhatsApp('Qual data você prefere para o novo atendimento? Pode responder amanhã ou indicar o dia da semana.');
+      }
+
+      const slotsRes = await consultarHorarios(dataReagendamento, estadoAtual.serviceDuration || 120);
+      if (slotsRes.fechado || !slotsRes.ok || !slotsRes.slots?.length) {
+        return sanitizarMensagemWhatsApp(mensagemSegura(slotsRes.mensagem, 'Não encontrei horários livres nessa data. Quer tentar outro dia?'));
+      }
+
+      setState(jid, {
+        ...estadoAtual,
+        step: 'AGUARDANDO_HORARIO_REAGENDAMENTO',
+        dataReagendamento,
+        slotsDisponiveis: slotsRes.slots,
+      });
+      return sanitizarMensagemWhatsApp(formatarListaHorarios(slotsRes.slots, dataReagendamento));
+    }
+
+    if (estadoAtual.step === 'AGUARDANDO_HORARIO_REAGENDAMENTO') {
+      const horaReagendamento = extrairHorario(texto);
+      const slot = estadoAtual.slotsDisponiveis?.find((item) => item.horario === horaReagendamento);
+      if (!slot) return sanitizarMensagemWhatsApp('Qual dos horários listados você prefere? Responda, por exemplo, 14h30.');
+
+      setState(jid, {
+        ...estadoAtual,
+        step: 'CONFIRMAR_REAGENDAMENTO',
+        novoStartsAt: slot.starts_at,
+        novoHorario: horarioSeguro(slot.horario) || horaReagendamento,
+      });
+      const horarioSeguroEscolhido = horarioSeguro(slot.horario) || horaReagendamento;
+      return sanitizarMensagemWhatsApp(
+        `Perfeito! Posso mudar seu atendimento para ${campoSeguro(estadoAtual.dataReagendamento, 32, 'a nova data')} às *${horarioSeguroEscolhido}*. Confirma a alteração? Responda *sim* ou *não*.`
+      );
+    }
+
+    if (estadoAtual.step === 'CONFIRMAR_REAGENDAMENTO') {
+      if (/^(sim|confirmo|pode|pode sim|confirmar)$/i.test(norm)) {
+        clearState(jid);
+        const resReagendar = await reagendarAgendamento(estadoAtual.appointmentId, estadoAtual.novoStartsAt, true);
+        return sanitizarMensagemWhatsApp(
+          resReagendar.ok
+            ? `Prontinho! Seu atendimento foi remarcado para ${campoSeguro(estadoAtual.dataReagendamento, 32, 'a nova data')} às *${horarioSeguro(estadoAtual.novoHorario) || 'o novo horário'}*.`
+            : mensagemSegura(resReagendar.erro, 'Não consegui remarcar esse horário. Vamos tentar outra opção?')
+        );
+      }
+      if (/^(nao|não|cancelar|voltar)$/i.test(norm)) {
+        clearState(jid);
+        return sanitizarMensagemWhatsApp('Tudo bem, mantive seu horário original.');
+      }
+      return sanitizarMensagemWhatsApp('Você confirma a troca para esse horário? Responda *sim* ou *não*.');
+    }
+
+    // 4.0 Cancelamento em lote: sempre confirma antes de alterar vários horários.
+    if (estadoAtual.step === 'CONFIRMAR_CANCELAMENTO_TODOS') {
+      const confirmou = /^(sim|sim cancelar|confirmo|confirmar|pode cancelar|pode cancelar todos|pode)$/i.test(norm);
+      const recusou = /^(nao|não|manter|deixa|voltar|cancela)$/i.test(norm);
+
+      if (confirmou) {
+        clearState(jid);
+        const resCancelAll = await cancelarTodosAgendamentos(telefone, 'Cancelamento total via WhatsApp', true);
+        return sanitizarMensagemWhatsApp(
+          resCancelAll.ok
+            ? `Prontinho! Cancelei ${resCancelAll.total_cancelados || 'todos os seus'} agendamento(s) e liberei os horários. Quando quiser marcar de novo, é só me chamar.`
+            : mensagemSegura(resCancelAll.erro, 'Não consegui concluir o cancelamento agora. A equipe já foi avisada.')
+        );
+      }
+
+      if (recusou) {
+        clearState(jid);
+        return sanitizarMensagemWhatsApp('Perfeito, mantive seus agendamentos como estão.');
+      }
+
+      return sanitizarMensagemWhatsApp('Para confirmar o cancelamento de todos, responda *sim, cancelar*. Se mudou de ideia, responda *não*.');
+    }
+
     // 4.1 Confirmação de cancelamento pendente
     if (estadoAtual.step === 'CONFIRMAR_CANCELAMENTO') {
       if (norm.includes('sim') || norm.includes('confirmo') || norm.includes('cancela')) {
         clearState(jid);
-        const resCancel = await cancelarAgendamento(estadoAtual.appointmentId, 'Cancelado via WhatsApp');
+        const resCancel = await cancelarAgendamento(estadoAtual.appointmentId, 'Cancelado via WhatsApp', true);
         if (resCancel.ok) {
           return sanitizarMensagemWhatsApp(
-            `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema.\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 https://laravarisa.netlify.app/agendar`
+            `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema.\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 ${config.publicSiteUrl.replace(/\/$/, '')}/agendar`
           );
         }
         return sanitizarMensagemWhatsApp('Tive uma instabilidade ao liberar o horário no sistema, mas já notifiquei a equipe.');
@@ -645,15 +819,16 @@ export async function processarFallback(texto = '', context = {}) {
     if (estadoAtual.step === 'AGUARDANDO_SERVICO') {
       const servicoEscolhido = identificarServico(texto, servicosAtivos, true);
       if (servicoEscolhido) {
+        const detalhes = servicoSeguro(servicoEscolhido);
         setState(jid, {
           step: 'AGUARDANDO_DATA',
           serviceId: servicoEscolhido.id,
-          serviceName: servicoEscolhido.nome,
-          serviceDuration: servicoEscolhido.duracao_minutos || 120,
-          servicePrice: servicoEscolhido.preco,
+          serviceName: detalhes.nome,
+          serviceDuration: Number.isFinite(Number(servicoEscolhido.duracao_minutos)) ? Number(servicoEscolhido.duracao_minutos) : 120,
+          servicePrice: detalhes.preco,
         });
         return sanitizarMensagemWhatsApp(
-          `Perfeito, *${servicoEscolhido.nome}* (${servicoEscolhido.preco})! Para qual dia você prefere? (ex: amanhã ou sexta)`
+          `Perfeito, *${detalhes.nome}* (${detalhes.preco})! Para qual dia você prefere? (ex: amanhã ou sexta)`
         );
       }
 
@@ -678,15 +853,16 @@ export async function processarFallback(texto = '', context = {}) {
 
       const outroServico = identificarServico(texto, servicosAtivos, false);
       if (outroServico && outroServico.id !== estadoAtual.serviceId) {
+        const detalhes = servicoSeguro(outroServico);
         setState(jid, {
           ...estadoAtual,
           serviceId: outroServico.id,
-          serviceName: outroServico.nome,
-          serviceDuration: outroServico.duracao_minutos || 120,
-          servicePrice: outroServico.preco,
+          serviceName: detalhes.nome,
+          serviceDuration: Number.isFinite(Number(outroServico.duracao_minutos)) ? Number(outroServico.duracao_minutos) : 120,
+          servicePrice: detalhes.preco,
         });
         return sanitizarMensagemWhatsApp(
-          `Perfeito, mudei para *${outroServico.nome}* (${outroServico.preco})! Para qual dia você prefere?`
+          `Perfeito, mudei para *${detalhes.nome}* (${detalhes.preco})! Para qual dia você prefere?`
         );
       }
 
@@ -696,7 +872,7 @@ export async function processarFallback(texto = '', context = {}) {
 
         if (slotsRes.fechado) {
           return sanitizarMensagemWhatsApp(
-            slotsRes.mensagem || 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?'
+            mensagemSegura(slotsRes.mensagem, 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?')
           );
         }
 
@@ -735,13 +911,14 @@ export async function processarFallback(texto = '', context = {}) {
           });
 
           if (resAgendar.ok) {
+            const nomeServicoSeguro = campoSeguro(estadoAtual.serviceName, 120, 'seu procedimento');
             return sanitizarMensagemWhatsApp(
-              `Confirmado! Seu *${estadoAtual.serviceName}* está agendado para ${estadoAtual.dataEscolhida} às *${horaEscolhida}*. Te esperamos no estúdio!`
+              `Confirmado! Seu *${nomeServicoSeguro}* está agendado para ${campoSeguro(estadoAtual.dataEscolhida, 32, 'a data escolhida')} às *${horaEscolhida}*. Te esperamos no estúdio!`
             );
           }
 
           return sanitizarMensagemWhatsApp(
-            resAgendar.erro || `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário?`
+            mensagemSegura(resAgendar.erro, `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário?`)
           );
         }
       }
@@ -771,12 +948,13 @@ export async function processarFallback(texto = '', context = {}) {
   const horarioDetectado = extrairHorario(texto);
 
   if (ehTentativaAgendamento && servicoDetectado && dataDetectada && horarioDetectado) {
+    const detalhesServico = servicoSeguro(servicoDetectado);
     clearState(jid);
 
     const slotsRes = await consultarHorarios(dataDetectada, servicoDetectado.duracao_minutos || 120);
     if (slotsRes.fechado) {
       return sanitizarMensagemWhatsApp(
-        slotsRes.mensagem || 'Nosso estúdio está fechado nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?'
+        mensagemSegura(slotsRes.mensagem, 'Nosso estúdio está fechado nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?')
       );
     }
 
@@ -797,25 +975,26 @@ export async function processarFallback(texto = '', context = {}) {
 
     if (resAgendar.ok) {
       return sanitizarMensagemWhatsApp(
-        `Confirmado! Seu *${servicoDetectado.nome}* está agendado para ${dataDetectada} às *${horarioDetectado}*. Te esperamos no estúdio!`
+        `Confirmado! Seu *${detalhesServico.nome}* está agendado para ${dataDetectada} às *${horarioDetectado}*. Te esperamos no estúdio!`
       );
     }
 
-    return sanitizarMensagemWhatsApp(resAgendar.erro || 'Não consegui confirmar o horário no momento. Que tal escolher outro horário?');
+    return sanitizarMensagemWhatsApp(mensagemSegura(resAgendar.erro, 'Não consegui confirmar o horário no momento. Que tal escolher outro horário?'));
   }
 
   // 5.1 Início de fluxo de agendamento guiado
   if (ehTentativaAgendamento) {
     if (servicoDetectado) {
+      const detalhesServico = servicoSeguro(servicoDetectado);
       setState(jid, {
         step: 'AGUARDANDO_DATA',
         serviceId: servicoDetectado.id,
-        serviceName: servicoDetectado.nome,
-        serviceDuration: servicoDetectado.duracao_minutos || 120,
-        servicePrice: servicoDetectado.preco,
+        serviceName: detalhesServico.nome,
+        serviceDuration: Number.isFinite(Number(servicoDetectado.duracao_minutos)) ? Number(servicoDetectado.duracao_minutos) : 120,
+        servicePrice: detalhesServico.preco,
       });
       return sanitizarMensagemWhatsApp(
-        `Perfeito, *${servicoDetectado.nome}* (${servicoDetectado.preco})! Para qual dia você prefere?`
+        `Perfeito, *${detalhesServico.nome}* (${detalhesServico.preco})! Para qual dia você prefere?`
       );
     }
 
@@ -849,7 +1028,7 @@ export async function processarFallback(texto = '', context = {}) {
 
     if (slotsRes.fechado) {
       return sanitizarMensagemWhatsApp(
-        slotsRes.mensagem || 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h.'
+        mensagemSegura(slotsRes.mensagem, 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h.')
       );
     }
 
@@ -898,8 +1077,9 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
+      const seguro = agendamentoSeguro(ag);
       return sanitizarMensagemWhatsApp(
-        `Presença confirmada, ${primeiroNome}! Já tá tudo pronto pra te receber no seu ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Até logo!`
+        `Presença confirmada, ${primeiroNome}! Já tá tudo pronto pra te receber no seu ${seguro.procedimento} dia ${seguro.data} às ${seguro.horario}. Até logo!`
       );
     }
     return sanitizarMensagemWhatsApp(

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CalendarDays, Clock3, MapPin, MessageCircle, X, ArrowUpRight } from 'lucide-react';
+import { Check, MapPin, MessageCircle, X, ArrowUpRight } from 'lucide-react';
 import { whatsappUrl } from '@/lib/studio';
 
 export type BookingResult = {

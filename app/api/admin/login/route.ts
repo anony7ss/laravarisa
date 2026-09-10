@@ -3,6 +3,7 @@ import { loginSchema } from '@/lib/validation';
 import {
   createServerSupabase,
   createPublicSupabase,
+  createAdminSupabase,
 } from '@/lib/supabase/server';
 import {
   checkRateLimit,
@@ -17,6 +18,8 @@ import {
   sealTwoFactorPending,
 } from '@/lib/two-factor';
 
+const MAX_BODY_BYTES = 12_000;
+
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
 
@@ -27,9 +30,17 @@ export async function POST(request: Request) {
     return jsonError('Muitas tentativas. Tente novamente mais tarde.', 429);
   }
 
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
+  }
+
   let input: unknown;
   try {
-    input = await request.json();
+    const rawBody = await request.arrayBuffer();
+    if (rawBody.byteLength > MAX_BODY_BYTES) {
+      return jsonError('Conteúdo muito grande.', 413);
+    }
+    input = JSON.parse(new TextDecoder().decode(rawBody));
   } catch {
     return jsonError('JSON inválido.', 400);
   }
@@ -93,6 +104,9 @@ export async function POST(request: Request) {
 
   // 3. Se o 2FA via WhatsApp estiver ativado, gera OTP e envia pelo bot
   if (profile.two_factor_enabled && profile.phone) {
+    const adminClient = createAdminSupabase();
+    if (!adminClient) return jsonError('Serviço temporariamente indisponível.', 503);
+
     let cleanPhone = profile.phone.replace(/\D/g, '');
     if (cleanPhone.length === 10 || cleanPhone.length === 11) {
       cleanPhone = `55${cleanPhone}`;
@@ -102,7 +116,7 @@ export async function POST(request: Request) {
     const tempToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await authClient
+    await adminClient
       .from('profiles')
       .update({
         // Store only a digest. The plaintext code is sent once through the outbox.
@@ -112,10 +126,10 @@ export async function POST(request: Request) {
       })
       .eq('id', data.user.id);
 
-    await authClient.from('whatsapp_outbox').insert({
+    await adminClient.from('whatsapp_outbox').insert({
       phone: cleanPhone,
-      client_name: profile.full_name || 'Admin Astra',
-      message: `*Astra Admin - Código de Segurança*\n\nSeu código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos. Se você não tentou fazer login, altere sua senha.`,
+      client_name: profile.full_name || 'Lara Varisa Admin',
+      message: `*Painel Lara Varisa - Código de Segurança*\n\nSeu código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos. Se você não tentou fazer login, altere sua senha.`,
       message_type: '2fa_code',
       status: 'pending',
     });

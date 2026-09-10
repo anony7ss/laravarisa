@@ -1,7 +1,7 @@
 'use client';
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Cards with nested actions use an accessible keyboard role. */
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, useSyncExternalStore, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -69,11 +69,45 @@ const FullscreenLightbox = dynamic(
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
 
+function safeBookingColor(value: unknown, fallback: string) {
+  const candidate = typeof value === 'string' ? value.trim() : '';
+  return /^#[0-9a-f]{3,8}$/i.test(candidate) ? candidate : fallback;
+}
+
+function safeBookingFont(value: unknown, fallback: string) {
+  const candidate = typeof value === 'string' ? value.trim() : '';
+  return /^[a-zA-Z0-9][a-zA-Z0-9 _-]{0,49}$/.test(candidate) ? candidate : fallback;
+}
+
 function getDefaultBookingDate() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   if (d.getDay() === 0) d.setDate(d.getDate() + 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const subscribeToDateChanges = () => () => {};
+
+function getServerBookingDate() {
+  return '';
+}
+
+function relativeLuminance(hex: string) {
+  const value = hex.trim().replace('#', '');
+  if (!/^(?:[\da-f]{3}|[\da-f]{6})$/i.test(value)) return null;
+  const normalized = value.length === 3 ? value.split('').map((char) => char + char).join('') : value;
+  const channels = [0, 2, 4].map((offset) => parseInt(normalized.slice(offset, offset + 2), 16) / 255);
+  const linear = channels.map((channel) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const foregroundLum = relativeLuminance(foreground);
+  const backgroundLum = relativeLuminance(background);
+  if (foregroundLum === null || backgroundLum === null) return 21;
+  const lighter = Math.max(foregroundLum, backgroundLum);
+  const darker = Math.min(foregroundLum, backgroundLum);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 export type BookingResult = {
@@ -126,9 +160,17 @@ function AgendarContent() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  // Set the relative date after hydration so the server and browser render the
-  // same initial markup and the booking screen never flashes a different day.
-  const [selectedDateStr, setSelectedDateStr] = useState<string>('');
+  // useSyncExternalStore gives SSR a deterministic empty value and lets the
+  // browser resolve the local day immediately after hydration without a
+  // setState-in-effect cascade or a server/client date mismatch.
+  const browserDefaultDate = useSyncExternalStore(
+    subscribeToDateChanges,
+    getDefaultBookingDate,
+    getServerBookingDate,
+  );
+  const [selectedDateOverride, setSelectedDateOverride] = useState<string | null>(null);
+  const selectedDateStr = selectedDateOverride ?? browserDefaultDate;
+  const setSelectedDateStr = setSelectedDateOverride;
 
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
@@ -195,10 +237,6 @@ function AgendarContent() {
     booking_promo_tag?: string;
     booking_guarantee_text?: string;
   } | null>(null);
-
-  useEffect(() => {
-    if (!selectedDateStr) setSelectedDateStr(getDefaultBookingDate());
-  }, [selectedDateStr]);
 
   useEffect(() => {
     let mounted = true;
@@ -411,16 +449,21 @@ function AgendarContent() {
   }
 
   // Constantes de personalização configuráveis pelo admin
-  const customBg = siteSettings?.booking_bg_color || '#e7e7e2';
-  const customCardBg = siteSettings?.booking_card_bg || '#ffffff';
-  const customPrimary = siteSettings?.booking_primary_color || '#121211';
-  const customAccent = siteSettings?.booking_accent_color || '#cca352';
-  const customText = siteSettings?.booking_text_color || '#121211';
-  const customBorder = siteSettings?.booking_border_color || '#cfcfc9';
+  // Os valores vêm de configurações persistidas e entram em um bloco CSS
+  // dinâmico. Aceite apenas tokens de cor/fonte simples para impedir injeção
+  // de declarações, URLs ou delimitadores CSS por dados armazenados.
+  const customBg = safeBookingColor(siteSettings?.booking_bg_color, '#e7e7e2');
+  const customCardBg = safeBookingColor(siteSettings?.booking_card_bg, '#ffffff');
+  const customPrimary = safeBookingColor(siteSettings?.booking_primary_color, '#121211');
+  const customAccent = safeBookingColor(siteSettings?.booking_accent_color, '#cca352');
+  const customText = safeBookingColor(siteSettings?.booking_text_color, '#121211');
+  const customBorder = safeBookingColor(siteSettings?.booking_border_color, '#cfcfc9');
+  // Mantém a cor dourada/laranja original de destaque definida na identidade visual
+  const customAccentText = customAccent;
 
-  const rawFontHeading = siteSettings?.booking_font_heading;
-  const fontHeading = (!rawFontHeading || rawFontHeading.toLowerCase() === 'anton') ? 'DM Sans' : rawFontHeading;
-  const fontBody = siteSettings?.booking_font_body || 'DM Sans';
+  const rawFontHeading = safeBookingFont(siteSettings?.booking_font_heading, 'Anton');
+  const fontHeading = rawFontHeading.toLowerCase() === 'anton' ? 'DM Sans' : rawFontHeading;
+  const fontBody = safeBookingFont(siteSettings?.booking_font_body, 'DM Sans');
 
   const coverUrl = siteSettings?.booking_cover_url || '/lara-lashes-optimized.webp';
   const avatarUrl = siteSettings?.booking_avatar_url || '/icons/icon-192x192.png';
@@ -468,6 +511,7 @@ function AgendarContent() {
           --booking-card-bg: ${customCardBg};
           --booking-primary: ${customPrimary};
           --booking-accent: ${customAccent};
+          --booking-accent-ink: ${customAccentText};
           --booking-text: ${customText};
           --booking-border: ${customBorder};
           --booking-font-heading: '${fontHeading}', var(--font-dm-sans), sans-serif;
@@ -499,7 +543,7 @@ function AgendarContent() {
           color: var(--booking-text) !important;
         }
         .booking-custom-root .text-\\[var\\(--color-ember\\)\\] {
-          color: var(--booking-accent) !important;
+          color: var(--booking-accent-ink) !important;
         }
       `}</style>
 
@@ -967,7 +1011,7 @@ function AgendarContent() {
                                     </h3>
                                     <span
                                       className="text-xs font-semibold block mt-0.5"
-                                      style={{ color: customAccent }}
+                                      style={{ color: customAccentText }}
                                     >
                                       {service.category || 'Personalizado'}
                                     </span>
@@ -1090,7 +1134,7 @@ function AgendarContent() {
                         <div className="min-w-0">
                           <span
                             className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
-                            style={{ color: customAccent, backgroundColor: `${customAccent}18` }}
+                            style={{ color: customAccentText, backgroundColor: `${customAccent}18` }}
                           >
                             1ª Visita
                           </span>
@@ -1137,6 +1181,8 @@ function AgendarContent() {
                           ))}
                         </div>
                       )}
+
+                      <h2 className="sr-only">Procedimentos disponíveis</h2>
 
                       {loadingServices ? (
                         <div className="py-12 text-center text-xs text-[#707068] flex items-center justify-center gap-2">
@@ -1244,7 +1290,7 @@ function AgendarContent() {
                               <ArrowLeft size={14} />
                               <span>Voltar para Serviços</span>
                             </button>
-                            <span className="text-xs font-bold" style={{ color: customAccent }}>
+                            <span className="text-xs font-bold" style={{ color: customAccentText }}>
                               Passo 2 de 3
                             </span>
                           </div>
@@ -1327,7 +1373,7 @@ function AgendarContent() {
                               <ArrowLeft size={14} />
                               <span>Voltar para Horários</span>
                             </button>
-                            <span className="text-xs font-bold" style={{ color: customAccent }}>
+                            <span className="text-xs font-bold" style={{ color: customAccentText }}>
                               Passo 3 de 3
                             </span>
                           </div>
@@ -1344,7 +1390,7 @@ function AgendarContent() {
                             <span className="font-bold" style={{ color: customPrimary }}>
                               {selectedService.name}
                             </span>
-                            <span className="font-semibold" style={{ color: customAccent }}>
+                            <span className="font-semibold" style={{ color: customAccentText }}>
                               {selectedSlot ? `${selectedDateDisplay} às ${selectedSlot.time}` : ''}
                             </span>
                           </div>
@@ -1837,7 +1883,7 @@ function AgendarContent() {
 
                         <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
                           <span className="opacity-70 font-medium">Valor:</span>
-                          <span className="font-bold" style={{ color: customAccent }}>
+                          <span className="font-bold" style={{ color: customAccentText }}>
                             {selectedService?.price || 'R$ 80,00'}
                           </span>
                         </div>
@@ -2199,7 +2245,7 @@ function AgendarContent() {
                       ))}
                     </div>
                   </div>
-                  <span className="text-[10.5px] font-medium" style={{ color: customAccent }}>
+                  <span className="text-[10.5px] font-medium" style={{ color: customAccentText }}>
                     {t.client_role || 'Cliente'}
                   </span>
                   <p
@@ -2296,7 +2342,7 @@ function AgendarContent() {
                   Localização & Acesso
                 </span>
                 <p className="m-0 opacity-85 leading-relaxed">{locationText}</p>
-                <span className="text-[10.5px] font-medium block pt-1" style={{ color: customAccent }}>
+                <span className="text-[10.5px] font-medium block pt-1" style={{ color: customAccentText }}>
                   Estacionamento privativo e recepção climatizada
                 </span>
               </div>

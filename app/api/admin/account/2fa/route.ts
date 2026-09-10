@@ -1,7 +1,18 @@
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import {
+  checkRateLimit,
+  getClientIp,
+  hasValidOrigin,
+  jsonError,
+  NO_STORE_HEADERS,
+  readJsonBody,
+} from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
-import { createOtpCode, hashOtpCode, safeCompareOtpCode } from '@/lib/two-factor';
+import { createOtpCode, hashOtpCode } from '@/lib/two-factor';
+import { twoFactorVerifySchema } from '@/lib/validation';
+import { createAdminSupabase } from '@/lib/supabase/server';
+
+const MAX_BODY_BYTES = 5_000;
 
 function formatPhoneForWhatsApp(phone: string): string {
   let cleaned = phone.replace(/\D/g, '');
@@ -23,8 +34,19 @@ export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
+  const adminSupabase = createAdminSupabase();
+  if (!adminSupabase) return jsonError('Serviço temporariamente indisponível.', 503);
 
-  const { data: profile, error } = await staff.supabase
+  const requestLimit = checkRateLimit(
+    `2fa-generate:${staff.user.id}:${getClientIp(request)}`,
+    3,
+    5 * 60 * 1000,
+  );
+  if (!requestLimit.allowed) {
+    return jsonError('Aguarde alguns minutos antes de solicitar outro código.', 429);
+  }
+
+  const { data: profile, error } = await adminSupabase
     .from('profiles')
     .select('id, full_name, phone, two_factor_enabled')
     .eq('id', staff.user.id)
@@ -45,7 +67,7 @@ export async function POST(request: Request) {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const targetPhone = formatPhoneForWhatsApp(profile.phone);
 
-  const { error: updateErr } = await staff.supabase
+  const { error: updateErr } = await adminSupabase
     .from('profiles')
     .update({
       two_factor_code: hashOtpCode(code),
@@ -59,10 +81,10 @@ export async function POST(request: Request) {
     return jsonError('Erro ao gerar código de segurança.', 500);
   }
 
-  const { error: outboxErr } = await staff.supabase.from('whatsapp_outbox').insert({
+  const { error: outboxErr } = await adminSupabase.from('whatsapp_outbox').insert({
     phone: targetPhone,
-    client_name: profile.full_name || 'Admin Astra',
-    message: `*Astra Admin - Verificação 2FA*\n\nSeu código de segurança para autenticação em duas etapas é:\n\n*${code}*\n\nEle expira em 10 minutos. Se você não solicitou este código, ignore esta mensagem.`,
+    client_name: profile.full_name || 'Lara Varisa Admin',
+    message: `*Painel Lara Varisa - Verificação 2FA*\n\nSeu código de segurança para autenticação em duas etapas é:\n\n*${code}*\n\nEle expira em 10 minutos. Se você não solicitou este código, ignore esta mensagem.`,
     message_type: '2fa_code',
     status: 'pending',
   });
@@ -89,41 +111,37 @@ export async function PUT(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await getStaffContext();
   if (!staff) return jsonError('Não autorizado.', 401);
+  const adminSupabase = createAdminSupabase();
+  if (!adminSupabase) return jsonError('Serviço temporariamente indisponível.', 503);
 
-  let body: { code?: string; enable?: boolean };
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('Dados inválidos.', 400);
+  const attemptLimit = checkRateLimit(
+    `2fa-toggle:${staff.user.id}:${getClientIp(request)}`,
+    5,
+    10 * 60 * 1000,
+  );
+  if (!attemptLimit.allowed) {
+    return jsonError('Muitas tentativas. Solicite um novo código mais tarde.', 429);
   }
 
-  const { code, enable } = body;
-  if (!code || typeof enable !== 'boolean') {
-    return jsonError('Código e estado de ativação são obrigatórios.', 422);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
-
-  const { data: profile, error } = await staff.supabase
-    .from('profiles')
-    .select('id, two_factor_code, two_factor_expires_at')
-    .eq('id', staff.user.id)
-    .single();
-
-  if (error || !profile) {
-    return jsonError('Perfil não encontrado.', 404);
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'Dados inválidos.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
+  const body = bodyResult.data;
 
-  if (!profile.two_factor_code || !safeCompareOtpCode(code.trim(), profile.two_factor_code)) {
-    return jsonError('Código de verificação inválido.', 422);
-  }
+  const parsedBody = twoFactorVerifySchema.safeParse(body);
+  if (!parsedBody.success) return jsonError(parsedBody.error.issues[0]?.message || 'Código inválido.', 422);
+  const { code, enable } = parsedBody.data;
 
-  if (
-    profile.two_factor_expires_at &&
-    new Date(profile.two_factor_expires_at).getTime() < Date.now()
-  ) {
-    return jsonError('Este código expirou. Solicite um novo código.', 422);
-  }
-
-  const { error: updateErr } = await staff.supabase
+  // Consome o código atomically: o primeiro UPDATE que casar com o hash e a
+  // validade vence o desafio; chamadas concorrentes não conseguem reutilizá-lo.
+  const { data: consumed, error: updateErr } = await adminSupabase
     .from('profiles')
     .update({
       two_factor_enabled: enable,
@@ -132,11 +150,18 @@ export async function PUT(request: Request) {
       two_factor_temp_token: null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', staff.user.id);
+    .eq('id', staff.user.id)
+    .eq('two_factor_code', hashOtpCode(code))
+    .gt('two_factor_expires_at', new Date().toISOString())
+    .select('id')
+    .maybeSingle();
 
   if (updateErr) {
     console.error('[2FA Toggle Error]:', updateErr);
     return jsonError('Erro ao atualizar status de 2FA.', 500);
+  }
+  if (!consumed) {
+    return jsonError('Código de verificação inválido ou expirado.', 422);
   }
 
   serverCache.delete(`staff_profile:${staff.user.id}`);

@@ -1,5 +1,6 @@
 import { requireStaff } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, sanitizeText } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody, sanitizeText } from '@/lib/security';
+import { whatsappChatActionSchema } from '@/lib/validation';
 import {
   normalizeCanonicalPhone,
   getPhoneSearchVariants,
@@ -7,12 +8,45 @@ import {
   cleanPhoneDigits,
   isLid,
 } from '@/lib/phone-utils';
+import { getSupabaseConfig } from '@/lib/supabase/env';
 
 export const dynamic = 'force-dynamic';
+const MAX_BODY_BYTES = 20_000;
+
+function isAllowedMediaUrl(value: string): boolean {
+  try {
+    const configuredUrl = getSupabaseConfig().url;
+    if (!configuredUrl) return false;
+    const media = new URL(value);
+    const allowed = new URL(configuredUrl);
+    return media.protocol === 'https:' && media.origin === allowed.origin;
+  } catch {
+    return false;
+  }
+}
+
+type ChatContactPayload = {
+  phone: string;
+  name: string;
+  lastMessage: string;
+  lastTimestamp: string;
+  fromMe: boolean;
+  mediaType: string;
+  aiPaused: boolean;
+  aiPausedUntil: string | null;
+  clientId: string | null;
+};
+
+type ClientLookupRow = { id: string; name: string; phone: string; notes?: string | null; created_at: string };
+type ChatControlRow = { phone: string; ai_paused: boolean; ai_paused_until: string | null };
 
 export async function GET(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const context = await requireStaff();
   const supabase = context.supabase;
+
+  const contentLength = Number(request.headers.get('content-length') || '0');
+  if (contentLength > MAX_BODY_BYTES) return jsonError('Conteúdo muito grande.', 413);
   const url = new URL(request.url);
   const phoneParam = url.searchParams.get('phone');
 
@@ -50,23 +84,24 @@ export async function GET(request: Request) {
     const [messagesRes, controlRes, clientRes] = await Promise.all([
       supabase
         .from('whatsapp_messages')
-        .select('*')
+      .select('id, phone, remote_jid, sender_name, content, created_at, from_me, media_type, media_url, status')
         .in('phone', searchVariants)
         .order('created_at', { ascending: true })
         .limit(300),
       supabase
         .from('whatsapp_chat_control')
-        .select('*')
+        .select('phone, ai_paused, ai_paused_until, updated_at')
         .in('phone', searchVariants)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
       supabase
         .from('clients')
-        .select('id, name, phone, notes, created_at'),
+        .select('id, name, phone, notes, created_at')
+        .in('phone', searchVariants),
     ]);
 
-    const matchedClient = (clientRes.data || []).find((cl: any) =>
+    const matchedClient = (clientRes.data as ClientLookupRow[] | null || []).find((cl) =>
       areSamePhone(cl.phone, targetPhone)
     ) || null;
 
@@ -78,7 +113,7 @@ export async function GET(request: Request) {
         ai_paused_until: null,
       },
       client: matchedClient,
-    });
+    }, { headers: NO_STORE_HEADERS });
   }
 
   // 2. Se pediu lista geral de contatos/conversas
@@ -91,7 +126,7 @@ export async function GET(request: Request) {
       .limit(600),
     supabase
       .from('whatsapp_chat_control')
-      .select('*'),
+      .select('phone, ai_paused, ai_paused_until, updated_at'),
     supabase
       .from('clients')
       .select('id, name, phone, created_at'),
@@ -101,7 +136,7 @@ export async function GET(request: Request) {
   ]);
 
   const clientsList = clientsRes.data || [];
-  const controlsList = controlsRes.data || [];
+  const controlsList = (controlsRes.data || []) as ChatControlRow[];
 
   const lidMap = new Map<string, string>();
   for (const m of (lidMappingsRes.data || [])) {
@@ -111,7 +146,7 @@ export async function GET(request: Request) {
   }
 
   // Agrupa contatos a partir das mensagens recentes usando telefone canônico
-  const contactsMap = new Map<string, any>();
+  const contactsMap = new Map<string, ChatContactPayload>();
   for (const msg of messagesRes.data || []) {
     if (!msg.phone) continue;
 
@@ -132,11 +167,11 @@ export async function GET(request: Request) {
     const canonical = normalizeCanonicalPhone(effectivePhone);
     if (!canonical) continue;
 
-    const matchedClient = clientsList.find((cl: any) =>
+    const matchedClient = clientsList.find((cl: ClientLookupRow) =>
       areSamePhone(cl.phone, canonical)
     );
 
-    const control = controlsList.find((c: any) =>
+    const control = controlsList.find((c) =>
       areSamePhone(c.phone, canonical)
     );
 
@@ -159,15 +194,17 @@ export async function GET(request: Request) {
       });
     } else {
       const existing = contactsMap.get(canonical);
-      if (new Date(msg.created_at).getTime() > new Date(existing.lastTimestamp).getTime()) {
-        existing.lastMessage = msg.content || '';
-        existing.lastTimestamp = msg.created_at;
-        existing.fromMe = msg.from_me;
-        existing.mediaType = msg.media_type || 'text';
-      }
-      if (!existing.clientId && matchedClient?.id) {
-        existing.clientId = matchedClient.id;
-        existing.name = matchedClient.name;
+      if (existing) {
+        if (new Date(msg.created_at).getTime() > new Date(existing.lastTimestamp).getTime()) {
+          existing.lastMessage = msg.content || '';
+          existing.lastTimestamp = msg.created_at;
+          existing.fromMe = msg.from_me;
+          existing.mediaType = msg.media_type || 'text';
+        }
+        if (!existing.clientId && matchedClient?.id) {
+          existing.clientId = matchedClient.id;
+          existing.name = matchedClient.name;
+        }
       }
     }
   }
@@ -176,7 +213,7 @@ export async function GET(request: Request) {
   for (const cl of clientsList) {
     const canonical = normalizeCanonicalPhone(cl.phone);
     if (canonical && !contactsMap.has(canonical)) {
-      const control = controlsList.find((c: any) =>
+      const control = controlsList.find((c) =>
         areSamePhone(c.phone, canonical)
       );
       const isAiPaused = Boolean(
@@ -204,26 +241,34 @@ export async function GET(request: Request) {
 
   return Response.json({
     contacts: contactsList,
-  });
+  }, { headers: NO_STORE_HEADERS });
 }
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const context = await requireStaff();
+  if (context.profile.role === 'viewer') {
+    return jsonError('Seu perfil pode apenas visualizar as conversas.', 403);
+  }
   const supabase = context.supabase;
 
-  let body: any = {};
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const input = bodyResult.data;
 
-  const action = body.action || 'send_message';
-  const rawPhone = String(body.phone || '').replace(/\D/g, '');
-  if (!rawPhone) {
-    return jsonError('Telefone é obrigatório.', 422);
-  }
+  const parsed = whatsappChatActionSchema.safeParse(input);
+  if (!parsed.success) return jsonError('Mensagem ou controle de conversa inválido.', 422);
+  const body = parsed.data;
+  const action = body.action;
+  const rawPhone = body.phone.replace(/\D/g, '');
 
   let effectivePhone = rawPhone;
   if (isLid(rawPhone)) {
@@ -243,8 +288,15 @@ export async function POST(request: Request) {
   // AÇÃO 1: Enviar mensagem manual do WhatsApp
   if (action === 'send_message') {
     const rawText = sanitizeText(body.message || '').slice(0, 3000);
-    const mediaType = body.media_type ? String(body.media_type) : 'text';
-    const mediaUrl = body.media_url ? String(body.media_url) : null;
+    const mediaType = body.media_type || 'text';
+    const mediaUrl = body.media_url || null;
+
+    if (mediaType !== 'text' && !mediaUrl) {
+      return jsonError('A mídia selecionada não possui arquivo.', 422);
+    }
+    if (mediaUrl && !isAllowedMediaUrl(mediaUrl)) {
+      return jsonError('A mídia precisa estar armazenada no servidor do estúdio.', 422);
+    }
     const text = rawText || (mediaType === 'image' ? '📷 [Foto enviada]' : mediaType === 'audio' ? '🎤 [Áudio enviado]' : '');
 
     if (!text.trim() && !mediaUrl) {
@@ -280,7 +332,7 @@ export async function POST(request: Request) {
       .single();
 
     if (errMsg) {
-      return jsonError(`Erro ao salvar mensagem: ${errMsg.message}`, 400);
+      return jsonError('Não foi possível registrar a mensagem.', 500);
     }
 
     // 2. Enfileira no whatsapp_outbox para o bot Baileys disparar
@@ -291,11 +343,16 @@ export async function POST(request: Request) {
         client_name: clientName,
         message: text,
         message_type: 'direct',
+        media_type: mediaType,
+        media_url: mediaUrl,
         status: 'pending',
       });
 
     if (errOutbox) {
-      return jsonError(`Erro ao enfileirar no WhatsApp: ${errOutbox.message}`, 400);
+      // Evita deixar uma mensagem fantasma na conversa se a fila estiver
+      // indisponível. A exclusão é best-effort; o erro real não é exposto.
+      await supabase.from('whatsapp_messages').delete().eq('id', insertedMsg.id);
+      return jsonError('Não foi possível enfileirar a mensagem para o WhatsApp.', 503);
     }
 
     // 3. Registra log de saída manual no terminal
@@ -308,7 +365,7 @@ export async function POST(request: Request) {
     return Response.json({
       ok: true,
       message: insertedMsg,
-    });
+    }, { headers: NO_STORE_HEADERS });
   }
 
   // AÇÃO 2: Pausar ou reativar IA para este contato específico
@@ -338,7 +395,7 @@ export async function POST(request: Request) {
       .single();
 
     if (errControl) {
-      return jsonError(`Erro ao atualizar controle de IA: ${errControl.message}`, 400);
+      return jsonError('Não foi possível atualizar o controle desta conversa.', 500);
     }
 
     // Registra log da alteração
@@ -355,7 +412,7 @@ export async function POST(request: Request) {
     return Response.json({
       ok: true,
       control: controlData,
-    });
+    }, { headers: NO_STORE_HEADERS });
   }
 
   return jsonError('Ação desconhecida.', 422);

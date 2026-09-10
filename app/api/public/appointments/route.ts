@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createPublicSupabase } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase/server';
 import { serverCache } from '@/lib/memory-cache';
 import {
   checkRateLimit,
@@ -8,31 +8,33 @@ import {
   jsonError,
   leadFingerprint,
   NO_STORE_HEADERS,
+  readJsonBody,
   sanitizeText,
   verifyTurnstile,
 } from '@/lib/security';
 
 const bookingRequestSchema = z.object({
-  serviceId: z.string().trim().min(1, 'Selecione um serviço válido'),
+  serviceId: z.uuid('Selecione um serviço válido'),
   startsAt: z.iso.datetime({ offset: true }),
   clientName: z.string().trim().min(2, 'Informe seu nome completo').max(80),
   clientPhone: z
     .string()
     .trim()
     .min(10, 'Informe um telefone com DDD válido')
-    .max(24),
+    .max(24)
+    .refine((value) => {
+      const digits = value.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 15;
+    }, 'Informe um telefone com DDD válido'),
   clientEmail: z
     .union([z.literal(''), z.email().trim().max(254)])
     .default(''),
   notes: z.string().trim().max(1000).default(''),
   turnstileToken: z.string().max(4096).optional().default(''),
-  isVip: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
-  const contentLength = Number(request.headers.get('content-length') || '0');
-  if (contentLength > 15_000) return jsonError('Conteúdo muito grande.', 413);
   if (!request.headers.get('content-type')?.includes('application/json')) {
     return jsonError('Formato inválido.', 415);
   }
@@ -44,12 +46,14 @@ export async function POST(request: Request) {
     return jsonError('Muitas tentativas de agendamento. Aguarde alguns minutos.', 429);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  const bodyResult = await readJsonBody(request, 15_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
+  const body = bodyResult.data;
 
   const parsed = bookingRequestSchema.safeParse(body);
   if (!parsed.success) {
@@ -68,11 +72,14 @@ export async function POST(request: Request) {
   } = parsed.data;
 
   // Turnstile verification if configured
-  if (turnstileToken && !(await verifyTurnstile(turnstileToken, request))) {
+  if (process.env.TURNSTILE_SECRET_KEY && !(await verifyTurnstile(turnstileToken, request))) {
     return jsonError('Não foi possível validar o envio seguro.', 403);
   }
 
-  const supabase = createPublicSupabase();
+  // Booking writes are private at the database layer. This route remains the
+  // public boundary and performs origin, Turnstile, IP and payload checks
+  // before calling the RPC with the server-only service role key.
+  const supabase = createAdminSupabase();
   if (!supabase) {
     return jsonError('Sistema de agendamento em manutenção temporária.', 503);
   }
@@ -108,9 +115,8 @@ export async function POST(request: Request) {
   }
 
   // Calculate fingerprint for database-level rate limiting
-  const fingerprint =
-    leadFingerprint(request, clientPhone || clientEmail || 'guest') ||
-    '0000000000000000000000000000000000000000000000000000000000000000';
+  const fingerprint = leadFingerprint(request, clientPhone || clientEmail || 'guest');
+  if (!fingerprint) return jsonError('Configuração de segurança incompleta.', 503);
 
   // Sanitize text inputs
   const cleanName = sanitizeText(clientName);
@@ -136,7 +142,8 @@ export async function POST(request: Request) {
       if (error.message.includes('slot_already_booked') || error.code === '23P01') {
         return jsonError('Esse horário acabou de ser reservado por outra cliente. Por favor, escolha outro horário.', 409);
       }
-      return jsonError(error.message || 'Não foi possível concluir o agendamento.', 400);
+      console.error('[Public Booking RPC Error]:', error);
+      return jsonError('Não foi possível concluir o agendamento.', 500);
     }
 
     const appointmentData = {

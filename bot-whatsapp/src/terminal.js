@@ -100,8 +100,8 @@ function createRow(content) {
  * Renderiza o painel principal de status limpo e perfeitamente alinhado
  */
 export function renderBanner(config = {}) {
-  const studio = config.studioName || 'Lara Lash & Sobrancelhas';
-  const city = config.studioCity || 'Porto Alegre - RS';
+  const studio = sanitizeForTerminal(String(config.studioName || 'Lara Lash & Sobrancelhas')).slice(0, 120);
+  const city = sanitizeForTerminal(String(config.studioCity || 'Porto Alegre - RS')).slice(0, 120);
 
   const c = colors;
   try {
@@ -133,7 +133,7 @@ export function renderBanner(config = {}) {
  */
 export function updateStatus(key, value) {
   if (botStatus[key] !== undefined) {
-    botStatus[key] = value;
+    botStatus[key] = sanitizeForTerminal(String(value ?? '')).slice(0, 160);
   }
 }
 

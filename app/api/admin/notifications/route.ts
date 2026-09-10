@@ -1,5 +1,5 @@
 import { requireStaff } from '@/lib/admin-auth';
-import { jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 
 export interface NotificationItem {
   id: string;
@@ -14,7 +14,8 @@ export interface NotificationItem {
   badge?: string;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const staff = await requireStaff();
   if (!staff) return jsonError('Não autorizado.', 401);
 
@@ -152,9 +153,7 @@ export async function GET() {
       { headers: NO_STORE_HEADERS },
     );
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : 'Falha ao buscar notificações.',
-      500,
-    );
+    console.error('[Notifications Error]:', error);
+    return jsonError('Falha ao buscar notificações.', 500);
   }
 }

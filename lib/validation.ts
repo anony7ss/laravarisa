@@ -34,6 +34,19 @@ const galleryPath = z
     'Caminho de imagem inválido.',
   );
 
+const bookingColor = (fallback: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-f]{3,8}$/i, 'Use uma cor hexadecimal válida.')
+    .default(fallback);
+const bookingFont = (fallback: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9 _-]{0,49}$/, 'Nome de fonte inválido.')
+    .default(fallback);
+
 export const leadSchema = z.object({
   name: cleanText(80).min(2),
   email: z
@@ -41,7 +54,16 @@ export const leadSchema = z.object({
     .trim()
     .max(254)
     .transform((v) => v.toLowerCase()),
-  phone: z.string().trim().max(24).default(''),
+  phone: z
+    .string()
+    .trim()
+    .max(24)
+    .refine((value) => {
+      if (!value) return true;
+      const digits = value.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 15;
+    }, 'Telefone inválido.')
+    .default(''),
   message: cleanText(1500).min(10),
   website: z.string().max(0).optional().default(''),
   turnstileToken: z.string().max(4096).optional().default(''),
@@ -55,6 +77,65 @@ export const loginSchema = z.object({
     .transform((v) => v.toLowerCase()),
   password: z.string().min(8).max(256),
   remember_me: z.boolean().optional().default(true),
+});
+
+const staffRoleSchema = z.enum(['admin', 'editor', 'viewer']);
+const staffPhoneSchema = z
+  .string()
+  .trim()
+  .max(25, 'Telefone inválido.')
+  .refine((value) => {
+    if (!value) return true;
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 15;
+  }, 'Informe um telefone com DDD válido.')
+  .default('');
+
+export const staffCreateSchema = z.object({
+  email: z.email().trim().max(254).transform((value) => value.toLowerCase()),
+  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres.').max(256),
+  full_name: cleanText(100).min(2),
+  role: staffRoleSchema.default('editor'),
+  phone: staffPhoneSchema,
+});
+
+export const staffUpdateSchema = z
+  .object({
+    target_user_id: z.uuid(),
+    role: staffRoleSchema.optional(),
+    password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres.').max(256).nullable().optional(),
+  })
+  .refine(
+    (value) => value.role !== undefined || (value.password !== undefined && value.password !== null && value.password !== ''),
+    'Informe um cargo ou uma nova senha.',
+  );
+
+export const profileUpdateSchema = z
+  .object({
+    full_name: z.string().trim().min(2).max(100).optional(),
+    phone: staffPhoneSchema.nullable().optional(),
+  })
+  .refine((value) => value.full_name !== undefined || value.phone !== undefined, 'Nenhuma alteração foi informada.');
+
+export const passwordChangeSchema = z
+  .object({
+    current_password: z.string().min(1).max(256),
+    new_password: z.string().min(8, 'A nova senha deve conter pelo menos 8 caracteres.').max(256),
+    confirm_password: z.string().min(8, 'Confirme a nova senha.').max(256),
+  })
+  .refine((value) => value.new_password === value.confirm_password, {
+    message: 'A confirmação de senha não confere.',
+    path: ['confirm_password'],
+  });
+
+export const twoFactorVerifySchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, 'Informe o código de 6 dígitos.'),
+  enable: z.boolean(),
+});
+
+export const twoFactorLoginSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, 'Informe o código de 6 dígitos.'),
+  tempToken: z.uuid('Token de segurança inválido.'),
 });
 
 export const leadUpdateSchema = z.object({
@@ -140,7 +221,15 @@ export const appointmentUpdateSchema = appointmentBaseSchema.partial();
 
 export const anamnesisSchema = z.object({
   client_name: cleanText(100).min(2),
-  client_phone: z.string().trim().min(10).max(24),
+  client_phone: z
+    .string()
+    .trim()
+    .min(10)
+    .max(24)
+    .refine((value) => {
+      const digits = value.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 15;
+    }, 'Telefone inválido.'),
   has_allergies: z.boolean().default(false),
   allergies_detail: z.string().trim().max(1000).nullable().optional(),
   pregnant: z.boolean().default(false),
@@ -169,7 +258,9 @@ export const settingsSchema = z.object({
   min_lead_hours: z.coerce.number().int().min(0).max(72).default(2),
   max_future_days: z.coerce.number().int().min(1).max(120).default(30),
   // Communication & studio
-  whatsapp_phone: z.string().trim().max(25).default('5551989601662'),
+  // O número precisa ser informado pelo administrador; nunca semeamos um
+  // contato de exemplo que poderia receber mensagens reais por engano.
+  whatsapp_phone: z.string().trim().max(25).default(''),
   lara_phone: z.string().trim().max(25).default('').nullable().optional().transform((val) => (val && val.trim() ? val.trim() : null)),
   notify_lara_on_new_booking: z.boolean().default(true),
   notify_lara_on_human_transfer: z.boolean().default(true),
@@ -209,14 +300,14 @@ export const settingsSchema = z.object({
   // Personalização da Página de Agendamento (/agendar)
   booking_layout_style: z.string().trim().max(50).default('modern-app'),
   booking_theme: z.string().trim().max(50).default('classic-noir'),
-  booking_bg_color: z.string().trim().max(30).default('#e7e7e2'),
-  booking_card_bg: z.string().trim().max(30).default('#ffffff'),
-  booking_primary_color: z.string().trim().max(30).default('#121211'),
-  booking_accent_color: z.string().trim().max(30).default('#cca352'),
-  booking_text_color: z.string().trim().max(30).default('#121211'),
-  booking_border_color: z.string().trim().max(30).default('#cfcfc9'),
-  booking_font_heading: z.string().trim().max(50).default('Anton'),
-  booking_font_body: z.string().trim().max(50).default('DM Sans'),
+  booking_bg_color: bookingColor('#e7e7e2'),
+  booking_card_bg: bookingColor('#ffffff'),
+  booking_primary_color: bookingColor('#121211'),
+  booking_accent_color: bookingColor('#cca352'),
+  booking_text_color: bookingColor('#121211'),
+  booking_border_color: bookingColor('#cfcfc9'),
+  booking_font_heading: bookingFont('Anton'),
+  booking_font_body: bookingFont('DM Sans'),
   booking_cover_url: publicAssetUrl('/lara-lashes-optimized.webp'),
   booking_avatar_url: publicAssetUrl('/logo-emblem.png'),
   booking_title: z.string().trim().max(100).default('Lara Varisa'),
@@ -252,8 +343,80 @@ export const shortLinkSchema = z.object({
     .min(2, 'O slug deve ter pelo menos 2 caracteres')
     .max(60, 'O slug deve ter no máximo 60 caracteres')
     .regex(/^[a-zA-Z0-9_-]+$/, 'O slug deve conter apenas letras, números, hífen (-) ou sublinhado (_)'),
-  target_url: z.url('URL de destino inválida').max(2000).refine((value) => /^https?:\/\//i.test(value), 'A URL precisa usar HTTP ou HTTPS.'),
+  target_url: z
+    .url('URL de destino inválida')
+    .max(2000)
+    .refine((value) => {
+      try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'https:' && !parsed.username && !parsed.password;
+      } catch {
+        return false;
+      }
+    }, 'A URL precisa usar HTTPS sem credenciais.'),
   phone: z.string().trim().max(30).optional().default(''),
   message: z.string().trim().max(1500).optional().default(''),
   is_active: z.boolean().optional().default(true),
 });
+
+const whatsappPhone = z
+  .string()
+  .trim()
+  .min(10, 'Telefone inválido.')
+  .max(24, 'Telefone inválido.')
+  .refine((value) => {
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 15;
+  }, 'Informe um telefone com DDD válido.');
+
+const whatsappMediaUrl = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    (value) => !value || /^https:\/\//i.test(value),
+    'A mídia precisa usar uma URL HTTPS.',
+  )
+  .optional()
+  .nullable();
+
+/** Payloads aceitos pelos controles globais do WhatsApp no painel. */
+export const whatsappActionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('disconnect') }),
+  z.object({ action: z.literal('refresh') }),
+  z
+    .object({
+      action: z.literal('update_settings'),
+      lara_phone: z.string().trim().max(24).optional().nullable(),
+      notify_lara_on_human_transfer: z.boolean().optional(),
+      notify_lara_on_new_booking: z.boolean().optional(),
+      ai_enabled: z.boolean().optional(),
+      audio_mode: z
+        .enum(['direct_request', 'mirror', 'always', 'disabled'])
+        .optional(),
+      audio_voice: z.string().trim().max(100).optional(),
+    })
+    .refine(
+      (value) => Object.keys(value).some((key) => key !== 'action'),
+      'Nenhuma configuração foi informada.',
+    ),
+]);
+
+/** Ações de conversa usadas pelo chat do painel. */
+export const whatsappChatActionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('send_message'),
+    phone: whatsappPhone,
+    client_name: z.string().trim().max(100).optional().nullable(),
+    message: z.string().trim().max(3000).default(''),
+    media_type: z.enum(['text', 'image', 'audio']).default('text'),
+    media_url: whatsappMediaUrl,
+  }),
+  z.object({
+    action: z.literal('toggle_ai'),
+    phone: whatsappPhone,
+    client_name: z.string().trim().max(100).optional().nullable(),
+    ai_paused: z.boolean(),
+    pause_duration_hours: z.number().int().min(1).max(168).nullable().optional(),
+  }),
+]);

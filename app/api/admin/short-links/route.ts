@@ -1,10 +1,11 @@
 import { requireStaff } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
 import { shortLinkSchema } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const { supabase } = await requireStaff();
 
   const { data, error } = await supabase
@@ -13,7 +14,8 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return jsonError(error.message, 400);
+    console.error('[Short Links GET Error]:', error);
+    return jsonError('Não foi possível carregar os links.', 500);
   }
 
   return Response.json(data || [], {
@@ -28,12 +30,17 @@ export async function POST(request: Request) {
     return jsonError('Permissão insuficiente para criar links.', 403);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, 20_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const body = bodyResult.data;
 
   const parsed = shortLinkSchema.safeParse(body);
   if (!parsed.success) {
@@ -69,7 +76,8 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return jsonError(error.message, 400);
+    console.error('[Short Links POST Error]:', error);
+    return jsonError('Não foi possível criar o link.', 500);
   }
 
   return Response.json(data, {

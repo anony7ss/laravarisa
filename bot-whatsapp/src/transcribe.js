@@ -1,6 +1,10 @@
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import config from './config.js';
 import { logInfo, logWarn, logError } from './terminal.js';
+import { isSupportedMediaBuffer, readAsyncIterableWithLimit, readResponseBodyWithLimit, sanitizeUntrustedText } from './security-utils.js';
+
+const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
+const TRANSCRIPTION_TIMEOUT_MS = 15_000;
 
 /**
  * Transcreve mensagens de áudio ou notas de voz do WhatsApp usando a API Groq Whisper.
@@ -12,7 +16,7 @@ import { logInfo, logWarn, logError } from './terminal.js';
  */
 export async function transcreverAudio(msg, sock) {
   const apiKey = config.groqApiKey;
-  if (!apiKey || apiKey === 'dummy_key' || apiKey.length < 10) {
+  if (!apiKey || apiKey === 'disabled-api-key' || apiKey.length < 10) {
     logWarn('Áudio', 'GROQ_API_KEY não configurada no .env. Transcrição indisponível.');
     return {
       sucesso: false,
@@ -30,14 +34,42 @@ export async function transcreverAudio(msg, sock) {
     };
   }
 
+  const declaredLength = Number(audioMessage.fileLength || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_AUDIO_BYTES) {
+    logWarn('Áudio', `Áudio recusado por exceder ${MAX_AUDIO_BYTES / (1024 * 1024)} MB.`);
+    return {
+      sucesso: false,
+      texto: '',
+      erro: 'Áudio muito grande',
+    };
+  }
+
+  const mimetype = String(audioMessage.mimetype || 'audio/ogg').split(';', 1)[0].trim().toLowerCase();
+  const allowedMimeTypes = new Set([
+    'audio/ogg',
+    'audio/opus',
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/x-m4a',
+    'audio/webm',
+  ]);
+  if (!allowedMimeTypes.has(mimetype)) {
+    return {
+      sucesso: false,
+      texto: '',
+      erro: 'Formato de áudio não suportado',
+    };
+  }
+
   try {
     // Baixa o buffer do áudio via Baileys
-    const buffer = await downloadMediaMessage(
+    const stream = await downloadMediaMessage(
       msg,
-      'buffer',
+      'stream',
       {},
       { reuploadRequest: sock?.updateMediaMessage }
     );
+    const buffer = await readAsyncIterableWithLimit(stream, MAX_AUDIO_BYTES);
 
     if (!buffer || buffer.length === 0) {
       logWarn('Áudio', 'Buffer de áudio vazio retornado pelo WhatsApp.');
@@ -48,8 +80,29 @@ export async function transcreverAudio(msg, sock) {
       };
     }
 
-    const mimetype = audioMessage.mimetype || 'audio/ogg';
-    const extensao = mimetype.includes('mp4') ? 'm4a' : 'ogg';
+    if (buffer.length > MAX_AUDIO_BYTES) {
+      logWarn('Áudio', `Áudio recusado por exceder ${MAX_AUDIO_BYTES / (1024 * 1024)} MB.`);
+      return {
+        sucesso: false,
+        texto: '',
+        erro: 'Áudio muito grande',
+      };
+    }
+    if (!isSupportedMediaBuffer(buffer, 'audio')) {
+      return {
+        sucesso: false,
+        texto: '',
+        erro: 'Conteúdo de áudio inválido',
+      };
+    }
+
+    const extensao = mimetype.includes('mp4') || mimetype === 'audio/x-m4a'
+      ? 'm4a'
+      : mimetype === 'audio/mpeg'
+        ? 'mp3'
+        : mimetype === 'audio/webm'
+          ? 'webm'
+          : 'ogg';
     const audioFile = new File([buffer], `audio.${extensao}`, { type: mimetype });
 
     const formData = new FormData();
@@ -64,10 +117,11 @@ export async function transcreverAudio(msg, sock) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: formData,
+      signal: AbortSignal.timeout(TRANSCRIPTION_TIMEOUT_MS),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = (await readResponseBodyWithLimit(response, 16 * 1024)).toString('utf8').slice(0, 500);
       logError('Áudio', `Falha na API Groq Whisper (${response.status}): ${errorText}`);
       return {
         sucesso: false,
@@ -76,8 +130,8 @@ export async function transcreverAudio(msg, sock) {
       };
     }
 
-    const data = await response.json();
-    const textoTranscrevido = (data.text || '').trim();
+    const data = JSON.parse((await readResponseBodyWithLimit(response, 64 * 1024)).toString('utf8'));
+    const textoTranscrevido = sanitizeUntrustedText(String(data?.text || ''), 6000).trim();
 
     if (!textoTranscrevido) {
       return {
@@ -96,7 +150,7 @@ export async function transcreverAudio(msg, sock) {
     return {
       sucesso: false,
       texto: '',
-      erro: error?.message || 'Erro desconhecido',
+      erro: 'Não foi possível transcrever o áudio agora.',
     };
   }
 }

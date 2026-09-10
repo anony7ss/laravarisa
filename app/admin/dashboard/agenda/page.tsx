@@ -5,11 +5,19 @@ import type { AppointmentRow, ClientRow, ServiceRow } from '@/lib/admin-types';
 export default async function AgendaPage() {
   const { supabase, profile } = await requireStaff();
   const [appointments, clients, services] = await Promise.all([
-    supabase.from('appointments').select('*').order('starts_at'),
-    supabase.from('clients').select('*').order('name'),
+    supabase
+      .from('appointments')
+      .select('id, client_id, lead_id, service_id, client_name, client_phone, starts_at, ends_at, status, notes, origin, is_blocked, created_at, updated_at')
+      .order('starts_at')
+      .limit(5000),
+    supabase
+      .from('clients')
+      .select('id, name, email, phone, notes, origin, created_from_lead, created_at, lash_mapping, lash_curl, lash_thickness, lash_length, lash_adhesive, lash_notes')
+      .order('name')
+      .limit(5000),
     supabase
       .from('services')
-      .select('*')
+      .select('id, slug, name, category, description, price_label, duration_label, duration_minutes, maintenance, intensity, sort_order, active')
       .eq('active', true)
       .order('sort_order'),
   ]);

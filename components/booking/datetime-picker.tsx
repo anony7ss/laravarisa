@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useSyncExternalStore } from 'react';
 import { CalendarDays, Loader2, AlertCircle } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
@@ -24,6 +24,28 @@ const monthsPt = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
+
+const subscribeToDateChanges = () => () => {};
+
+function getTodayKey() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  return [
+    parts.find((part) => part.type === 'year')?.value,
+    parts.find((part) => part.type === 'month')?.value,
+    parts.find((part) => part.type === 'day')?.value,
+  ].join('-');
+}
+
+function getServerTodayKey() {
+  // Keep server and client snapshots in the studio timezone to avoid an
+  // obsolete-date flash before hydration.
+  return getTodayKey();
+}
 
 function formatDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -57,14 +79,12 @@ export function DateTimePicker({
   plainContainer?: boolean;
   variant?: 'classic' | 'modern';
 }) {
-  // Keep the first render deterministic for SSR/hydration; replace it with the
-  // real local day immediately after mount.
-  const [today, setToday] = useState(() => new Date(2000, 0, 1));
-  useEffect(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    setToday(d);
-  }, []);
+  // Keep SSR and hydration aligned with the studio's São Paulo calendar day.
+  const todayKey = useSyncExternalStore(subscribeToDateChanges, getTodayKey, getServerTodayKey);
+  const today = useMemo(() => {
+    const [year, month, day] = todayKey.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }, [todayKey]);
 
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);

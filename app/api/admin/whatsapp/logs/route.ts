@@ -1,9 +1,10 @@
 import { requireStaff } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const context = await requireStaff();
   const supabase = context.supabase;
 
@@ -14,17 +15,20 @@ export async function GET() {
     .limit(200);
 
   if (error) {
-    return jsonError(error.message, 400);
+    return jsonError('Não foi possível carregar os registros do bot.', 500);
   }
 
   return Response.json({
     logs: data || [],
-  });
+  }, { headers: NO_STORE_HEADERS });
 }
 
 export async function DELETE(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const context = await requireStaff();
+  if (context.profile.role !== 'admin') {
+    return jsonError('Apenas administradores podem limpar os registros.', 403);
+  }
   const supabase = context.supabase;
 
   const { error } = await supabase
@@ -33,7 +37,7 @@ export async function DELETE(request: Request) {
     .neq('id', '00000000-0000-0000-0000-000000000000');
 
   if (error) {
-    return jsonError(error.message, 400);
+    return jsonError('Não foi possível limpar os registros.', 500);
   }
 
   // Insere log de reinício limpo

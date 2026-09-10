@@ -14,6 +14,7 @@ import { sendHumanizedMessage } from './queue.js';
 import { logReminder, logWarn, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
 import { obterConfiguracoesEmCache } from './cache.js';
+import { sanitizeUntrustedText } from './security-utils.js';
 
 let reminderInterval = null;
 let isProcessingReminders = false;
@@ -23,6 +24,7 @@ let isProcessingReminders = false;
  */
 function formatarDataHora(isoString) {
   const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return null;
   const data = d.toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     weekday: 'long',
@@ -42,15 +44,32 @@ function formatarDataHora(isoString) {
  * Substitui variáveis do template
  */
 function preencherTemplate(template, vars) {
-  let texto = template || '';
+  let texto = sanitizeUntrustedText(String(template || ''), 2500);
   for (const [k, v] of Object.entries(vars)) {
-    texto = texto.replaceAll(`{${k}}`, v || '');
+    texto = texto.replaceAll(`{${k}}`, sanitizeUntrustedText(String(v || ''), 300));
   }
   return texto
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\\r/g, '\n')
-    .trim();
+    .trim()
+    .slice(0, 6000);
+}
+
+function limitarHoras(value, fallback, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, max);
+}
+
+function linkSeguro(value) {
+  try {
+    const parsed = new URL(String(value || ''));
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return null;
+    return parsed.toString().slice(0, 500);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -77,7 +96,7 @@ export async function processarLembretes(sock) {
     // FLUXO 1: LEMBRETE PRINCIPAL DE ANTECEDÊNCIA (Ex: 24h antes)
     // -------------------------------------------------------------
     if (settings.reminder_active) {
-      const horasAntes = Number(settings.reminder_hours_before) || 24;
+      const horasAntes = limitarHoras(settings.reminder_hours_before, 24, 168);
       const janelaLimite = new Date(agora.getTime() + horasAntes * 60 * 60 * 1000).toISOString();
 
       const { data: pendentes, error: errPendentes } = await supabase
@@ -125,9 +144,11 @@ export async function processarLembretes(sock) {
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
 
-          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
-          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
-          const nomeServico = ag.service?.name || 'Procedimento';
+          const formatado = formatarDataHora(ag.starts_at);
+          if (!formatado) continue;
+          const { data: dataFmt, horario: horaFmt } = formatado;
+          const nomeCliente = sanitizeUntrustedText((ag.client_name || 'Cliente').trim().split(' ')[0], 80) || 'Cliente';
+          const nomeServico = sanitizeUntrustedText(ag.service?.name || 'Procedimento', 120) || 'Procedimento';
 
           const templatePadrao =
             'Oi, {nome}! Passando pra lembrar do seu horário de {procedimento} amanhã às {horario}. Consegue me confirmar se você vem?';
@@ -157,7 +178,7 @@ export async function processarLembretes(sock) {
     // FLUXO 2: LEMBRETE RÁPIDO NO DIA DO ATENDIMENTO (Ex: 2h antes)
     // -------------------------------------------------------------
     if (settings.reminder_same_day_active) {
-      const horasAntesDia = Number(settings.reminder_same_day_hours_before) || 2;
+      const horasAntesDia = limitarHoras(settings.reminder_same_day_hours_before, 2, 24);
       const janelaLimiteDia = new Date(agora.getTime() + horasAntesDia * 60 * 60 * 1000).toISOString();
 
       const { data: pendentesDia, error: errDia } = await supabase
@@ -196,9 +217,11 @@ export async function processarLembretes(sock) {
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
 
-          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
-          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
-          const nomeServico = ag.service?.name || 'Procedimento';
+          const formatado = formatarDataHora(ag.starts_at);
+          if (!formatado) continue;
+          const { data: dataFmt, horario: horaFmt } = formatado;
+          const nomeCliente = sanitizeUntrustedText((ag.client_name || 'Cliente').trim().split(' ')[0], 80) || 'Cliente';
+          const nomeServico = sanitizeUntrustedText(ag.service?.name || 'Procedimento', 120) || 'Procedimento';
 
           const templatePadraoDia =
             'Oi, {nome}! Tudo pronto pra te receber hoje às {horario} no estúdio ({local}). Até já!';
@@ -227,7 +250,7 @@ export async function processarLembretes(sock) {
     // FLUXO 3: PÓS-ATENDIMENTO & PESQUISA DE SATISFAÇÃO (Google Review)
     // -------------------------------------------------------------
     if (settings.post_care_active) {
-      const horasDepois = Number(settings.post_care_hours_after) || 24;
+      const horasDepois = limitarHoras(settings.post_care_hours_after, 24, 720);
       const janelaMin = new Date(agora.getTime() - (horasDepois + 72) * 60 * 60 * 1000).toISOString();
       const janelaMax = new Date(agora.getTime() - horasDepois * 60 * 60 * 1000).toISOString();
 
@@ -248,10 +271,12 @@ export async function processarLembretes(sock) {
           const targetJid = await resolverJidWhatsApp(sock, ag.client_phone);
           if (!targetJid) continue;
 
-          const { data: dataFmt, horario: horaFmt } = formatarDataHora(ag.starts_at);
-          const nomeCliente = (ag.client_name || 'Cliente').trim().split(' ')[0];
-          const nomeServico = ag.service?.name || 'Procedimento';
-          const linkAvaliacao = settings.google_review_url || 'https://laravarisa.com.br';
+          const formatado = formatarDataHora(ag.starts_at);
+          if (!formatado) continue;
+          const { data: dataFmt, horario: horaFmt } = formatado;
+          const nomeCliente = sanitizeUntrustedText((ag.client_name || 'Cliente').trim().split(' ')[0], 80) || 'Cliente';
+          const nomeServico = sanitizeUntrustedText(ag.service?.name || 'Procedimento', 120) || 'Procedimento';
+          const linkAvaliacao = linkSeguro(settings.google_review_url) || 'https://laravarisa.com.br';
 
           const templatePadraoPos =
             'Oi, {nome}! 🌸 Passando para saber como estão seus cílios e se você está amando o resultado! 💕\n\nLembre-se dos cuidados básicos:\n• Evite vapor excessivo e água muito quente nos olhos\n• Penteie suavemente com a escovinha sempre que acordar\n• Lave a região com espuminha neutra\n\nSua opinião é super especial para nós! Se puder deixar uma avaliação com 5 estrelas no Google, nos ajuda demais:\n⭐ {link_avaliacao}\n\nQualquer dúvida estou por aqui! Um beijo! 🥰';

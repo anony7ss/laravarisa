@@ -17,7 +17,6 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel';
 import createAutoScroll from 'embla-carousel-auto-scroll';
-import { serviceWhatsAppUrl } from '@/lib/services';
 import { usePublicServices } from '@/lib/public-content';
 
 export function ServiceCarousel() {
@@ -25,6 +24,7 @@ export function ServiceCarousel() {
   const [api, setApi] = useState<CarouselApi>();
   const [playing, setPlaying] = useState(true);
   const userPaused = useRef(false);
+  const reducedMotion = useRef(false);
   const host = useRef<HTMLDivElement>(null);
   const autoScroll = useMemo(
     () =>
@@ -43,12 +43,28 @@ export function ServiceCarousel() {
     let isVisible = false;
 
     const sync = () => {
-      if (isVisible && !document.hidden && !userPaused.current) {
+      if (isVisible && !document.hidden && !userPaused.current && !reducedMotion.current) {
         autoScroll.play(0);
       } else {
         autoScroll.stop();
       }
     };
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reducedMotion.current = motionQuery.matches;
+    if (motionQuery.matches) {
+      userPaused.current = true;
+      setPlaying(false);
+    }
+    const onMotionPreferenceChange = (event: MediaQueryListEvent) => {
+      reducedMotion.current = event.matches;
+      if (event.matches) {
+        userPaused.current = true;
+        setPlaying(false);
+      }
+      sync();
+    };
+    motionQuery.addEventListener('change', onMotionPreferenceChange);
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -71,10 +87,12 @@ export function ServiceCarousel() {
       autoScroll.stop();
       api.off('autoScroll:play', onPlay).off('autoScroll:stop', onStop);
       document.removeEventListener('visibilitychange', sync);
+      motionQuery.removeEventListener('change', onMotionPreferenceChange);
     };
   }, [api, autoScroll]);
 
   function toggle() {
+    if (reducedMotion.current) return;
     if (playing) {
       userPaused.current = true;
       autoScroll.stop();
@@ -139,6 +157,7 @@ export function ServiceCarousel() {
             className="play-button"
             onClick={toggle}
             aria-label={playing ? 'Pausar serviços' : 'Continuar serviços'}
+            aria-pressed={playing}
           >
             {playing ? <Pause size={16} /> : <Play size={16} />}
             <span>{playing ? 'Pausar' : 'Continuar'}</span>

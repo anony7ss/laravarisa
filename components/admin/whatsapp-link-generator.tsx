@@ -104,7 +104,7 @@ function generateRandomSlug(): string {
 }
 
 export function WhatsAppLinkGenerator({
-  defaultPhone = '51989601662',
+  defaultPhone = '',
 }: {
   defaultPhone?: string;
 }) {
@@ -133,7 +133,7 @@ export function WhatsAppLinkGenerator({
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Lista de Shortlinks carregados do banco de dados Supabase
+  // Lista de shortlinks carregados pelo servidor
   const [shortLinks, setShortLinks] = useState<ShortLinkItem[]>([]);
   const [isLoadingLinks, setIsLoadingLinks] = useState(true);
 
@@ -579,7 +579,7 @@ export function WhatsAppLinkGenerator({
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(formatPhoneDigits(e.target.value))}
-                  placeholder="51989601662"
+                  placeholder="DDD + número"
                   style={{
                     width: '100%',
                     height: '42px',

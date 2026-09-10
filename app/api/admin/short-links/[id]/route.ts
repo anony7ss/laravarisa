@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { requireStaff } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import { hasValidOrigin, jsonError, NO_STORE_HEADERS, readJsonBody } from '@/lib/security';
 import { shortLinkSchema } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic';
@@ -20,12 +20,17 @@ export async function PATCH(
     return jsonError('Permissão insuficiente.', 403);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, 20_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const body = bodyResult.data;
 
   const parsed = shortLinkSchema.partial().safeParse(body);
   if (!parsed.success) {
@@ -58,7 +63,8 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return jsonError(error.message, 400);
+    console.error('[Short Links PATCH Error]:', error);
+    return jsonError('Não foi possível atualizar o link.', 500);
   }
 
   return Response.json(data, { headers: NO_STORE_HEADERS });
@@ -85,7 +91,8 @@ export async function DELETE(
     .eq('id', id);
 
   if (error) {
-    return jsonError(error.message, 400);
+    console.error('[Short Links DELETE Error]:', error);
+    return jsonError('Não foi possível excluir o link.', 500);
   }
 
   return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });

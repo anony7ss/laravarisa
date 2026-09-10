@@ -9,6 +9,7 @@ import { obterConfiguracoesLara, normalizarTelefoneBR } from './notifications.js
 import { consultarAgendaProfissional, consultarResumoFinanceiroProfissional, listarClientesInativasProfissional } from './tools-professional.js';
 import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 import { logInfo, logWarn, logError } from './terminal.js';
+import { sanitizeUntrustedText, isSafeWhatsAppJid } from './security-utils.js';
 
 let routineInterval = null;
 let isCheckingRoutines = false;
@@ -56,7 +57,7 @@ export async function verificarRotinasAgendadas(sock) {
 
     const { data: rotinas, error } = await supabase
       .from('lara_scheduled_routines')
-      .select('*')
+      .select('id, title, routine_type, time_of_day, days_of_week, active, last_run_at')
       .eq('active', true)
       .eq('time_of_day', horario);
 
@@ -66,7 +67,7 @@ export async function verificarRotinasAgendadas(sock) {
 
     const config = await obterConfiguracoesLara();
     const laraPhone = normalizarTelefoneBR(config.laraPhone);
-    if (!laraPhone) return;
+    if (!laraPhone || !isSafeWhatsAppJid(`${laraPhone}@s.whatsapp.net`)) return;
     const laraJid = `${laraPhone}@s.whatsapp.net`;
 
     for (const rotina of rotinas) {
@@ -96,29 +97,29 @@ export async function verificarRotinasAgendadas(sock) {
       let mensagem = '';
 
       if (rotina.routine_type === 'daily_agenda_briefing') {
-        const agenda = await consultarAgendaProfissional({ data: 'hoje', actor_phone: laraPhoneLimpo });
+        const agenda = await consultarAgendaProfissional({ data: 'hoje', actor_phone: laraPhone });
         if (agenda.total === 0) {
           mensagem = `Bom dia, Lara! Sua agenda de hoje está livre (sem atendimentos agendados).`;
         } else {
-          const itens = (agenda.agendamentos || []).map((ag) => `• ${ag.hora_inicio} — ${ag.cliente} (${ag.procedimento})`).join('\n');
+          const itens = (agenda.agendamentos || []).map((ag) => `• ${ag.hora_inicio} — ${sanitizeUntrustedText(ag.cliente, 100)} (${sanitizeUntrustedText(ag.procedimento, 100)})`).join('\n');
           mensagem =
             `Bom dia, Lara! Resumo da sua agenda de hoje:\n\n` +
             `${itens}\n\n` +
             `Total: ${agenda.total} atendimento(s) | Previsto: ${agenda.valor_total_previsto_fmt}`;
         }
       } else if (rotina.routine_type === 'financial_report') {
-        const fin = await consultarResumoFinanceiroProfissional({ periodo: 'hoje', actor_phone: laraPhoneLimpo });
+        const fin = await consultarResumoFinanceiroProfissional({ periodo: 'hoje', actor_phone: laraPhone });
         mensagem =
           `Relatório Financeiro (${fin.periodo}):\n\n` +
           `• Atendimentos concluídos: ${fin.total_atendimentos_concluidos}\n` +
           `• Faturamento: ${fin.faturamento_realizado_fmt}\n` +
-          `• Destaque: ${fin.servico_mais_agendado}`;
+          `• Destaque: ${sanitizeUntrustedText(fin.servico_mais_agendado, 100)}`;
       } else if (rotina.routine_type === 'inactive_clients_alert') {
-        const inat = await listarClientesInativasProfissional({ dias_sem_vir: 60, actor_phone: laraPhoneLimpo });
+        const inat = await listarClientesInativasProfissional({ dias_sem_vir: 60, actor_phone: laraPhone });
         if (inat.total > 0) {
           mensagem =
             `Lara, ${inat.total} cliente(s) não vêm há mais de 60 dias:\n\n` +
-            inat.clientes.slice(0, 5).map((c) => `• ${c.cliente} (última visita: ${c.ultima_visita})`).join('\n');
+            inat.clientes.slice(0, 5).map((c) => `• ${sanitizeUntrustedText(c.cliente, 100)} (última visita: ${sanitizeUntrustedText(c.ultima_visita, 40)})`).join('\n');
         }
       }
 
@@ -130,7 +131,7 @@ export async function verificarRotinasAgendadas(sock) {
           .update({ last_run_at: new Date().toISOString() })
           .eq('id', rotina.id);
 
-        logInfo('Rotinas', `Rotina "${rotina.title}" executada com sucesso para a Lara.`);
+        logInfo('Rotinas', `Rotina "${sanitizeUntrustedText(rotina.title, 100)}" executada com sucesso para a Lara.`);
       }
     }
   } catch (err) {

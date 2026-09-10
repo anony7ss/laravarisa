@@ -25,7 +25,6 @@ import {
   Link2,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { createBrowserSupabase } from '@/lib/supabase/client';
 import { DisparosManager, type ClientWithActivity, type OutboxItem } from './disparos-manager';
 import { WhatsAppChatSimulator } from './whatsapp-chat-simulator';
 import { WhatsAppTerminal } from './whatsapp-terminal';
@@ -95,7 +94,7 @@ export function WhatsAppManager({
   const lastFetchRef = useRef(0);
 
   // Configurações de notificação pessoal da Lara & Modo Profissional
-  const [laraPhone, setLaraPhone] = useState(initialSession.lara_phone || '5551989601662');
+  const [laraPhone, setLaraPhone] = useState(initialSession.lara_phone || '');
   const [notifyLara, setNotifyLara] = useState(initialSession.notify_lara_on_human_transfer !== false);
   const [notifyLaraBooking, setNotifyLaraBooking] = useState(initialSession.notify_lara_on_new_booking !== false);
   const [savingLaraSettings, setSavingLaraSettings] = useState(false);
@@ -316,33 +315,10 @@ export function WhatsAppManager({
     }
   }, []);
 
-  // Escuta atualizações em tempo real via Supabase Realtime + Polling inteligente
+  // Atualiza pela API protegida; nenhum segredo ou canal direto de dados
+  // chega ao bundle do navegador.
   useEffect(() => {
-    const supabase = createBrowserSupabase();
-    let channel: any = null;
-
-    if (supabase) {
-      channel = supabase
-        .channel('realtime_whatsapp_session')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'whatsapp_bot_session',
-            filter: 'id=eq.default',
-          },
-          (payload: { new?: any }) => {
-            if (payload.new) {
-              setSession((prev) => ({ ...prev, ...(payload.new as WhatsAppSession) }));
-            }
-          }
-        )
-        .subscribe();
-    }
-
-    // Com Supabase Realtime ativo, quando conectado um polling de 30s é mais que suficiente como backup.
-    // Quando desconectado ou aguardando QR, verifica a cada 10s.
+    // Quando conectado, 30s é suficiente; aguardando QR, verifica a cada 10s.
     const pollTime = session.status === 'connected' ? 30000 : 10000;
 
     const interval = setInterval(() => {
@@ -361,9 +337,6 @@ export function WhatsAppManager({
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
-      if (supabase && channel) {
-        supabase.removeChannel(channel);
-      }
       clearInterval(interval);
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
@@ -661,7 +634,7 @@ export function WhatsAppManager({
       </div>
 
       {activeTab === 'chat' && (
-        <WhatsAppChatSimulator session={session} />
+        <WhatsAppChatSimulator session={session} role={role} />
       )}
 
       {activeTab === 'terminal' && (
@@ -679,7 +652,7 @@ export function WhatsAppManager({
 
       {activeTab === 'links' && (
         <WhatsAppLinkGenerator
-          defaultPhone={session.phone_connected || session.lara_phone || '51989601662'}
+          defaultPhone={session.phone_connected || session.lara_phone || ''}
         />
       )}
 
@@ -1186,7 +1159,7 @@ export function WhatsAppManager({
                     Sincronização do Site
                   </p>
                   <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: 0 }}>
-                    Agendamentos web em tempo real (Supabase)
+                    Agendamentos web em tempo real
                   </p>
                 </div>
               </div>
@@ -1199,7 +1172,7 @@ export function WhatsAppManager({
                   color: '#1d4ed8',
                 }}
               >
-                Realtime Ativo
+                Atualização automática
               </span>
             </div>
 
@@ -1642,7 +1615,7 @@ export function WhatsAppManager({
                   type="text"
                   value={laraPhone}
                   onChange={(e) => setLaraPhone(e.target.value)}
-                  placeholder="Ex: 51989601662 ou (51) 98960-1662"
+                  placeholder="Ex: DDD + número ou (11) 99999-9999"
                   style={{
                     width: '100%',
                     height: '42px',

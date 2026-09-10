@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Anton, DM_Sans } from 'next/font/google';
+import '@fontsource/anton/400.css';
+import '@fontsource/dm-sans/400.css';
+import '@fontsource/dm-sans/500.css';
+import '@fontsource/dm-sans/600.css';
+import '@fontsource/dm-sans/700.css';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -8,19 +12,6 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-const anton = Anton({
-  weight: '400',
-  subsets: ['latin', 'latin-ext'],
-  display: 'swap',
-  variable: '--font-anton',
-});
-
-const dmSans = DM_Sans({
-  weight: ['400', '500', '600', '700'],
-  subsets: ['latin', 'latin-ext'],
-  display: 'swap',
-  variable: '--font-dm-sans',
-});
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
@@ -61,7 +52,7 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${anton.variable} ${dmSans.variable}`}
+      className="font-dm-sans"
     >
       <head>
         <link rel="icon" type="image/png" href="/logo-emblem.png?v=4" sizes="any" />

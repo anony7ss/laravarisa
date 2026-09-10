@@ -30,7 +30,6 @@ console.warn = function (...args) {
   _origWarn.apply(console, args);
 };
 
-import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { initWhatsApp, limparSessaoDesincronizada } from './src/whatsapp.js';
 
 console.error = function (...args) {
@@ -50,12 +49,13 @@ console.error = function (...args) {
   _origError.apply(console, args);
 };
 
-import config from './src/config.js';
+import config, { assertRuntimeConfig } from './src/config.js';
 import { iniciarSincronizacaoSite } from './src/supabase.js';
 import { iniciarLembretesAutomaticos } from './src/reminders.js';
 import { iniciarProcessadorOutbox } from './src/outbox.js';
 import { iniciarRotinasProgramadas } from './src/routines.js';
 import { obterConfiguracoesLara, normalizarTelefoneBR } from './src/notifications.js';
+import { obterServicosEmCache, obterConfiguracoesEmCache } from './src/cache.js';
 import { testarConexaoIA, processarMensagemComIA, extrairPrimeiroNome } from './src/ai.js';
 import {
   iniciarHeartbeat,
@@ -66,7 +66,21 @@ import {
   registrarMensagemChat,
 } from './src/web-sync.js';
 import { renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError } from './src/terminal.js';
-import { isLid, resolverLidParaTelefone, registrarMapeamentoLid, resolverNomeCliente } from './src/phone-utils.js';
+import {
+  isLid,
+  telefonesCorrespondemBR,
+  resolverLidParaTelefone,
+  registrarMapeamentoLid,
+  resolverNomeCliente,
+} from './src/phone-utils.js';
+import { isSafeWhatsAppJid } from './src/security-utils.js';
+
+try {
+  assertRuntimeConfig();
+} catch (error) {
+  console.error(`[Sistema] ${error?.message || error}`);
+  process.exit(1);
+}
 
 /**
  * Tratamento global de erros para prevenir quedas na Shard Cloud
@@ -106,6 +120,15 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 const userProcessingLocks = new Map();
+const MAX_ACTIVE_MESSAGE_LOCKS = 2000;
+
+// Aquece os dados usados no primeiro atendimento enquanto o Baileys conecta.
+// Assim, a primeira mensagem não precisa esperar duas consultas de catálogo.
+Promise.allSettled([
+  obterServicosEmCache(),
+  obterConfiguracoesEmCache(),
+  obterConfiguracoesLara(),
+]).catch(() => {});
 
 /**
  * Adaptador de mensagens para conectar o listener do WhatsApp ao motor de atendimento
@@ -117,6 +140,11 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
     : msgOrJid;
 
   if (!jid) return;
+  if (!isSafeWhatsAppJid(jid)) return;
+  if (!userProcessingLocks.has(jid) && userProcessingLocks.size >= MAX_ACTIVE_MESSAGE_LOCKS) {
+    logWarn('Atendimento', 'Limite de conversas simultâneas atingido; mensagem descartada com segurança.');
+    return;
+  }
 
   const previousLock = userProcessingLocks.get(jid) || Promise.resolve();
   const currentLock = previousLock
@@ -171,39 +199,6 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             }
           }
 
-          let mediaUrl = null;
-          if (ehImagem) {
-            try {
-              const buffer = await downloadMediaMessage(
-                msg,
-                'buffer',
-                {},
-                { reuploadRequest: sock?.updateMediaMessage }
-              );
-              if (buffer && buffer.length > 0) {
-                const mime = msg.message?.imageMessage?.mimetype || 'image/jpeg';
-                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
-              }
-            } catch (errMedia) {
-              // Silencioso se mídia expirada
-            }
-          } else if (ehAudio) {
-            try {
-              const buffer = await downloadMediaMessage(
-                msg,
-                'buffer',
-                {},
-                { reuploadRequest: sock?.updateMediaMessage }
-              );
-              if (buffer && buffer.length > 0) {
-                const mime = (msg.message?.audioMessage || msg.message?.pttMessage)?.mimetype || 'audio/ogg';
-                mediaUrl = `data:${mime};base64,${buffer.toString('base64')}`;
-              }
-            } catch (errMedia) {
-              // Silencioso se mídia expirada
-            }
-          }
-
           // Registra a mensagem recebida para o Chat ao Vivo no Painel com o telefone e nome reais
           registrarMensagemChat({
             phone: realPhone,
@@ -213,17 +208,11 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             senderType: 'client',
             content: texto || (ehAudio ? '🎤 [Áudio / Nota de voz]' : (ehImagem ? '📷 [Foto enviada]' : 'Mensagem')),
             mediaType: ehAudio ? 'audio' : (ehImagem ? 'image' : 'text'),
-            mediaUrl: mediaUrl,
           });
 
           const configLara = await obterConfiguracoesLara();
           const laraPhoneLimpo = normalizarTelefoneBR(configLara.laraPhone);
-          const isLaraMsg = Boolean(
-            laraPhoneLimpo && (
-              realPhone === laraPhoneLimpo ||
-              (realPhone.length >= 8 && laraPhoneLimpo.length >= 8 && realPhone.slice(-8) === laraPhoneLimpo.slice(-8))
-            )
-          );
+          const isLaraMsg = Boolean(laraPhoneLimpo && telefonesCorrespondemBR(realPhone, laraPhoneLimpo));
 
           if (!isLaraMsg) {
             if (!isAiEnabled()) {
@@ -242,12 +231,7 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
           const configLara = await obterConfiguracoesLara();
           const laraPhoneLimpo = normalizarTelefoneBR(configLara.laraPhone);
           const jidPhone = String(jid).replace(/\D/g, '');
-          const isLaraMsg = Boolean(
-            laraPhoneLimpo && (
-              jidPhone === laraPhoneLimpo ||
-              (jidPhone.length >= 8 && laraPhoneLimpo.length >= 8 && jidPhone.slice(-8) === laraPhoneLimpo.slice(-8))
-            )
-          );
+          const isLaraMsg = Boolean(laraPhoneLimpo && telefonesCorrespondemBR(jidPhone, laraPhoneLimpo));
 
           if (!isLaraMsg && (!isAiEnabled() || isChatAiPaused(jid))) {
             logInfo('Atendimento', 'IA pausada para este contato - atendimento manual.');

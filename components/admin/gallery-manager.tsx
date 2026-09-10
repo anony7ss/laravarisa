@@ -20,9 +20,8 @@ const emptyGallery = {
 function getGalleryImageUrl(item: { public_url?: string; image_path: string }) {
   const url = item.public_url || item.image_path;
   if (!url) return '';
-  if (/^https?:\/\//.test(url) || url.startsWith('/')) return url;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  return `${base}/storage/v1/object/public/gallery/${url}`;
+  if (/^https?:\/\//i.test(url) || url.startsWith('/')) return url;
+  return `/api/admin/gallery-image?path=${encodeURIComponent(url)}`;
 }
 
 export function GalleryManager({

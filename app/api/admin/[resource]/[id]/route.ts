@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { getStaffContext } from '@/lib/admin-auth';
-import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
+import {
+  hasValidOrigin,
+  jsonError,
+  NO_STORE_HEADERS,
+  readJsonBody,
+} from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
 import {
   appointmentUpdateSchema,
@@ -11,13 +16,39 @@ import {
   serviceSchema,
 } from '@/lib/validation';
 
+const MAX_BODY_BYTES = 100_000;
+
 const resources = {
-  leads: { table: 'leads', schema: leadUpdateSchema },
-  clients: { table: 'clients', schema: clientSchema.partial() },
-  appointments: { table: 'appointments', schema: appointmentUpdateSchema },
-  services: { table: 'services', schema: serviceSchema.partial() },
-  gallery: { table: 'gallery_items', schema: gallerySchema.partial() },
-  expenses: { table: 'expenses', schema: expenseSchema.partial() },
+  leads: {
+    table: 'leads',
+    schema: leadUpdateSchema,
+    select: 'id,name,email,phone,message,status,source,assigned_to,client_id,created_at,updated_at',
+  },
+  clients: {
+    table: 'clients',
+    schema: clientSchema.partial(),
+    select: 'id,name,email,phone,notes,origin,created_from_lead,created_at,updated_at,lash_mapping,lash_curl,lash_thickness,lash_length,lash_adhesive,lash_notes',
+  },
+  appointments: {
+    table: 'appointments',
+    schema: appointmentUpdateSchema,
+    select: 'id,client_id,lead_id,service_id,client_name,client_phone,starts_at,ends_at,status,notes,created_by,created_at,updated_at,origin,is_blocked,reminder_sent_at,reminder_same_day_sent_at,whatsapp_notification_sent_at,post_care_sent_at',
+  },
+  services: {
+    table: 'services',
+    schema: serviceSchema.partial(),
+    select: 'id,slug,name,category,description,price_label,duration_label,duration_minutes,maintenance,intensity,sort_order,active,created_at,updated_at',
+  },
+  gallery: {
+    table: 'gallery_items',
+    schema: gallerySchema.partial(),
+    select: 'id,title,subtitle,image_path,before_image_path,alt_text,object_position,zoom,sort_order,active,created_at,updated_at',
+  },
+  expenses: {
+    table: 'expenses',
+    schema: expenseSchema.partial(),
+    select: 'id,description,amount,category,date,notes,created_at,updated_at',
+  },
 } as const;
 
 export async function PATCH(
@@ -33,25 +64,50 @@ export async function PATCH(
     return jsonError('ID inválido.', 400);
   const config = resources[resource as keyof typeof resources];
   if (!config) return jsonError('Recurso inválido.', 404);
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  const tableName = config.table as string;
+  const selectFields = config.select as string;
+  if (!request.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return jsonError('Formato inválido.', 415);
   }
+  const bodyResult = await readJsonBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
+  }
+  const body = bodyResult.data;
   const parsed = config.schema.safeParse(body);
   if (!parsed.success) return jsonError('Revise os campos informados.', 422);
+
+  // Guarda o status anterior para não disparar a mesma notificação várias
+  // vezes quando o administrador apenas edita outro campo do agendamento.
+  let previousAppointmentStatus: string | null = null;
+  if (resource === 'appointments' && 'status' in parsed.data) {
+    const { data: currentAppointment } = await staff.supabase
+      .from('appointments')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle();
+    previousAppointmentStatus = currentAppointment?.status || null;
+  }
+
   const { data, error } = await staff.supabase
-    .from(config.table)
+    .from(tableName as never)
     .update(parsed.data)
     .eq('id', id)
-    .select('*')
+    .select(selectFields)
     .single();
   if (error) return jsonError('Não foi possível atualizar.', 500);
 
   // Se for agendamento e o status foi alterado para cancelled, no_show ou completed
-  if (resource === 'appointments' && (parsed.data as any).status) {
-    await queueStatusChangeNotification(staff.supabase, data, (parsed.data as any).status);
+  if (
+    resource === 'appointments' &&
+    'status' in parsed.data &&
+    parsed.data.status &&
+    parsed.data.status !== previousAppointmentStatus
+  ) {
+    await queueStatusChangeNotification(staff.supabase, data, parsed.data.status);
   }
 
   serverCache.delete(`admin_resource:${resource}`);
@@ -95,11 +151,16 @@ async function queueStatusChangeNotification(
     // Garante DDI 55 para números brasileiros
     const formattedPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
 
-    const { data: settings } = await supabase
-      .from('site_settings')
-      .select('notify_on_status_change, msg_cancelled_template, msg_no_show_template, msg_completed_template')
-      .eq('id', 'global')
-      .maybeSingle();
+    const [{ data: settings }, { data: service }] = await Promise.all([
+      supabase
+        .from('site_settings')
+        .select('notify_on_status_change, msg_cancelled_template, msg_no_show_template, msg_completed_template')
+        .eq('id', 'global')
+        .maybeSingle(),
+      appointment.service_id
+        ? supabase.from('services').select('name').eq('id', appointment.service_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
     if (settings && settings.notify_on_status_change === false) return;
 
@@ -120,15 +181,7 @@ async function queueStatusChangeNotification(
 
     if (!template) return;
 
-    let serviceName = 'procedimento';
-    if (appointment.service_id) {
-      const { data: service } = await supabase
-        .from('services')
-        .select('name')
-        .eq('id', appointment.service_id)
-        .maybeSingle();
-      if (service?.name) serviceName = service.name;
-    }
+    const serviceName = service?.name || 'procedimento';
 
     const startDate = new Date(appointment.starts_at);
     const dateFormatted = startDate.toLocaleDateString('pt-BR', {

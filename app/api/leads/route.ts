@@ -1,5 +1,5 @@
 import { leadSchema } from '@/lib/validation';
-import { createPublicSupabase } from '@/lib/supabase/server';
+import { createAdminSupabase } from '@/lib/supabase/server';
 import {
   checkRateLimit,
   getClientIp,
@@ -7,14 +7,13 @@ import {
   jsonError,
   leadFingerprint,
   NO_STORE_HEADERS,
+  readJsonBody,
   sanitizeText,
   verifyTurnstile,
 } from '@/lib/security';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
-  const contentLength = Number(request.headers.get('content-length') || '0');
-  if (contentLength > 10_000) return jsonError('Conteúdo muito grande.', 413);
   if (!request.headers.get('content-type')?.includes('application/json'))
     return jsonError('Formato inválido.', 415);
 
@@ -25,17 +24,21 @@ export async function POST(request: Request) {
     return jsonError('Muitas tentativas. Aguarde alguns minutos antes de reenviar.', 429);
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return jsonError('JSON inválido.', 400);
+  const bodyResult = await readJsonBody(request, 10_000);
+  if (!bodyResult.ok) {
+    return jsonError(
+      bodyResult.reason === 'too_large' ? 'Conteúdo muito grande.' : 'JSON inválido.',
+      bodyResult.reason === 'too_large' ? 413 : 400,
+    );
   }
-  const parsed = leadSchema.safeParse(body);
+  const parsed = leadSchema.safeParse(bodyResult.data);
   if (!parsed.success) return jsonError('Revise os campos informados.', 422);
-  if (parsed.data.website) return Response.json({ ok: true }, { status: 202 });
+  if (parsed.data.website) return Response.json({ ok: true }, { status: 202, headers: NO_STORE_HEADERS });
 
-  const supabase = createPublicSupabase();
+  // The write RPC is intentionally private at the database layer. This
+  // server route performs the origin, Turnstile, honeypot and IP checks before
+  // using the service role to call it; the key never reaches the browser.
+  const supabase = createAdminSupabase();
   if (!supabase)
     return jsonError('O canal de mensagens está sendo configurado.', 503);
   const fingerprint = leadFingerprint(request, parsed.data.email);
@@ -65,4 +68,3 @@ export async function POST(request: Request) {
   }
   return Response.json({ ok: true, id: data }, { status: 201, headers: NO_STORE_HEADERS });
 }
-
