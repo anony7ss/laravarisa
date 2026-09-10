@@ -21,7 +21,6 @@ function obterHorarioBrasilia() {
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit',
     minute: '2-digit',
-    weekday: 'numeric',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -33,8 +32,8 @@ function obterHorarioBrasilia() {
   const mes = partes.find((p) => p.type === 'month')?.value;
   const dia = partes.find((p) => p.type === 'day')?.value;
 
-  // Dia da semana de 0 (domingo) a 6 (sábado)
-  const diaSemana = new Date().getDay();
+  // Dia da semana no fuso de Brasília (0 = domingo, 1 = segunda, ..., 6 = sábado)
+  const diaSemana = new Date(`${ano}-${mes}-${dia}T12:00:00-03:00`).getDay();
 
   return {
     horario: `${hora}:${minuto}`,

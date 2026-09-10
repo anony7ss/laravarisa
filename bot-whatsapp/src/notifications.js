@@ -21,23 +21,41 @@ export async function obterConfiguracoesLara() {
   }
 
   try {
-    const { data } = await supabase
+    const { data: botData } = await supabase
       .from('whatsapp_bot_session')
       .select('lara_phone, notify_lara_on_human_transfer, notify_lara_on_new_booking')
       .eq('id', 'default')
       .maybeSingle();
 
+    let laraPhone = botData?.lara_phone;
+    let notifyOnHumanTransfer = botData?.notify_lara_on_human_transfer;
+    let notifyOnNewBooking = botData?.notify_lara_on_new_booking;
+
+    if (!laraPhone) {
+      const { data: siteData } = await supabase
+        .from('site_settings')
+        .select('lara_phone, notify_lara_on_human_transfer, notify_lara_on_new_booking')
+        .limit(1)
+        .maybeSingle();
+
+      if (siteData) {
+        laraPhone = siteData.lara_phone;
+        if (notifyOnHumanTransfer === undefined) notifyOnHumanTransfer = siteData.notify_lara_on_human_transfer;
+        if (notifyOnNewBooking === undefined) notifyOnNewBooking = siteData.notify_lara_on_new_booking;
+      }
+    }
+
     configLaraCache = {
-      laraPhone: data?.lara_phone || '5551989601662',
-      notifyOnHumanTransfer: data?.notify_lara_on_human_transfer !== false,
-      notifyOnNewBooking: data?.notify_lara_on_new_booking !== false,
+      laraPhone: laraPhone || '5551989741970',
+      notifyOnHumanTransfer: notifyOnHumanTransfer !== false,
+      notifyOnNewBooking: notifyOnNewBooking !== false,
     };
     lastFetchTime = now;
     return configLaraCache;
   } catch (err) {
     console.warn('[notifications] Erro ao carregar config da Lara:', err?.message || err);
     return {
-      laraPhone: configLaraCache?.laraPhone || '5551989601662',
+      laraPhone: configLaraCache?.laraPhone || '5551989741970',
       notifyOnHumanTransfer: true,
       notifyOnNewBooking: true,
     };

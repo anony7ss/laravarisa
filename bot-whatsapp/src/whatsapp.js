@@ -365,9 +365,8 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
       }
     }
 
-    // Apenas mensagens do tipo notify nos interessam para processamento de comandos/respostas
-    if (type !== 'notify') return;
-
+    // Processa mensagens em tempo real ('notify') e também mensagens recentes que chegaram
+    // durante o handshake/reconexão ('append'), descartando apenas mensagens históricas antigas (>3 min).
     for (const msg of messages) {
       const jid = msg.key?.remoteJid;
 
@@ -378,6 +377,15 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
 
       // 1. Ignora mensagens enviadas pelo próprio bot
       if (msg.key?.fromMe) continue;
+
+      // Se for append (sincronização de backlog), ignora mensagens antigas
+      if (type === 'append') {
+        const msgTime = Number(msg.messageTimestamp || 0);
+        const nowSec = Math.floor(Date.now() / 1000);
+        if (!msgTime || (nowSec - msgTime > 180)) {
+          continue;
+        }
+      }
 
       // 2. Anti-duplicação: descarta se esse mesmo ID de mensagem já foi processado
       const msgId = msg.key?.id;
