@@ -1,27 +1,32 @@
 /**
- * Motor de Fallback Determinístico e Baseado em Regras para o Bot WhatsApp Lara Varisa.
+ * Motor de Fallback Determinístico e Data-Driven para o Bot WhatsApp da Arla AI (Lara Varisa).
  * 
- * Funciona de forma autônoma quando:
- * 1. Não há chave de API de IA configurada (OPENCODE_API_KEY / OPENAI_API_KEY).
- * 2. Ocorre oscilação de rede, timeout ou indisponibilidade temporária do provedor de IA.
- * 3. O usuário envia palavras-chave diretas ou variadas para agendamento, consulta, catálogo ou cancelamento.
+ * 100% baseado nas ferramentas reais e nos dados ao vivo do Supabase:
+ * - Serviços e preços carregados dinamicamente de `services` (via cache).
+ * - Horários e localização carregados dinamicamente de `site_settings` (via cache).
+ * - Slots disponíveis calculados em tempo real pela RPC `get_public_available_slots`.
+ * - Agendamentos, consultas e cancelamentos executados pelas ferramentas de `tools.js`.
+ * 
+ * Zero dados hardcoded de procedimentos, preços, tabelas ou horários de funcionamento!
  */
 
 import config from './config.js';
 import {
-  listarServicos,
   consultarHorarios,
   criarAgendamento,
   consultarAgendamentoCliente,
   cancelarAgendamento,
+  cancelarTodosAgendamentos,
+  reagendarAgendamento,
 } from './tools.js';
 import { getState, setState, clearState } from './memory.js';
 import { verificarSegurancaEntrada } from './guardrails.js';
 import { notificarLaraAtendimentoHumano } from './notifications.js';
-import { obterConfiguracoesEmCache } from './cache.js';
+import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
+import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 
 /**
- * Remove acentos e normaliza para caixa baixa para matching tolerante a variações
+ * Normaliza texto para caixa baixa, sem acentos e sem pontuação extra
  * @param {string} str 
  * @returns {string}
  */
@@ -31,6 +36,28 @@ function normalizarTexto(str = '') {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+/**
+ * Extrai apenas o primeiro nome limpo
+ * @param {string} nome 
+ * @returns {string}
+ */
+function extrairPrimeiroNome(nome) {
+  if (!nome || typeof nome !== 'string') return 'Cliente';
+  const limpo = nome.trim();
+  if (!limpo) return 'Cliente';
+
+  const partes = limpo.split(/[\s_\-\.]+/);
+  for (const parte of partes) {
+    const apenasLetras = parte.replace(/[^a-zA-ZÀ-ÿ]/g, '');
+    if (apenasLetras.length >= 2) {
+      const genericos = ['cliente', 'user', 'usuario', 'whatsapp', 'você', 'voce', 'unknown', 'contato'];
+      if (genericos.includes(apenasLetras.toLowerCase())) return 'Cliente';
+      return apenasLetras.charAt(0).toUpperCase() + apenasLetras.slice(1).toLowerCase();
+    }
+  }
+  return 'Cliente';
 }
 
 /**
@@ -50,7 +77,6 @@ function extrairData(texto = '') {
     day: '2-digit',
   });
   
-  // Data base local em YYYY-MM-DD
   const hojeStr = formatter.format(now);
   const [baseAno, baseMes, baseDia] = hojeStr.split('-').map(Number);
   const dataBase = new Date(Date.UTC(baseAno, baseMes - 1, baseDia, 12, 0, 0));
@@ -88,7 +114,7 @@ function extrairData(texto = '') {
     return hojeStr;
   }
 
-  // 4. Dias da semana (segunda a sabado)
+  // 4. Dias da semana
   const diasSemanaMap = {
     domingo: 0,
     segunda: 1,
@@ -104,7 +130,7 @@ function extrairData(texto = '') {
       const d = new Date(dataBase);
       const diaAtual = d.getUTCDay();
       let diff = diaIdx - diaAtual;
-      if (diff <= 0) diff += 7; // Próxima ocorrência do dia
+      if (diff <= 0) diff += 7;
       d.setUTCDate(d.getUTCDate() + diff);
       return d.toISOString().split('T')[0];
     }
@@ -114,7 +140,7 @@ function extrairData(texto = '') {
 }
 
 /**
- * Extrai horário do texto (ex: '14:00', '14h', '14h30', '9:00', '09h')
+ * Extrai horário do texto (ex: '14:00', '14h', '14h30', '9h')
  * @param {string} texto 
  * @returns {string|null} Horário no formato HH:mm ou null
  */
@@ -129,7 +155,7 @@ function extrairHorario(texto = '') {
     return `${h}:${m}`;
   }
 
-  // Formato HHh ou HHhMM (ex: '14h', '14h30', '9h', '9h00')
+  // Formato HHh ou HHhMM
   const match2 = norm.match(/\b([01]?\d|2[0-3])h([0-5]\d)?\b/);
   if (match2) {
     const h = String(match2[1]).padStart(2, '0');
@@ -137,8 +163,8 @@ function extrairHorario(texto = '') {
     return `${h}:${m}`;
   }
 
-  // Formato isolado 'às 14' ou 'as 14'
-  const match3 = norm.match(/\b(?:as|as)\s+([01]?\d|2[0-3])\b/);
+  // Formato isolado 'às 14'
+  const match3 = norm.match(/\b(?:as|às)\s+([01]?\d|2[0-3])\b/);
   if (match3) {
     const h = String(match3[1]).padStart(2, '0');
     return `${h}:00`;
@@ -148,19 +174,19 @@ function extrairHorario(texto = '') {
 }
 
 /**
- * Localiza serviço correspondente no banco ou por palavras-chave
+ * Localiza serviço correspondente no banco de dados Supabase de forma dinâmica
  * @param {string} texto 
  * @param {Array<any>} servicosAtivos 
+ * @param {boolean} [aceitarNumero=false] 
  * @returns {any|null}
  */
 function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = false) {
+  if (!servicosAtivos || servicosAtivos.length === 0) return null;
   const norm = normalizarTexto(texto);
 
-  // 1. Verificação por número caso venha de menu numerado ('1', '2', 'opcao 1')
-  // IMPORTANTE: SOMENTE quando aceitarNumero for true (ex: quando o bot já perguntou qual o procedimento).
-  // Isso evita que "1" do menu principal seja confundido com o serviço Fio a fio!
+  // 1. Número da opção na lista
   if (aceitarNumero) {
-    const matchNum = norm.match(/\b(?:opcao|numero)?\s*([1-9])\b/);
+    const matchNum = norm.match(/\b(?:opcao|número|numero)?\s*([1-9]\d?)\b/);
     if (matchNum) {
       const idx = parseInt(matchNum[1], 10) - 1;
       if (idx >= 0 && idx < servicosAtivos.length) {
@@ -169,29 +195,7 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
     }
   }
 
-  // 2. Mapeamento de termos específicos do catálogo Lara Varisa
-  const padroes = [
-    { keys: ['volume egipcio', 'egipcio', 'egipcia', 'fio w', '3d w', '4d w'], query: 'egípcio' },
-    { keys: ['volume russo', 'russo', 'russa', '4d', '5d', '6d', '8d', 'mega volume', 'mega'], query: 'russo' },
-    { keys: ['fox eyes', 'fox', 'raposa', 'siren eyes', 'gatinho', 'cat eye'], query: 'fox eyes' },
-    { keys: ['fio a fio', 'classico', 'classica', 'fio', '1d', '2d', '3d'], query: 'fio a fio' },
-    { keys: ['lash lifting', 'lifting', 'lift'], query: 'lifting' },
-    { keys: ['manutencao', 'manutencao de cilios', 'manut'], query: 'manutenção' },
-    { keys: ['remocao', 'remocao segura', 'remover', 'tirar cilios'], query: 'remoção' },
-    { keys: ['volume brasileiro', 'brasileiro', 'brasileira', 'fio y'], query: 'brasileiro' },
-    { keys: ['sobrancelha', 'sobrancelhas', 'design'], query: 'sobrancelha' },
-  ];
-
-  for (const padrao of padroes) {
-    if (padrao.keys.some((k) => norm.includes(k))) {
-      const match = servicosAtivos.find((s) =>
-        normalizarTexto(s.nome).includes(normalizarTexto(padrao.query))
-      );
-      if (match) return match;
-    }
-  }
-
-  // 3. Busca por similaridade nos nomes dos serviços
+  // 2. Busca exata ou por inclusão no nome cadastrado no Supabase
   for (const s of servicosAtivos) {
     const nomeNorm = normalizarTexto(s.nome);
     if (norm.includes(nomeNorm)) {
@@ -199,98 +203,152 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
     }
   }
 
+  // 3. Mapeamento dinâmico de termos técnicos e visagismo para serviços existentes
+  const termosMap = [
+    { termos: ['volume egipcio', 'egipcio', 'egipcia', 'fio w', '3d w', '4d w', 'w'], chave: 'egipcio' },
+    { termos: ['volume russo', 'russo', 'russa', '4d', '5d', '6d', '8d', 'mega volume', 'mega', 'blackout'], chave: 'russo' },
+    { termos: ['fox eyes', 'fox', 'raposa', 'siren eyes', 'gatinho', 'cat eye'], chave: 'fox' },
+    { termos: ['fio a fio', 'classico', 'classica', '1d', '2d', '3d', 'natural'], chave: 'fio a fio' },
+    { termos: ['lash lifting', 'lifting', 'lift'], chave: 'lifting' },
+    { termos: ['manutencao', 'manut', 'retocar', 'repor'], chave: 'manutencao' },
+    { termos: ['remocao', 'remover', 'tirar cilios'], chave: 'remocao' },
+    { termos: ['volume brasileiro', 'brasileiro', 'brasileira', 'fio y', 'y'], chave: 'brasileiro' },
+    { termos: ['sobrancelha', 'sobrancelhas', 'design'], chave: 'sobrancelha' },
+  ];
+
+  for (const item of termosMap) {
+    if (item.termos.some((t) => norm.includes(t))) {
+      const match = servicosAtivos.find((s) => normalizarTexto(s.nome).includes(item.chave));
+      if (match) return match;
+    }
+  }
+
+  // 4. Busca por tokens significativos do nome do serviço
+  for (const s of servicosAtivos) {
+    const tokens = normalizarTexto(s.nome).split(/\s+/).filter((t) => t.length > 3);
+    for (const token of tokens) {
+      if (norm.includes(token)) {
+        return s;
+      }
+    }
+  }
+
   return null;
 }
 
 /**
- * Resposta formatada com o Catálogo de Serviços do estúdio (sem números de menu)
+ * Formata catálogo de serviços 100% dinâmico a partir dos dados do Supabase
  * @param {Array<any>} servicos 
+ * @param {any} settings 
  * @returns {string}
  */
-function formatarCatalogoServicos(servicos = []) {
+function formatarCatalogoServicos(servicos = [], settings = null) {
   if (!servicos || servicos.length === 0) {
-    return `Os valores dos principais:\n\nFio a Fio: R$ 120 (2h)\nLash Lifting: R$ 130 (1h15)\nVolume Egípcio: R$ 165 (2h15)\nFox Eyes: R$ 170 (2h15)\nVolume Russo: R$ 190 (2h30)\nManutenção: a partir de R$ 85 (1h30)\nRemoção Segura: R$ 45 (40min)\n\nQual deles combina mais com você?`;
+    return 'No momento nosso catálogo de procedimentos está sendo atualizado no sistema. Fale com a Lara por aqui para mais informações!';
   }
 
   const linhas = servicos.map((s) => `• ${s.nome}: ${s.preco} (${s.duracao || `${s.duracao_minutos}min`})`);
+  let texto = `Os valores dos principais procedimentos:\n\n${linhas.join('\n')}`;
 
-  return `Os valores dos principais:\n\n${linhas.join('\n')}\n\nQual deles combina mais com você?`;
+  if (settings?.booking_promo_tag) {
+    texto += `\n\n🎁 *${settings.booking_promo_tag}*`;
+  }
+
+  texto += '\n\nQual deles você gostaria de fazer?';
+  return texto;
 }
 
 /**
- * Menu principal acolhedor e natural da Lara (100% conversacional, sem números)
- * @param {string} pushName 
+ * Formata localização e informações do estúdio 100% dinâmico a partir do site_settings
+ * @param {any} settings 
  * @returns {string}
  */
-function getMenuPrincipal(pushName = 'Cliente') {
-  const primeiroNome = pushName.trim().split(' ')[0];
-  return `Oi, ${primeiroNome}! Tudo bem? Aqui é a Arla AI, assistente do estúdio Lara Varisa.\n\nComo posso te ajudar hoje? Se quiser ver horários ou procedimentos, é só me falar.`;
+function formatarLocalizacao(settings = null) {
+  const nome = settings?.studio_name || config.studioName || 'Studio Lara Varisa';
+  const endereco = settings?.studio_address || 'Atendimento presencial na Zona Norte';
+  const cidade = settings?.studio_city || 'Porto Alegre - RS';
+  const horarios = settings?.studio_hours || 'Segunda a sábado, das 09h às 19h (com agendamento)';
+
+  return `*${nome}*\n\n` +
+    `📍 ${endereco}\n` +
+    `🏙️ ${cidade}\n` +
+    `⏰ ${horarios}\n` +
+    `💳 Pagamento: Pix, cartões (débito/crédito) e dinheiro\n\n` +
+    `Se quiser marcar seu horário, só me falar aqui!`;
 }
 
 /**
- * FAQ e Cuidados Pré e Pós Atendimento
+ * Formata cuidados básicos pré e pós atendimento
  * @returns {string}
  */
-function getFaqCuidados() {
-  return `Dicas & Cuidados:\n\n` +
-    `• Venha sem maquiagem ou rímel nos olhos.\n` +
-    `• Não molhe as extensões nas primeiras 24h.\n` +
-    `• Evite vapor muito quente e produtos oleosos.\n` +
-    `• Penteie delicadamente com a escovinha.\n` +
-    `• Manutenção recomendada a cada 15 a 20 dias.\n\n` +
-    `Se quiser agendar seu horário, é só me chamar por aqui.`;
+function formatarCuidados() {
+  return `*Dicas & Cuidados com as Extensões:*\n\n` +
+    `• Venha para o atendimento sem rímel ou maquiagem nos olhos.\n` +
+    `• Não molhe os cílios nas primeiras 24h pós-aplicação.\n` +
+    `• Evite vapor excessivo, sauna e produtos oleosos na área dos olhos.\n` +
+    `• Penteie suavemente com a escovinha limpa todos os dias.\n` +
+    `• Manutenção recomendada a cada 15 a 20 dias para manter o olhar preenchido.\n\n` +
+    `Se quiser agendar seu horário, é só me chamar por aqui!`;
 }
 
 /**
- * Informações de Localização e Pagamento
+ * Formata horários disponíveis agrupando por manhã e tarde
+ * @param {Array<any>} slots 
+ * @param {string} dataFormatada 
  * @returns {string}
  */
-function getLocalizacao() {
-  return `Studio Lara Varisa:\n\n` +
-    `• Zona Norte de Porto Alegre - RS\n` +
-    `• Segunda a Sábado, das 09h às 19h\n` +
-    `• Pix, cartões e dinheiro no atendimento\n\n` +
-    `Se quiser marcar seu horário, só me falar aqui.`;
+function formatarListaHorarios(slots = [], dataFormatada = '') {
+  if (!slots || slots.length === 0) {
+    return `Para o dia ${dataFormatada} não temos mais horários livres no momento. Quer tentar outra data?`;
+  }
+
+  const manha = slots.filter((s) => (s.horario || s.time_label) < '12:00').map((s) => s.horario || s.time_label);
+  const tarde = slots.filter((s) => (s.horario || s.time_label) >= '12:00').map((s) => s.horario || s.time_label);
+
+  let blocos = [];
+  if (manha.length > 0) blocos.push(`Manhã: ${manha.join(', ')}`);
+  if (tarde.length > 0) blocos.push(`Tarde: ${tarde.join(', ')}`);
+
+  const corpo = blocos.length > 0 ? blocos.join('\n') : slots.map((s) => `• ${s.horario || s.time_label}`).join('\n');
+  return `Para *${dataFormatada}*, temos esses horários disponíveis:\n\n${corpo}\n\nQual desses horários fica melhor pra você?`;
 }
 
 /**
- * Executa o processamento determinístico / fallback de mensagens
+ * Executa o processamento de contingência / fallback 100% orientado a ferramentas e banco de dados
  * 
  * @param {string} texto Mensagem enviada pelo usuário
  * @param {Object} context Contexto contendo { jid, telefone, pushName, sock }
- * @returns {Promise<string>} Resposta humanizada da Lara
+ * @returns {Promise<string>} Resposta humanizada da Arla AI
  */
 export async function processarFallback(texto = '', context = {}) {
   const norm = normalizarTexto(texto);
   const jid = context.jid || 'default';
-  const pushName = context.pushName || 'Cliente';
+  const rawPushName = context.pushName || 'Cliente';
+  const primeiroNome = extrairPrimeiroNome(rawPushName);
   const telefone = context.telefone || String(jid).replace(/\D/g, '');
   const estadoAtual = getState(jid);
 
-  // Verificação de segurança (recusa scripts, python, prompt injection)
+  // Verificação de segurança (recusa scripts, jailbreak, prompt injection)
   const check = verificarSegurancaEntrada(texto);
   if (check.bloqueado) {
     return check.resposta;
   }
 
-  // 1. Carrega catálogo de serviços ativo no Supabase
-  let servicosAtivos = [];
-  try {
-    const resServicos = await listarServicos();
-    if (resServicos.ok && Array.isArray(resServicos.servicos)) {
-      servicosAtivos = resServicos.servicos;
-    }
-  } catch (err) {
-    console.warn('[fallback] Aviso ao listar serviços:', err?.message || err);
-  }
+  // 1. Dados vivos em cache de alta velocidade do Supabase
+  const servicosAtivos = (await obterServicosEmCache()) || [];
+  const configuracoes = await obterConfiguracoesEmCache();
+
+  // 1.1 Checagem de agendamentos pausados no estúdio
+  const agendamentoPausado = configuracoes && configuracoes.booking_enabled === false;
+  const mensagemPausado =
+    configuracoes?.booking_closed_message ||
+    'Oi! No momento os novos agendamentos estão temporariamente pausados. Fale com a Lara diretamente para verificar possíveis encaixes!';
 
   // =========================================================================
-  // 2. INTERCEPTORES GLOBAIS DE ALTA PRIORIDADE (FUNCIONAM A QUALQUER MOMENTO)
-  // O cliente NUNCA fica preso em um fluxo. Pode voltar, sair, chamar humano
-  // ou tirar dúvidas sobre endereço, cuidados e valores quando quiser.
+  // 2. COMANDOS GLOBAIS DE INTERRUPÇÃO E ATENDIMENTO HUMANO
   // =========================================================================
 
-  // 2.1 Comandos de Voltar, Sair ou Cancelar o fluxo atual
+  // 2.1 Cancelar fluxo conversacional atual
   const ehComandoVoltarOuCancelar =
     norm === 'voltar' ||
     norm === 'sair' ||
@@ -298,31 +356,26 @@ export async function processarFallback(texto = '', context = {}) {
     norm === 'cancelar' ||
     norm === 'deixa' ||
     norm === 'deixa pra la' ||
-    norm === 'deixa quieto' ||
     norm === 'esquece' ||
     norm === 'parar' ||
     norm === 'recomecar' ||
-    norm === 'reiniciar' ||
-    norm === 'inicio' ||
     norm === 'menu' ||
     norm === 'nao quero mais';
 
-  if (ehComandoVoltarOuCancelar) {
-    if (estadoAtual) {
-      clearState(jid);
-      return `Sem problemas! Cancelei essa etapa. Me conta como posso te ajudar: saber sobre procedimentos, valores, tirar alguma dúvida ou falar com a Lara?`;
-    }
+  if (ehComandoVoltarOuCancelar && estadoAtual) {
+    clearState(jid);
+    return sanitizarMensagemWhatsApp(
+      `Sem problemas! Cancelei essa etapa. Me conta como posso te ajudar: saber sobre procedimentos, valores, tirar alguma dúvida ou falar com a Lara?`
+    );
   }
 
-  // 2.2 Chamada de Atendente / Humano / Lara / Dono (imediata)
+  // 2.2 Solicitar Atendimento Humano / Falar com a Lara
   const ehChamadaHumano =
     /\b(dono|dona|proprietari[ao]|gerente|responsavel)\b/i.test(norm) ||
     norm.includes('falar com a lara') ||
     norm.includes('falar com lara') ||
     norm.includes('falar com o dono') ||
     norm.includes('falar com a dona') ||
-    norm.includes('falar com dono') ||
-    norm.includes('falar com dona') ||
     norm.includes('falar com atendente') ||
     norm.includes('falar com humano') ||
     norm.includes('falar com pessoa') ||
@@ -330,65 +383,61 @@ export async function processarFallback(texto = '', context = {}) {
     norm.includes('chamar a lara') ||
     norm.includes('chama a lara') ||
     norm.includes('chamar o dono') ||
-    norm.includes('chama o dono') ||
     norm.includes('atendente') ||
-    norm.includes('humano') ||
     norm.includes('atendimento humano');
 
   if (ehChamadaHumano) {
     if (estadoAtual) clearState(jid);
     if (context?.sock) {
       notificarLaraAtendimentoHumano(context.sock, {
-        clienteNome: pushName,
+        clienteNome: primeiroNome,
         clienteTelefone: telefone,
         mensagem: texto,
-        motivo: 'Solicitação de atendente/dono via Fallback',
+        motivo: 'Solicitação de atendente/Lara',
       }).catch((err) => console.error('[fallback:notificarLara] Erro:', err?.message || err));
     }
-    return `Prontinho, ${pushName.split(' ')[0]}! Já notifiquei a Lara agora mesmo 🔔 Em breve ela (ou alguém da equipe) vai te responder diretamente por aqui! Se precisar de algo enquanto isso, estou por aqui.`;
+    return sanitizarMensagemWhatsApp(
+      `Prontinho, ${primeiroNome}! Já avisei a Lara agora mesmo 🔔 Em breve ela ou a equipe vai te responder diretamente por aqui! Se precisar de algo enquanto isso, estou por aqui.`
+    );
   }
 
-  // 2.3 Pergunta de Identidade ("Você é IA?", "É um robô?", "É a Lara?")
+  // 2.3 Perguntas sobre Criador / Desenvolvedor
   const ehPerguntaCriador =
     norm.includes('quem te criou') ||
     norm.includes('quem criou voce') ||
     norm.includes('quem te fez') ||
     norm.includes('quem te programou') ||
     norm.includes('quem te desenvolveu') ||
-    norm.includes('quem e seu criador') ||
     norm.includes('seu criador');
 
   if (ehPerguntaCriador) {
-    return `Fui desenvolvida pelo 0xGabriel especialmente para o estúdio da Lara Varisa!`;
+    return sanitizarMensagemWhatsApp(
+      'Fui desenvolvida pelo 0xGabriel especialmente para o estúdio da Lara Varisa!'
+    );
   }
 
+  // 2.4 Identidade da Assistente (Arla AI)
   const ehPerguntaIdentidade =
-    norm.includes('vc e ia') ||
-    norm.includes('voce e ia') ||
-    norm === 'e ia' ||
-    norm === 'e ia?' ||
     norm.includes('qual seu nome') ||
     norm.includes('seu nome') ||
     norm.includes('como se chama') ||
     norm.includes('como voce se chama') ||
+    norm.includes('voce e ia') ||
+    norm.includes('vc e ia') ||
     norm.includes('e robo') ||
     norm.includes('voce e um robo') ||
-    norm.includes('vc e robo') ||
-    norm.includes('inteligencia artificial') ||
     norm.includes('quem e voce') ||
-    norm.includes('quem ta falando') ||
     norm.includes('quem esta falando') ||
     norm.includes('e a lara') ||
-    norm.includes('voce e a lara') ||
-    norm.includes('vc e a lara') ||
-    norm.includes('e humana') ||
-    norm.includes('voce e humana');
+    norm.includes('voce e a lara');
 
   if (ehPerguntaIdentidade) {
-    return `Eu sou a Arla AI, a assistente virtual do estúdio Lara Varisa! Posso te ajudar com agendamentos, horários e dúvidas sobre os procedimentos. Se quiser falar com a Lara, é só me pedir.`;
+    return sanitizarMensagemWhatsApp(
+      'Eu sou a Arla AI, a assistente virtual do estúdio Lara Varisa! Cuido do atendimento, tiro dúvidas dos procedimentos e organizo seus agendamentos.'
+    );
   }
 
-  // 2.4 Informações de Localização, Endereço e Pagamento
+  // 2.5 Localização e Endereço do Estúdio
   const ehLocalizacao =
     norm.includes('onde fica') ||
     norm.includes('endereco') ||
@@ -401,70 +450,62 @@ export async function processarFallback(texto = '', context = {}) {
     norm.includes('cartao');
 
   if (ehLocalizacao) {
-    return getLocalizacao();
+    return sanitizarMensagemWhatsApp(formatarLocalizacao(configuracoes));
   }
 
-  // 2.4 Dicas de Cuidados Pré e Pós
+  // 2.6 Dicas de Cuidados
   const ehCuidados =
     norm.includes('cuidado') ||
+    norm.includes('pos atendimento') ||
     norm.includes('pos') ||
     norm.includes('molhar') ||
     norm.includes('dormir') ||
     norm.includes('lavar') ||
-    norm.includes('rimel') ||
     norm.includes('durabilidade') ||
     norm.includes('dura');
 
   if (ehCuidados) {
-    return getFaqCuidados();
+    return sanitizarMensagemWhatsApp(formatarCuidados());
   }
 
-  // 2.4.1 Tratamento de Foto ou Imagem de Referência enviada no WhatsApp
-  if (
-    context.ehImagem ||
-    norm.includes('foto') ||
-    norm.includes('imagem') ||
-    norm.includes('foto de referencia') ||
-    norm.includes('referencia')
-  ) {
+  // 2.7 Comprovante de Pagamento / Foto de Referência
+  if (context.ehImagem || norm.includes('foto') || norm.includes('imagem')) {
     if (norm.includes('pix') || norm.includes('comprovante') || norm.includes('paguei')) {
-      return `Comprovante recebido com sucesso! Muito obrigada.`;
+      return sanitizarMensagemWhatsApp('Comprovante recebido com sucesso! Muito obrigada.');
     }
     if (context.ehImagem) {
-      return `Recebi sua foto de referência! A Lara personaliza e reproduz perfeitamente esse modelo no seu olhar (seja 4D, 5D, Fox Eyes ou Russo). Quer aproveitar e marcar seu horário?`;
+      return sanitizarMensagemWhatsApp(
+        'Recebi sua foto de referência! A Lara reproduz e personaliza esse modelo no seu olhar (seja Fox Eyes, Russo ou Egípcio). Quer aproveitar e marcar seu horário?'
+      );
     }
   }
 
-  // 2.4.2 Dúvidas sobre Modelos e Técnicas de Cílios (4D, 5D, Mega, Wet Look, Wispy, etc.)
-  const ehDuvidaModelosCilios =
+  // 2.8 Dúvidas sobre Modelos de Cílios
+  const ehDuvidaModelos =
     /\b(4d|5d|6d|8d|mega volume|wet look|wispy|kim k|boneca|gatinho)\b/i.test(norm) ||
-    norm.includes('volume 4d') ||
-    norm.includes('volume 5d') ||
     norm.includes('efeito molhado') ||
     norm.includes('efeito pluma') ||
-    norm.includes('manga') ||
-    norm.includes('anime') ||
-    norm.includes('efeito boneca') ||
-    norm.includes('efeito gatinho') ||
     norm.includes('diferenca entre');
 
-  if (ehDuvidaModelosCilios) {
+  if (ehDuvidaModelos) {
     if (/\b(4d|5d|6d|8d|mega)\b/i.test(norm)) {
-      return `O Volume 4D e 5D utilizam leques artesanais levíssimos para um acabamento aveludado, bem pretinho e marcante. A Lara personaliza essa densidade no nosso Volume Russo ou Egípcio! Quer marcar seu horário?`;
+      return sanitizarMensagemWhatsApp(
+        'O Volume 4D e 5D utilizam leques artesanais levíssimos para um acabamento aveludado, bem pretinho e marcante. A Lara personaliza essa densidade no nosso Volume Russo ou Egípcio! Quer marcar seu horário?'
+      );
     }
     if (norm.includes('wet') || norm.includes('molhado')) {
-      return `O Wet Look dá aquele acabamento sofisticado e moderno de fios alinhados com efeito molhado. A Lara domina e adora fazer essa estilização! Quer agendar o seu?`;
+      return sanitizarMensagemWhatsApp(
+        'O Wet Look dá aquele acabamento sofisticado e moderno de fios alinhados com efeito molhado. A Lara domina essa técnica no estúdio! Quer agendar o seu?'
+      );
     }
     if (norm.includes('wispy') || norm.includes('kim') || norm.includes('pluma')) {
-      return `O estilo Wispy (Kim K) alterna fios mais longos em destaque criando uma textura linda, moderna e despojada. A Lara personaliza esse efeito no estúdio! Quer marcar?`;
+      return sanitizarMensagemWhatsApp(
+        'O estilo Wispy alterna fios mais longos em destaque criando uma textura moderna e despojada. A Lara personaliza esse efeito no estúdio! Quer agendar?'
+      );
     }
-    if (norm.includes('boneca') || norm.includes('gatinho')) {
-      return `O efeito Gatinho (ou Fox Eyes) alonga o canto externo e o Boneca abre o olhar no centro. A Lara faz o visagismo ideal para valorizar seus olhos! Quer agendar?`;
-    }
-    return `Trabalhamos com Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo (incluindo 4D e 5D) e Lash Lifting! Você pode me mandar uma foto de referência que te oriento com carinho.`;
   }
 
-  // 2.5 Pergunta de Preço Específico (ex: "quanto tá o volume egípcio?")
+  // 2.9 Preço de Serviço Específico (busca no banco de dados)
   const servicoEspecifico = identificarServico(texto, servicosAtivos);
   if (
     servicoEspecifico &&
@@ -474,26 +515,47 @@ export async function processarFallback(texto = '', context = {}) {
       norm.includes('custa') ||
       norm.includes('tabela'))
   ) {
-    return `O *${servicoEspecifico.nome}* está ${servicoEspecifico.preco} (${servicoEspecifico.duracao || `${servicoEspecifico.duracao_minutos}min`}). Quer agendar um horário?`;
+    return sanitizarMensagemWhatsApp(
+      `O *${servicoEspecifico.nome}* está ${servicoEspecifico.preco} (${servicoEspecifico.duracao || `${servicoEspecifico.duracao_minutos}min`}). Quer agendar um horário?`
+    );
   }
 
-  // 2.6 Agradecimento Rápido
+  // 2.10 Agradecimento
   if (
     norm.match(/\b(obrigada|obrigado|valeu|brigada|brigado|show|maravilha)\b/) &&
     norm.length <= 25
   ) {
     if (estadoAtual) clearState(jid);
-    return `Imagina, fico à disposição! Até logo.`;
+    return sanitizarMensagemWhatsApp('Imagina, fico à disposição! Até logo.');
   }
 
-  // 2.7 Cancelamento de Agendamento no Banco (quando o cliente pede explicitamente)
+  // =========================================================================
+  // 3. CANCELAMENTO E CONSULTA DE AGENDAMENTOS EXISTENTES
+  // =========================================================================
+
+  // 3.1 Cancelar todos os agendamentos da cliente
+  if (
+    norm.includes('cancelar todos') ||
+    norm.includes('cancela tudo') ||
+    norm.includes('cancelar todas') ||
+    norm.includes('desmarcar todos')
+  ) {
+    if (estadoAtual) clearState(jid);
+    const resCancelAll = await cancelarTodosAgendamentos(telefone, 'Cancelamento total via WhatsApp');
+    if (resCancelAll.ok) {
+      return sanitizarMensagemWhatsApp(
+        'Todos os seus agendamentos foram cancelados com sucesso. Quando quiser marcar uma nova data, será um prazer te receber!'
+      );
+    }
+    return sanitizarMensagemWhatsApp('Não encontrei agendamentos ativos para cancelar no seu número.');
+  }
+
+  // 3.2 Cancelar agendamento específico
   if (
     norm.includes('cancelar agendamento') ||
     norm.includes('desmarcar agendamento') ||
     norm.includes('desmarcar meu') ||
     norm.includes('cancelar meu') ||
-    norm.includes('nao vou conseguir ir') ||
-    norm.includes('nao poderei ir') ||
     norm.includes('cancela meu horario')
   ) {
     const resCons = await consultarAgendamentoCliente(telefone);
@@ -503,325 +565,16 @@ export async function processarFallback(texto = '', context = {}) {
         step: 'CONFIRMAR_CANCELAMENTO',
         appointmentId: ag.id,
       });
-      return `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`;
+      return sanitizarMensagemWhatsApp(
+        `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`
+      );
     }
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar!`;
-  }
-
-  // =========================================================================
-  // 3. TRATAMENTO DE ESTADOS CONVERSACIONAIS PENDENTES (FLUXO MULTI-ETAPAS)
-  // =========================================================================
-  if (estadoAtual) {
-    // 3.1 Confirmação de Cancelamento
-    if (estadoAtual.step === 'CONFIRMAR_CANCELAMENTO') {
-      if (
-        norm.includes('sim') ||
-        norm.includes('confirmo') ||
-        norm.includes('pode cancelar') ||
-        norm.includes('cancela')
-      ) {
-        clearState(jid);
-        const resCancel = await cancelarAgendamento(
-          estadoAtual.appointmentId,
-          'Cancelado via atendimento WhatsApp'
-        );
-        if (resCancel.ok) {
-          return `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema.\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 https://laravarisa.netlify.app/agendar`;
-        }
-        return `Tive um pequeno contratempo ao liberar o horário no sistema, mas já anotei aqui. Qualquer dúvida me avise!`;
-      }
-
-      if (norm.includes('nao') || norm.includes('não') || norm.includes('manter')) {
-        clearState(jid);
-        return `Perfeito! Seu agendamento permanece confirmado. Te espero no estúdio.`;
-      }
-    }
-
-    // 3.2 Seleção de Serviço pendente
-    if (estadoAtual.step === 'AGUARDANDO_SERVICO') {
-      const servicoEscolhido = identificarServico(texto, servicosAtivos, true);
-      if (servicoEscolhido) {
-        setState(jid, {
-          step: 'AGUARDANDO_DATA',
-          serviceId: servicoEscolhido.id,
-          serviceName: servicoEscolhido.nome,
-          serviceDuration: servicoEscolhido.duracao_minutos || 120,
-          servicePrice: servicoEscolhido.preco,
-        });
-
-        return `Perfeito, *${servicoEscolhido.nome}* (${servicoEscolhido.preco})! Para qual dia você prefere? (ex: amanhã ou sexta)`;
-      }
-
-      // Se o cliente pediu para ver os serviços ou procedimentos
-      if (
-        norm.includes('procedimento') ||
-        norm.includes('servico') ||
-        norm.includes('catalogo') ||
-        norm.includes('quais') ||
-        norm.includes('tabela') ||
-        norm.includes('preco')
-      ) {
-        return formatarCatalogoServicos(servicosAtivos);
-      }
-
-      // Se não reconheceu como serviço nem pergunta geral, orienta com gentileza
-      return `Qual procedimento você gostaria de fazer? Me conta se prefere Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo, Lash Lifting ou Manutenção.`;
-    }
-
-    // 3.3 Seleção de Data pendente
-    if (estadoAtual.step === 'AGUARDANDO_DATA') {
-      // Permite ao cliente trocar de procedimento
-      if (norm.includes('trocar') || norm.includes('mudar') || norm.includes('outro procedimento') || norm.includes('ver opcoes')) {
-        setState(jid, { step: 'AGUARDANDO_SERVICO' });
-        return `Sem problemas! Qual procedimento você prefere?\n\n${formatarCatalogoServicos(servicosAtivos)}`;
-      }
-
-      const outroServico = identificarServico(texto, servicosAtivos, false);
-      if (outroServico && outroServico.id !== estadoAtual.serviceId) {
-        setState(jid, {
-          ...estadoAtual,
-          serviceId: outroServico.id,
-          serviceName: outroServico.nome,
-          serviceDuration: outroServico.duracao_minutos || 120,
-          servicePrice: outroServico.preco,
-        });
-        return `Perfeito, mudei para *${outroServico.nome}* (${outroServico.preco})! Para qual dia você prefere?`;
-      }
-
-      const dataEscolhida = extrairData(texto);
-      if (dataEscolhida) {
-        const slotsRes = await consultarHorarios(
-          dataEscolhida,
-          estadoAtual.serviceDuration || 120
-        );
-
-        if (slotsRes.fechado) {
-          return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?`;
-        }
-
-        if (!slotsRes.ok || !slotsRes.slots || slotsRes.slots.length === 0) {
-          return `Para o dia ${dataEscolhida} todos os horários já estão preenchidos. Quer tentar outro dia?`;
-        }
-
-        setState(jid, {
-          ...estadoAtual,
-          step: 'AGUARDANDO_HORARIO',
-          dataEscolhida,
-          slotsDisponiveis: slotsRes.slots,
-        });
-
-        const manha = slotsRes.slots.filter((s) => s.horario < '12:00').map((s) => s.horario);
-        const tarde = slotsRes.slots.filter((s) => s.horario >= '12:00').map((s) => s.horario);
-        let linhasHorarios = [];
-        if (manha.length > 0) linhasHorarios.push(`Manhã: ${manha.join(', ')}`);
-        if (tarde.length > 0) linhasHorarios.push(`Tarde: ${tarde.join(', ')}`);
-        const listaFormatada = linhasHorarios.length > 0 ? linhasHorarios.join('\n') : slotsRes.slots.map((s) => `• *${s.horario}*`).join('\n');
-
-        return `Para *${dataEscolhida}*, tenho esses horários livres:\n\n${listaFormatada}\n\nQual fica melhor pra você?`;
-      }
-
-      return `Para qual dia você prefere? Pode me dizer amanhã ou outro dia da semana.`;
-    }
-
-    // 3.4 Seleção de Horário pendente -> Conclusão do Agendamento
-    if (estadoAtual.step === 'AGUARDANDO_HORARIO') {
-      const horaEscolhida = extrairHorario(texto);
-      if (horaEscolhida && estadoAtual.slotsDisponiveis) {
-        const slotMatch = estadoAtual.slotsDisponiveis.find((s) => s.horario === horaEscolhida);
-        if (slotMatch) {
-          clearState(jid);
-          const resAgendar = await criarAgendamento({
-            service_id: estadoAtual.serviceId,
-            starts_at: slotMatch.starts_at,
-            client_name: pushName,
-            client_phone: telefone,
-            notes: 'Agendado via fallback inteligente WhatsApp',
-          });
-
-          if (resAgendar.ok) {
-            return `Prontinho, agendado! Seu *${estadoAtual.serviceName}* tá confirmado para ${estadoAtual.dataEscolhida} às *${horaEscolhida}*. Te espero no estúdio.`;
-          }
-
-          return `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário?`;
-        }
-      }
-
-      return `Qual horário fica melhor pra você?`;
-    }
-  }
-
-  // 1.1 Checa se o estúdio está com agendamentos pausados
-  let configuracoesEstudio = null;
-  try {
-    configuracoesEstudio = await obterConfiguracoesEmCache();
-  } catch (errCfg) {
-    console.warn('[fallback] Aviso ao obter configurações:', errCfg?.message || errCfg);
-  }
-  const agendamentoPausado = configuracoesEstudio && configuracoesEstudio.booking_enabled === false;
-  const mensagemPausado =
-    configuracoesEstudio?.booking_closed_message ||
-    'Oi! No momento os agendamentos online estão temporariamente pausados. Deixe seu recado aqui que a Lara te responderá para verificar encaixes assim que possível 💕';
-
-  // Se agendamentos estiverem pausados e a cliente tentar agendar ou avançar no agendamento
-  if (agendamentoPausado) {
-    const ehTentativaAgendamento =
-      norm.includes('agendar') ||
-      norm.includes('marcar') ||
-      norm.includes('reserva') ||
-      norm.includes('reservar') ||
-      norm.includes('horario') ||
-      norm.includes('horarios') ||
-      norm === '1' ||
-      norm === 'opcao 1';
-
-    if (
-      ehTentativaAgendamento ||
-      (estadoAtual && typeof estadoAtual.step === 'string' && estadoAtual.step.startsWith('AGUARDANDO'))
-    ) {
-      if (estadoAtual) clearState(jid);
-      return mensagemPausado;
-    }
-  }
-
-  // =========================================================================
-  // 4. AGENDAMENTO DIRETO DE 1 ÚNICO PASSO (ONE-SHOT POR PALAVRAS-CHAVE)
-  // Ex: "Quero agendar volume brasileiro amanhã 14:00"
-  // =========================================================================
-  const ehTentativaAgendamento =
-    norm.includes('agendar') ||
-    norm.includes('marcar') ||
-    norm.includes('reserva') ||
-    norm.includes('reservar') ||
-    norm === '1' ||
-    norm === 'opcao 1';
-
-  const servicoDetectado = identificarServico(texto, servicosAtivos);
-  const dataDetectada = extrairData(texto);
-  const horarioDetectado = extrairHorario(texto);
-
-  if (ehTentativaAgendamento && servicoDetectado && dataDetectada && horarioDetectado) {
-    clearState(jid);
-
-    // Consulta disponibilidade na data
-    const slotsRes = await consultarHorarios(
-      dataDetectada,
-      servicoDetectado.duracao_minutos || 120
+    return sanitizarMensagemWhatsApp(
+      `Oi, ${primeiroNome}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar!`
     );
-
-    if (slotsRes.fechado) {
-      return `Oi! Aos domingos nosso estúdio é fechado para descanso. Atendemos de segunda a sábado das 09h às 19h! Que outro dia fica bom pra você?`;
-    }
-
-    const slotDisponivel = slotsRes.slots?.find((s) => s.horario === horarioDetectado);
-    if (!slotDisponivel) {
-      const opcoesHorarios = slotsRes.slots?.map((s) => s.horario).join(', ') || 'Nenhum horário livre';
-      return `Oi, ${pushName.split(' ')[0]}! O horário das ${horarioDetectado} no dia ${dataDetectada} já está ocupado.\n\nPra esse dia, ainda temos vagas em: *${opcoesHorarios}*.\n\nQual deles você prefere?`;
-    }
-
-    // Cria agendamento imediato
-    const resAgendar = await criarAgendamento({
-      service_id: servicoDetectado.id,
-      starts_at: slotDisponivel.starts_at,
-      client_name: pushName,
-      client_phone: telefone,
-      notes: 'Agendado em comando direto WhatsApp',
-    });
-
-    if (resAgendar.ok) {
-      return `Prontinho, agendado! Seu *${servicoDetectado.nome}* tá confirmado para ${dataDetectada} às *${horarioDetectado}*. Te espero no estúdio.`;
-    }
-
-    return `Não consegui confirmar o horário no momento. Que tal escolher outro horário?`;
   }
 
-  // =========================================================================
-  // 5. INÍCIO DE FLUXO DE AGENDAMENTO (PRECISA DE MAIS INFORMAÇÕES)
-  // =========================================================================
-  if (ehTentativaAgendamento) {
-    if (servicoDetectado) {
-      // Já tem o serviço, precisa da data
-      setState(jid, {
-        step: 'AGUARDANDO_DATA',
-        serviceId: servicoDetectado.id,
-        serviceName: servicoDetectado.nome,
-        serviceDuration: servicoDetectado.duracao_minutos || 120,
-        servicePrice: servicoDetectado.preco,
-      });
-      return `Perfeito, *${servicoDetectado.nome}* (${servicoDetectado.preco})! Para qual dia você prefere?`;
-    }
-
-    // Não informou o serviço: exibe o catálogo para iniciar
-    setState(jid, { step: 'AGUARDANDO_SERVICO' });
-    return `Qual procedimento você gostaria de fazer?\n\n${formatarCatalogoServicos(servicosAtivos)}`;
-  }
-
-  // =========================================================================
-  // 6. CONSULTA DE CATÁLOGO GERAL
-  // =========================================================================
-  if (
-    norm.includes('preco') ||
-    norm.includes('valor') ||
-    norm.includes('quanto custa') ||
-    norm.includes('servico') ||
-    norm.includes('procedimento') ||
-    norm.includes('catalogo') ||
-    norm.includes('tabela') ||
-    norm.includes('cardapio') ||
-    norm.includes('o que voces fazem') ||
-    norm.includes('o que faz') ||
-    norm === '2' ||
-    norm === 'opcao 2'
-  ) {
-    return formatarCatalogoServicos(servicosAtivos);
-  }
-
-  // =========================================================================
-  // 7. CONFIRMAÇÃO DIRETA DE PRESENÇA / RESPOSTA POSITIVA (ex: "sim", "confirmo", "vou sim")
-  // =========================================================================
-  if (
-    norm === 'sim' ||
-    norm === '1' ||
-    norm === 'confirmo' ||
-    norm === 'confirmar' ||
-    norm === 'vou sim' ||
-    norm === 'com certeza' ||
-    norm === 'pode confirmar' ||
-    norm === 'combinado' ||
-    norm === 'fechado' ||
-    norm === 'ok'
-  ) {
-    const resCons = await consultarAgendamentoCliente(telefone);
-    if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
-      const ag = resCons.agendamentos[0];
-      return `Presença confirmada, ${pushName.split(' ')[0]}! Já tá tudo pronto pra te receber no seu ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Até logo.`;
-    }
-    return `Perfeito! Se você quiser agendar um horário ou tiver alguma dúvida, é só me chamar.`;
-  }
-
-  // =========================================================================
-  // 8. CANCELAMENTO GERAL (SE NÃO ENTROU NO INTERCEPTOR)
-  // =========================================================================
-  if (
-    norm.includes('cancelar') ||
-    norm.includes('desmarcar') ||
-    norm.includes('imprevisto')
-  ) {
-    const resCons = await consultarAgendamentoCliente(telefone);
-    if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
-      const ag = resCons.agendamentos[0];
-      setState(jid, {
-        step: 'CONFIRMAR_CANCELAMENTO',
-        appointmentId: ag.id,
-      });
-      return `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`;
-    }
-
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar!`;
-  }
-
-  // =========================================================================
-  // 10. CONSULTA DE MEUS AGENDAMENTOS
-  // =========================================================================
+  // 3.3 Consultar meus agendamentos
   if (
     norm.includes('meu agendamento') ||
     norm.includes('meus agendamentos') ||
@@ -834,44 +587,252 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const listaAg = resCons.agendamentos
-        .map(
-          (ag) =>
-            `• ${ag.procedimento} - ${ag.data} às ${ag.horario} (${ag.valor || 'A consultar'})`
-        )
+        .map((ag) => `• ${ag.procedimento} - ${ag.data} às ${ag.horario} (${ag.valor || 'A consultar'})`)
         .join('\n');
-
-      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento:\n\n${listaAg}\n\nSe precisar remarcar ou cancelar, só me avisar.`;
+      return sanitizarMensagemWhatsApp(
+        `Oi, ${primeiroNome}! Seu agendamento:\n\n${listaAg}\n\nSe precisar remarcar ou cancelar, só me avisar.`
+      );
     }
-
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei agendamentos futuros no seu número. Se quiser marcar um horário, é só me dizer.`;
+    return sanitizarMensagemWhatsApp(
+      `Oi, ${primeiroNome}! Não encontrei agendamentos futuros no seu número. Se quiser marcar um horário, é só me dizer.`
+    );
   }
 
-  // =========================================================================
-  // 11. REAGENDAMENTO / REMARCAR
-  // =========================================================================
+  // 3.4 Reagendamento
   if (
     norm.includes('reagendar') ||
     norm.includes('remarcar') ||
     norm.includes('mudar data') ||
     norm.includes('mudar horario') ||
-    norm.includes('trocar dia') ||
-    norm.includes('trocar data')
+    norm.includes('trocar dia')
   ) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
-      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento atual é ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Para qual data você prefere mudar?`;
+      return sanitizarMensagemWhatsApp(
+        `Oi, ${primeiroNome}! Seu agendamento atual é ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Para qual data você prefere mudar?`
+      );
     }
-
-    return `Você não possui nenhum agendamento ativo para reagendar. Quer marcar um horário? Basta me dizer.`;
+    return sanitizarMensagemWhatsApp(
+      'Você não possui nenhum agendamento ativo para reagendar. Quer marcar um horário? Basta me dizer.'
+    );
   }
 
   // =========================================================================
-  // 12. CONSULTA DE HORÁRIOS LIVRES / VAGAS
+  // 4. MÁQUINA DE ESTADOS MULTI-ETAPAS PARA AGENDAMENTO CONVERSACIONAL
+  // =========================================================================
+  if (estadoAtual) {
+    // 4.1 Confirmação de cancelamento pendente
+    if (estadoAtual.step === 'CONFIRMAR_CANCELAMENTO') {
+      if (norm.includes('sim') || norm.includes('confirmo') || norm.includes('cancela')) {
+        clearState(jid);
+        const resCancel = await cancelarAgendamento(estadoAtual.appointmentId, 'Cancelado via WhatsApp');
+        if (resCancel.ok) {
+          return sanitizarMensagemWhatsApp(
+            `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema.\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 https://laravarisa.netlify.app/agendar`
+          );
+        }
+        return sanitizarMensagemWhatsApp('Tive uma instabilidade ao liberar o horário no sistema, mas já notifiquei a equipe.');
+      }
+
+      if (norm.includes('nao') || norm.includes('manter')) {
+        clearState(jid);
+        return sanitizarMensagemWhatsApp('Perfeito! Seu agendamento permanece confirmado. Te espero no estúdio.');
+      }
+    }
+
+    // 4.2 Seleção de Serviço pendente
+    if (estadoAtual.step === 'AGUARDANDO_SERVICO') {
+      const servicoEscolhido = identificarServico(texto, servicosAtivos, true);
+      if (servicoEscolhido) {
+        setState(jid, {
+          step: 'AGUARDANDO_DATA',
+          serviceId: servicoEscolhido.id,
+          serviceName: servicoEscolhido.nome,
+          serviceDuration: servicoEscolhido.duracao_minutos || 120,
+          servicePrice: servicoEscolhido.preco,
+        });
+        return sanitizarMensagemWhatsApp(
+          `Perfeito, *${servicoEscolhido.nome}* (${servicoEscolhido.preco})! Para qual dia você prefere? (ex: amanhã ou sexta)`
+        );
+      }
+
+      if (norm.includes('procedimento') || norm.includes('servico') || norm.includes('tabela') || norm.includes('preco')) {
+        return sanitizarMensagemWhatsApp(formatarCatalogoServicos(servicosAtivos, configuracoes));
+      }
+
+      return sanitizarMensagemWhatsApp(
+        `Qual procedimento você gostaria de fazer?\n\n${formatarCatalogoServicos(servicosAtivos, configuracoes)}`
+      );
+    }
+
+    // 4.3 Seleção de Data pendente
+    if (estadoAtual.step === 'AGUARDANDO_DATA') {
+      // Troca de procedimento
+      if (norm.includes('trocar') || norm.includes('mudar') || norm.includes('outro procedimento')) {
+        setState(jid, { step: 'AGUARDANDO_SERVICO' });
+        return sanitizarMensagemWhatsApp(
+          `Sem problemas! Qual procedimento você prefere?\n\n${formatarCatalogoServicos(servicosAtivos, configuracoes)}`
+        );
+      }
+
+      const outroServico = identificarServico(texto, servicosAtivos, false);
+      if (outroServico && outroServico.id !== estadoAtual.serviceId) {
+        setState(jid, {
+          ...estadoAtual,
+          serviceId: outroServico.id,
+          serviceName: outroServico.nome,
+          serviceDuration: outroServico.duracao_minutos || 120,
+          servicePrice: outroServico.preco,
+        });
+        return sanitizarMensagemWhatsApp(
+          `Perfeito, mudei para *${outroServico.nome}* (${outroServico.preco})! Para qual dia você prefere?`
+        );
+      }
+
+      const dataEscolhida = extrairData(texto);
+      if (dataEscolhida) {
+        const slotsRes = await consultarHorarios(dataEscolhida, estadoAtual.serviceDuration || 120);
+
+        if (slotsRes.fechado) {
+          return sanitizarMensagemWhatsApp(
+            slotsRes.mensagem || 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?'
+          );
+        }
+
+        if (!slotsRes.ok || !slotsRes.slots || slotsRes.slots.length === 0) {
+          return sanitizarMensagemWhatsApp(
+            `Para o dia ${dataEscolhida} todos os horários já estão preenchidos. Quer tentar outro dia?`
+          );
+        }
+
+        setState(jid, {
+          ...estadoAtual,
+          step: 'AGUARDANDO_HORARIO',
+          dataEscolhida,
+          slotsDisponiveis: slotsRes.slots,
+        });
+
+        return sanitizarMensagemWhatsApp(formatarListaHorarios(slotsRes.slots, dataEscolhida));
+      }
+
+      return sanitizarMensagemWhatsApp('Para qual dia você prefere? Pode me dizer amanhã ou outro dia da semana.');
+    }
+
+    // 4.4 Seleção de Horário pendente -> Confirmação de Agendamento
+    if (estadoAtual.step === 'AGUARDANDO_HORARIO') {
+      const horaEscolhida = extrairHorario(texto);
+      if (horaEscolhida && estadoAtual.slotsDisponiveis) {
+        const slotMatch = estadoAtual.slotsDisponiveis.find((s) => s.horario === horaEscolhida);
+        if (slotMatch) {
+          clearState(jid);
+          const resAgendar = await criarAgendamento({
+            service_id: estadoAtual.serviceId,
+            starts_at: slotMatch.starts_at,
+            client_name: primeiroNome,
+            client_phone: telefone,
+            notes: 'Agendado via fallback inteligente WhatsApp',
+          });
+
+          if (resAgendar.ok) {
+            return sanitizarMensagemWhatsApp(
+              `Confirmado! Seu *${estadoAtual.serviceName}* está agendado para ${estadoAtual.dataEscolhida} às *${horaEscolhida}*. Te esperamos no estúdio!`
+            );
+          }
+
+          return sanitizarMensagemWhatsApp(
+            resAgendar.erro || `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário?`
+          );
+        }
+      }
+
+      return sanitizarMensagemWhatsApp('Qual horário fica melhor pra você?');
+    }
+  }
+
+  // =========================================================================
+  // 5. AGENDAMENTO DIRETO ONE-SHOT (Serviço + Data + Horário na mesma mensagem)
+  // =========================================================================
+  const ehTentativaAgendamento =
+    norm.includes('agendar') ||
+    norm.includes('marcar') ||
+    norm.includes('reserva') ||
+    norm.includes('reservar') ||
+    norm === '1' ||
+    norm === 'opcao 1';
+
+  if (agendamentoPausado && (ehTentativaAgendamento || norm.includes('horario') || norm.includes('vaga'))) {
+    if (estadoAtual) clearState(jid);
+    return sanitizarMensagemWhatsApp(mensagemPausado);
+  }
+
+  const servicoDetectado = identificarServico(texto, servicosAtivos);
+  const dataDetectada = extrairData(texto);
+  const horarioDetectado = extrairHorario(texto);
+
+  if (ehTentativaAgendamento && servicoDetectado && dataDetectada && horarioDetectado) {
+    clearState(jid);
+
+    const slotsRes = await consultarHorarios(dataDetectada, servicoDetectado.duracao_minutos || 120);
+    if (slotsRes.fechado) {
+      return sanitizarMensagemWhatsApp(
+        slotsRes.mensagem || 'Nosso estúdio está fechado nessa data. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?'
+      );
+    }
+
+    const slotDisponivel = slotsRes.slots?.find((s) => s.horario === horarioDetectado);
+    if (!slotDisponivel) {
+      return sanitizarMensagemWhatsApp(
+        `Oi, ${primeiroNome}! O horário das ${horarioDetectado} no dia ${dataDetectada} já está ocupado.\n\n${formatarListaHorarios(slotsRes.slots, dataDetectada)}`
+      );
+    }
+
+    const resAgendar = await criarAgendamento({
+      service_id: servicoDetectado.id,
+      starts_at: slotDisponivel.starts_at,
+      client_name: primeiroNome,
+      client_phone: telefone,
+      notes: 'Agendado em comando direto WhatsApp',
+    });
+
+    if (resAgendar.ok) {
+      return sanitizarMensagemWhatsApp(
+        `Confirmado! Seu *${servicoDetectado.nome}* está agendado para ${dataDetectada} às *${horarioDetectado}*. Te esperamos no estúdio!`
+      );
+    }
+
+    return sanitizarMensagemWhatsApp(resAgendar.erro || 'Não consegui confirmar o horário no momento. Que tal escolher outro horário?');
+  }
+
+  // 5.1 Início de fluxo de agendamento guiado
+  if (ehTentativaAgendamento) {
+    if (servicoDetectado) {
+      setState(jid, {
+        step: 'AGUARDANDO_DATA',
+        serviceId: servicoDetectado.id,
+        serviceName: servicoDetectado.nome,
+        serviceDuration: servicoDetectado.duracao_minutos || 120,
+        servicePrice: servicoDetectado.preco,
+      });
+      return sanitizarMensagemWhatsApp(
+        `Perfeito, *${servicoDetectado.nome}* (${servicoDetectado.preco})! Para qual dia você prefere?`
+      );
+    }
+
+    setState(jid, { step: 'AGUARDANDO_SERVICO' });
+    return sanitizarMensagemWhatsApp(
+      `Qual procedimento você gostaria de fazer?\n\n${formatarCatalogoServicos(servicosAtivos, configuracoes)}`
+    );
+  }
+
+  // =========================================================================
+  // 6. CONSULTA DE HORÁRIOS LIVRES / VAGAS DISPONÍVEIS
   // =========================================================================
   if (
     norm.includes('horario') ||
+    norm.includes('horarios') ||
     norm.includes('vaga') ||
+    norm.includes('vagas') ||
     norm.includes('disponivel') ||
     norm.includes('disponibilidade') ||
     norm.includes('agenda')
@@ -883,72 +844,86 @@ export async function processarFallback(texto = '', context = {}) {
       dataConsulta = d.toISOString().split('T')[0];
     }
 
-    const slotsRes = await consultarHorarios(dataConsulta, 120);
+    const duracaoPadrao = servicoDetectado ? servicoDetectado.duracao_minutos : 120;
+    const slotsRes = await consultarHorarios(dataConsulta, duracaoPadrao);
 
     if (slotsRes.fechado) {
-      return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h.`;
+      return sanitizarMensagemWhatsApp(
+        slotsRes.mensagem || 'O estúdio não abre nessa data. Atendemos de segunda a sábado das 09h às 19h.'
+      );
     }
 
     if (!slotsRes.ok || !slotsRes.slots || slotsRes.slots.length === 0) {
-      return `Para o dia ${dataConsulta} não temos mais horários livres no momento. Quer tentar outra data?`;
+      return sanitizarMensagemWhatsApp(
+        `Para o dia ${dataConsulta} não temos mais horários livres no momento. Quer tentar outra data?`
+      );
     }
 
-    const manha = slotsRes.slots.filter((s) => s.horario < '12:00').map((s) => s.horario);
-    const tarde = slotsRes.slots.filter((s) => s.horario >= '12:00').map((s) => s.horario);
-    let linhasHorarios = [];
-    if (manha.length > 0) linhasHorarios.push(`Manhã: ${manha.join(', ')}`);
-    if (tarde.length > 0) linhasHorarios.push(`Tarde: ${tarde.join(', ')}`);
-    const listaFormatada = linhasHorarios.length > 0 ? linhasHorarios.join('\n') : slotsRes.slots.map((s) => `• ${s.horario}`).join('\n');
-
-    return `Para *${dataConsulta}*, temos esses horários disponíveis:\n\n${listaFormatada}\n\nQual desses horários fica melhor pra você?`;
+    return sanitizarMensagemWhatsApp(formatarListaHorarios(slotsRes.slots, dataConsulta));
   }
 
   // =========================================================================
-  // 13. CUIDADOS & DÚVIDAS FREQUENTES
+  // 7. CONSULTA DE CATÁLOGO / PREÇOS GERAIS
   // =========================================================================
   if (
-    norm.includes('cuidado') ||
-    norm.includes('pos') ||
-    norm.includes('molhar') ||
-    norm.includes('dormir') ||
-    norm.includes('lavar') ||
-    norm.includes('rimel') ||
-    norm.includes('durabilidade') ||
-    norm.includes('dura')
+    norm.includes('preco') ||
+    norm.includes('valor') ||
+    norm.includes('quanto custa') ||
+    norm.includes('servico') ||
+    norm.includes('procedimento') ||
+    norm.includes('catalogo') ||
+    norm.includes('tabela') ||
+    norm.includes('cardapio') ||
+    norm.includes('o que voces fazem') ||
+    norm === '2' ||
+    norm === 'opcao 2'
   ) {
-    return getFaqCuidados();
+    return sanitizarMensagemWhatsApp(formatarCatalogoServicos(servicosAtivos, configuracoes));
   }
 
   // =========================================================================
-  // 14. LOCALIZAÇÃO DO ESTÚDIO & PAGAMENTO
+  // 8. CONFIRMAÇÃO DE PRESENÇA DIRETA (ex: "sim", "confirmo", "vou sim")
   // =========================================================================
   if (
-    norm.includes('onde fica') ||
-    norm.includes('endereco') ||
-    norm.includes('localizacao') ||
-    norm.includes('como chegar') ||
-    norm.includes('bairro') ||
-    norm.includes('zona norte') ||
-    norm.includes('pagamento') ||
-    norm.includes('pix') ||
-    norm.includes('cartao')
+    norm === 'sim' ||
+    norm === 'confirmo' ||
+    norm === 'confirmar' ||
+    norm === 'vou sim' ||
+    norm === 'com certeza' ||
+    norm === 'pode confirmar' ||
+    norm === 'combinado' ||
+    norm === 'fechado' ||
+    norm === 'ok'
   ) {
-    return getLocalizacao();
+    const resCons = await consultarAgendamentoCliente(telefone);
+    if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
+      const ag = resCons.agendamentos[0];
+      return sanitizarMensagemWhatsApp(
+        `Presença confirmada, ${primeiroNome}! Já tá tudo pronto pra te receber no seu ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Até logo!`
+      );
+    }
+    return sanitizarMensagemWhatsApp(
+      'Perfeito! Se você quiser agendar um horário ou tiver alguma dúvida, é só me chamar.'
+    );
   }
 
   // =========================================================================
-  // 15. SAUDAÇÃO NATURAL PURA
+  // 9. SAUDAÇÃO NATURAL
   // =========================================================================
   if (
     norm.match(/^(oi|ola|oie|olaa|oii|oiii|bom dia|boa tarde|boa noite|opa|tudo bem|tudo bom|e ai)\b/i)
   ) {
-    return `Oi, ${pushName.split(' ')[0]}! Tudo bem? Aqui é a Arla AI, assistente do estúdio Lara Varisa. Como posso te ajudar hoje?`;
+    return sanitizarMensagemWhatsApp(
+      `Oi, ${primeiroNome}! Tudo bem? Aqui é a Arla AI, assistente do estúdio Lara Varisa. Como posso te ajudar hoje?`
+    );
   }
 
   // =========================================================================
-  // 16. RESPOSTA PADRÃO ACOLHEDORA E NATURAL (SEM NÚMEROS!)
+  // 10. RESPOSTA PADRÃO ACOLHEDORA E DIRETA
   // =========================================================================
-  return `Oi, ${pushName.split(' ')[0]}! Me conta como posso te ajudar: você gostaria de saber sobre procedimentos, valores ou marcar um horário?`;
+  return sanitizarMensagemWhatsApp(
+    `Oi, ${primeiroNome}! Me conta como posso te ajudar: você gostaria de saber sobre procedimentos, valores ou marcar um horário?`
+  );
 }
 
 export default {
