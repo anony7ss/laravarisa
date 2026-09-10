@@ -197,9 +197,9 @@ export async function notificarLaraNovoAgendamento(sock, agendamento) {
     const origem = agendamento.origin === 'whatsapp_bot' ? 'WhatsApp (IA)' : 'Site';
 
     let textoNotificacao =
-      `✨ *Novo Agendamento Confirmado!*\n\n` +
+      `🤍 *Novo Agendamento Confirmado*\n\n` +
       `👤 *${nomeCliente}*\n` +
-      `✨ *${nomeProcedimento}*\n` +
+      `• *${nomeProcedimento}*\n` +
       `📅 *${dataFormatada} às ${horaFormatada}*\n`;
 
     if (valorLabel) {

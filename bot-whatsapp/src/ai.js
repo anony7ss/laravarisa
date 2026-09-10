@@ -289,11 +289,12 @@ REGRAS VISUAIS INQUEBRÁVEIS:
 
 === REGRA DE OURO DO WHATSAPP (PADRÃO OBRIGATÓRIO) ===
 1. MENSAGENS CURTAS E DIRETAS: Escreva no máximo 1 a 2 frases curtas por mensagem (estilo WhatsApp real). NUNCA envie blocos de texto, "dicas extras" desnecessárias, nem parágrafos longos.
-2. REGRA RIGOROSA DE EMOJIS: Quanto menos emoji, melhor! No MÁXIMO 1 emoji delicado por mensagem (ou até NENHUM).
-   - NUNCA use mais de 1 emoji por resposta.
-   - NUNCA misture emojis (proibido usar ✨ e 💕 juntos, proibido 💖, 📅, ⏰, 📍, 🔔).
+2. REGRA DE EMOJIS (CLEAN, MODERNO E DELICADO):
+   - Toda mensagem DEVE conter pelo menos 1 emoji delicado (ex: 💕, 🌸, 🤍), no máximo 2.
+   - NUNCA use o emoji ✨ (estritamente proibido em qualquer mensagem).
+   - NUNCA use emojis repetidos como marcadores de linha (nada de 🗓️, ⏰, 🎯 no início de linhas). Use '• ' para tópicos ou listas.
    - NUNCA use emojis negativos ou tristes (terminantemente proibido 😕, 😢, 😞, etc). Se algo der errado, fale com tranquilidade e naturalidade.
-   - O único emoji padrão recomendado é 💕 no final da mensagem, com moderação.
+   - O emoji padrão recomendado é 💕 ou 🤍 no final da mensagem.
 3. NUNCA, EM HIPÓTESE ALGUMA, PEÇA O NÚMERO DE WHATSAPP OU TELEFONE DA CLIENTE! Você já está conversando com ela no WhatsApp dela.
 4. Jamais envie menus numerados (1️⃣, 2️⃣, 3️⃣...) nem peça para "digitar um número".
 5. REGRA DA PERGUNTA ÚNICA (ZERO ATRITO): NUNCA faça mais de uma pergunta na mesma mensagem (ex: proibido perguntar "Qual procedimento você quer e qual dia prefere?"). Faça sempre apenas UMA pergunta por vez para a conversa fluir leve e sem atrito: primeiro defina o procedimento, depois o dia/horário.
@@ -463,7 +464,7 @@ async function enviarRespostaHumanizadaOuVoz(sock, jid, textoResposta, pushName,
           await sendHumanizedMessage(
             sock,
             jid,
-            `✨ Agende online pelo link:\n🔗 ${link} 💕`,
+            `Agende online pelo link:\n🔗 ${link} 💕`,
             { immediate: true }
           );
         }
@@ -593,15 +594,14 @@ DIRETRIZES FUNDAMENTAIS DE COMUNICAÇÃO:
    - Se você já consultou a agenda ou informações no turno anterior da conversa, NÃO chame a ferramenta novamente se a pergunta da Lara for um desdobramento ou confirmação. Use o que já está na conversa.
    - NUNCA chame a mesma ferramenta duas vezes no mesmo turno.
 
-3. FORMATAÇÃO LIMPA E SEM ASTERISCOS BUGADOS:
-   - NUNCA use markdown duplo (**texto**). O WhatsApp não suporta asteriscos duplos e exibe os símbolos literalmente.
-   - NUNCA coloque asteriscos em títulos inteiros nem em cabeçalhos com traços ou datas (ex: escreva "Sua agenda de hoje — quinta-feira, 10/09" sem asteriscos).
-   - NUNCA coloque dois pontos ou pontuação colada dentro de asteriscos.
-
-4. REDUÇÃO DRÁSTICA DE EMOJIS (EM PELO MENOS 80%):
-   - Use no máximo 0 a 1 emoji sutil por mensagem, ou ZERO em listas e relatórios numéricos.
-   - PROIBIDO usar emojis como marcadores de linha (nada de 🗓️, 🎯, ✅, ⏰, ☀️, 📊 no início de linhas).
-   - Use marcadores simples (•) para tópicos.
+3. FORMATAÇÃO CLEAN E MODERNA (PADRÃO CONCIERGE):
+   - Toda mensagem DEVE conter pelo menos 1 emoji moderno e elegante (ex: 🤍, 🌸, 📋, 🗓️), no máximo 2.
+   - NUNCA use o emoji ✨ (estritamente proibido pela Lara).
+   - NUNCA use markdown duplo (**texto**).
+   - NUNCA use emojis repetidos como marcadores de linha (nada de 🗓️, 🎯, ✅, ⏰, ☀️, 📊 no início de linhas).
+   - Use SEMPRE a bolinha '• ' para tópicos ou listas (NUNCA use asterisco '*' nem hífen '-' como marcador de tópicos).
+   - Títulos de seções sempre em negrito limpo (ex: *Agenda*, *Clientes*, *Financeiro*, *Rotinas*), nunca em CAIXA ALTA pura.
+   - Se a Lara perguntar o que você pode fazer ("com o que pode me ajudar?", "diga tudo que pode fazer"), apresente um resumo clean e moderno agrupado por *Agenda*, *Clientes*, *Financeiro* e *Rotinas*, usando marcadores '• ' e no máximo 1 a 2 emojis 🤍.
 
 VOCÊ TEM FERRAMENTAS REAIS INTEGRADAS AO SISTEMA DO ESTÚDIO:
 1. "consultarAgendaProfissional": Lista os atendimentos de hoje, amanhã ou de qualquer data.
@@ -940,7 +940,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
           messages,
           ...(toolsAtivas ? { tools: toolsAtivas, tool_choice: 'auto' } : {}),
           temperature: isLara ? 0.2 : 0.4,
-          max_tokens: isLara ? 160 : (base64Imagem ? 800 : 200),
+          max_tokens: isLara ? 400 : (base64Imagem ? 800 : 250),
         },
         {
           headers: {
@@ -1004,10 +1004,9 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         : 'Oi! Tudo bem? Como posso te ajudar hoje? 💕';
     }
 
-    // 2. Sanitização de formatação do WhatsApp: corrige asteriscos bugados e reduz emojis em pelo menos 80%
+    // 2. Sanitização de formatação do WhatsApp: layout clean, bullets com '• ', banimento de ✨ e garantia de pelo menos 1 emoji
     respostaFinal = sanitizarMensagemWhatsApp(respostaFinal, {
       isProfissional: isLara,
-      maxEmojis: isLara ? 0 : 1,
     });
 
     // 3. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves (apenas clientes)

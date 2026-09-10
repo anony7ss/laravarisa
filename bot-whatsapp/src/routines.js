@@ -7,6 +7,7 @@ import { supabase } from './supabase.js';
 import { sendHumanizedMessage } from './queue.js';
 import { obterConfiguracoesLara, normalizarTelefoneBR } from './notifications.js';
 import { consultarAgendaProfissional, consultarResumoFinanceiroProfissional, listarClientesInativasProfissional } from './tools-professional.js';
+import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 import { logInfo, logWarn, logError } from './terminal.js';
 
 let routineInterval = null;
@@ -122,7 +123,8 @@ export async function verificarRotinasAgendadas(sock) {
       }
 
       if (mensagem) {
-        await sendHumanizedMessage(sock, laraJid, mensagem, { immediate: true });
+        const mensagemFormatada = sanitizarMensagemWhatsApp(mensagem, { isProfissional: true });
+        await sendHumanizedMessage(sock, laraJid, mensagemFormatada, { immediate: true });
         await supabase
           .from('lara_scheduled_routines')
           .update({ last_run_at: new Date().toISOString() })

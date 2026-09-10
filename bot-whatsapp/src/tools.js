@@ -723,7 +723,7 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
       case 'reagendarAgendamento': {
         const res = await reagendarAgendamento(args.agendamento_id, args.novo_starts_at);
         if (res.ok && context.sock && context.msgKey) {
-          reactToMessage(context.sock, context.msgKey, '✨').catch(() => {});
+          reactToMessage(context.sock, context.msgKey, '🤍').catch(() => {});
         }
         return res;
       }
