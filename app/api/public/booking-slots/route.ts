@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createPublicSupabase } from '@/lib/supabase/server';
-import { jsonError } from '@/lib/security';
+import { jsonError, NO_STORE_HEADERS } from '@/lib/security';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -44,15 +44,18 @@ export async function GET(request: NextRequest) {
 
   // 1. Check if booking is globally enabled
   if (settings && settings.booking_enabled === false) {
-    return Response.json({
-      ok: true,
-      date: dateStr,
-      closed: true,
-      message:
-        settings.booking_closed_message ||
-        'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.',
-      slots: [],
-    });
+    return Response.json(
+      {
+        ok: true,
+        date: dateStr,
+        closed: true,
+        message:
+          settings.booking_closed_message ||
+          'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.',
+        slots: [],
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   }
 
   // 2. Check open days of week
@@ -102,17 +105,20 @@ export async function GET(request: NextRequest) {
       });
 
       if (!error && Array.isArray(data)) {
-        return Response.json({
-          ok: true,
-          date: dateStr,
-          closed: false,
-          slots: data.map(
-            (item: { slot_time: string; time_label: string }) => ({
-              time: item.time_label,
-              dateTime: item.slot_time,
-            }),
-          ),
-        });
+        return Response.json(
+          {
+            ok: true,
+            date: dateStr,
+            closed: false,
+            slots: data.map(
+              (item: { slot_time: string; time_label: string }) => ({
+                time: item.time_label,
+                dateTime: item.slot_time,
+              }),
+            ),
+          },
+          { headers: NO_STORE_HEADERS },
+        );
       }
     } catch {
       // Fallback below
@@ -134,10 +140,13 @@ export async function GET(request: NextRequest) {
     .filter((s) => s.available)
     .map(({ time, dateTime }) => ({ time, dateTime }));
 
-  return Response.json({
-    ok: true,
-    date: dateStr,
-    closed: false,
-    slots: simulatedSlots,
-  });
+  return Response.json(
+    {
+      ok: true,
+      date: dateStr,
+      closed: false,
+      slots: simulatedSlots,
+    },
+    { headers: NO_STORE_HEADERS },
+  );
 }

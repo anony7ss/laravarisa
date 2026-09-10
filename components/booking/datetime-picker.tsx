@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Clock3, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
@@ -94,8 +94,6 @@ export function DateTimePicker({
     return availableDays.find((d) => d.dateStr === selectedDateStr)?.date || today;
   }, [availableDays, selectedDateStr, today]);
 
-  const slotsCache = useRef<Record<string, { slots: TimeSlot[]; error?: string }>>({});
-
   useEffect(() => {
     if (!selectedDateStr) return;
 
@@ -112,15 +110,6 @@ export function DateTimePicker({
       return;
     }
 
-    const cacheKey = `${selectedDateStr}_${durationMinutes}`;
-    const cached = slotsCache.current[cacheKey];
-    if (cached) {
-      setSlots(cached.slots);
-      setSlotError(cached.error || '');
-      setLoadingSlots(false);
-      return;
-    }
-
     let isMounted = true;
     setLoadingSlots(true);
     setSlotError('');
@@ -132,16 +121,14 @@ export function DateTimePicker({
         if (data.ok) {
           if (data.closed) {
             setSlots([]);
-            const msg = data.message || closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.';
-            setSlotError(msg);
-            slotsCache.current[cacheKey] = { slots: [], error: msg };
+            setSlotError(data.message || closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
             return;
           }
           if (Array.isArray(data.slots)) {
             setSlots(data.slots);
-            const msg = data.slots.length === 0 ? 'Nenhum horário livre nesta data. Por favor, selecione outro dia.' : undefined;
-            if (msg) setSlotError(msg);
-            slotsCache.current[cacheKey] = { slots: data.slots, error: msg };
+            if (data.slots.length === 0) {
+              setSlotError('Nenhum horário livre nesta data. Por favor, selecione outro dia.');
+            }
           }
         } else {
           setSlotError(data.error || 'Erro ao carregar horários.');
