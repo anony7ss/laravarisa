@@ -349,14 +349,30 @@ export async function processarFallback(texto = '', context = {}) {
   }
 
   // 2.3 Pergunta de Identidade ("Você é IA?", "É um robô?", "É a Lara?")
+  const ehPerguntaCriador =
+    norm.includes('quem te criou') ||
+    norm.includes('quem criou voce') ||
+    norm.includes('quem te fez') ||
+    norm.includes('quem te programou') ||
+    norm.includes('quem te desenvolveu') ||
+    norm.includes('quem e seu criador') ||
+    norm.includes('seu criador');
+
+  if (ehPerguntaCriador) {
+    return `Fui desenvolvida pelo 0xGabriel especialmente para o estúdio da Lara Varisa!`;
+  }
+
   const ehPerguntaIdentidade =
     norm.includes('vc e ia') ||
     norm.includes('voce e ia') ||
     norm === 'e ia' ||
     norm === 'e ia?' ||
+    norm.includes('qual seu nome') ||
+    norm.includes('seu nome') ||
+    norm.includes('como se chama') ||
+    norm.includes('como voce se chama') ||
     norm.includes('e robo') ||
-    norm.includes('e um robo') ||
-    norm.includes('voce e robo') ||
+    norm.includes('voce e um robo') ||
     norm.includes('vc e robo') ||
     norm.includes('inteligencia artificial') ||
     norm.includes('quem e voce') ||
@@ -369,7 +385,7 @@ export async function processarFallback(texto = '', context = {}) {
     norm.includes('voce e humana');
 
   if (ehPerguntaIdentidade) {
-    return `Sou a assistente virtual do Studio Lara Varisa. Te ajudo com agendamentos, horários e dúvidas sobre os procedimentos. Se quiser falar com a Lara, é só me pedir 💕`;
+    return `Eu sou a Arla AI, a assistente virtual do estúdio Lara Varisa! Posso te ajudar com agendamentos, horários e dúvidas sobre os procedimentos. Se quiser falar com a Lara, é só me pedir.`;
   }
 
   // 2.4 Informações de Localização, Endereço e Pagamento

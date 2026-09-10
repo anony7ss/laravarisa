@@ -39,9 +39,9 @@ const OFF_TOPIC_PATTERNS = [
 ];
 
 export const RESPOSTAS_DEFENSIVAS = {
-  injection: 'Oi! Como assistente virtual do estúdio Lara Varisa, cuido exclusivamente dos atendimentos e agendamentos de cílios e sobrancelhas. Se você quiser conhecer nossos procedimentos ou marcar um horário, é só me falar! 💕',
-  code: 'Oi! Como assistente virtual do estúdio Lara Varisa, meu foco aqui no WhatsApp é exclusivamente o atendimento e agendamento de serviços de cílios e sobrancelhas. Não realizo tarefas de programação ou scripts. Posso te ajudar com os nossos procedimentos? 💕',
-  offTopic: 'Oi! Aqui no WhatsApp eu atendo exclusivamente dúvidas sobre cílios, sobrancelhas e agendamento de horários no estúdio Lara Varisa em Porto Alegre. Como posso te ajudar com o seu olhar hoje? 💕',
+  injection: 'Oi! Como Arla AI, assistente do estúdio Lara Varisa, cuido exclusivamente do atendimento e agendamento de procedimentos do olhar. Posso te ajudar com dúvidas dos procedimentos ou marcar seu horário!',
+  code: 'Oi! Como Arla AI, assistente do estúdio Lara Varisa, meu foco é no atendimento e agendamento de cílios e sobrancelhas. Não realizo programação ou scripts. Posso te ajudar com os nossos procedimentos?',
+  offTopic: 'Oi! Aqui no WhatsApp eu atendo exclusivamente dúvidas sobre cílios, sobrancelhas e agendamentos no estúdio Lara Varisa em Porto Alegre. Como posso te ajudar hoje?',
 };
 
 /**

@@ -51,8 +51,8 @@ export function sanitizarMensagemWhatsApp(text, options = {}) {
   // 7. Corrige markdown duplo (**texto**) para negrito limpo (*texto*) ou direto
   cleaned = cleaned.replace(/\*\*([^*\n]+)\*\*/g, '*$1*');
 
-  // 8. Remove asteriscos que quebram formatação com travessão/hífen (ex: *Título — Subtítulo*)
-  cleaned = cleaned.replace(/\*([^*\n]+[—–-][^*\n]+)\*/g, '$1');
+  // 8. Normaliza travessão longo (—) para dois pontos limpos (: ) para evitar estilo de IA
+  cleaned = cleaned.replace(/(\S)\s*[—–]\s*(R\$|\d)/gi, '$1: $2');
 
   // 9. Corrige dois pontos colados dentro de asteriscos: *Total:* -> *Total*:
   cleaned = cleaned.replace(/\*([^*\n]+):\*/g, '*$1*:');
@@ -67,13 +67,11 @@ export function sanitizarMensagemWhatsApp(text, options = {}) {
   // 11. Garante espaçamento limpo entre seções (seção anterior -> título da próxima)
   cleaned = cleaned.replace(/([^\n])\n(\*[A-ZÀ-ÖØ-öø-ÿ][a-zçãõáéíóúâêîôû]+\*)/g, '$1\n\n$2');
 
-  // 12. Controle de Emojis: exatamente entre 1 e 2 emojis elegantes por mensagem, NUNCA ✨
-  // Remove qualquer ✨ residual
+  // 12. Controle de Emojis: no máximo 1 ou 2 emojis elegantes, sem forçar emoji quando a mensagem não pede
   cleaned = cleaned.replace(/✨/gu, '');
   const emojisEncontrados = [...cleaned.matchAll(EMOJI_REGEX)];
 
   if (emojisEncontrados.length > 2) {
-    // Se tiver mais de 2, mantém no máximo os 2 primeiros
     let count = 0;
     cleaned = cleaned.replace(EMOJI_REGEX, (match) => {
       count++;
@@ -82,10 +80,6 @@ export function sanitizarMensagemWhatsApp(text, options = {}) {
       }
       return '';
     });
-  } else if (emojisEncontrados.length === 0) {
-    // Garante pelo menos 1 emoji moderno e sutil por mensagem (🤍 para Lara, 💕 para cliente)
-    const emojiPadrao = isProfissional ? '🤍' : '💕';
-    cleaned = `${cleaned.trim()} ${emojiPadrao}`;
   }
 
   // 13. Limpeza final de espaços extras e quebras excessivas
