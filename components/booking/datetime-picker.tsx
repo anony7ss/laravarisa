@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Clock3, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
@@ -94,6 +94,8 @@ export function DateTimePicker({
     return availableDays.find((d) => d.dateStr === selectedDateStr)?.date || today;
   }, [availableDays, selectedDateStr, today]);
 
+  const slotsCache = useRef<Record<string, { slots: TimeSlot[]; error?: string }>>({});
+
   useEffect(() => {
     if (!selectedDateStr) return;
 
@@ -110,6 +112,15 @@ export function DateTimePicker({
       return;
     }
 
+    const cacheKey = `${selectedDateStr}_${durationMinutes}`;
+    const cached = slotsCache.current[cacheKey];
+    if (cached) {
+      setSlots(cached.slots);
+      setSlotError(cached.error || '');
+      setLoadingSlots(false);
+      return;
+    }
+
     let isMounted = true;
     setLoadingSlots(true);
     setSlotError('');
@@ -121,14 +132,16 @@ export function DateTimePicker({
         if (data.ok) {
           if (data.closed) {
             setSlots([]);
-            setSlotError(data.message || closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
+            const msg = data.message || closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.';
+            setSlotError(msg);
+            slotsCache.current[cacheKey] = { slots: [], error: msg };
             return;
           }
           if (Array.isArray(data.slots)) {
             setSlots(data.slots);
-            if (data.slots.length === 0) {
-              setSlotError('Nenhum horário livre nesta data. Por favor, selecione outro dia.');
-            }
+            const msg = data.slots.length === 0 ? 'Nenhum horário livre nesta data. Por favor, selecione outro dia.' : undefined;
+            if (msg) setSlotError(msg);
+            slotsCache.current[cacheKey] = { slots: data.slots, error: msg };
           }
         } else {
           setSlotError(data.error || 'Erro ao carregar horários.');
@@ -156,8 +169,11 @@ export function DateTimePicker({
         </span>
       </div>
 
-        {/* Horizontal Days Selector */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
+        {/* Horizontal Days Selector - Sem touch-pan-x para permitir rolagem vertical fluida */}
+        <div
+          className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 overscroll-x-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
             const disabled = item.isClosed;
@@ -295,7 +311,10 @@ export function DateTimePicker({
           >
             1. Selecione a Data
           </label>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none touch-pan-x -mx-1 px-1">
+          <div
+            className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1 overscroll-x-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {availableDays.map((item, idx) => {
               const isSelected = item.dateStr === selectedDateStr;
               const disabled = item.isClosed;

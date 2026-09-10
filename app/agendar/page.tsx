@@ -46,16 +46,24 @@ function InstagramIcon({ size = 16, className = '' }: { size?: number; className
     </svg>
   );
 }
+import dynamic from 'next/dynamic';
 import { triggerHaptic } from '@/lib/utils';
 import { type ServiceItem } from '@/components/booking/service-selector';
 import { DateTimePicker, type TimeSlot } from '@/components/booking/datetime-picker';
 import { ClientForm, type ClientFormData } from '@/components/booking/client-form';
-import { MyAppointmentsSheet } from '@/components/booking/my-appointments-sheet';
-import { FullscreenLightbox } from '@/components/fullscreen-lightbox';
 import { services as defaultFallbackServices } from '@/lib/services';
 import { galleryPhotos as fallbackGalleryPhotos, type GalleryPhoto } from '@/lib/gallery';
 import { whatsappUrl, getStudioScheduleInfo } from '@/lib/studio';
 import { PwaInstallButton } from '@/components/pwa/pwa-button';
+
+const MyAppointmentsSheet = dynamic(
+  () => import('@/components/booking/my-appointments-sheet').then((mod) => mod.MyAppointmentsSheet),
+  { ssr: false }
+);
+const FullscreenLightbox = dynamic(
+  () => import('@/components/fullscreen-lightbox').then((mod) => mod.FullscreenLightbox),
+  { ssr: false }
+);
 
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
@@ -173,14 +181,23 @@ function AgendarContent() {
   } | null>(null);
 
   useEffect(() => {
-    fetch('/api/public/content', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data) return;
-        if (data.settings) setSiteSettings(data.settings);
-        if (Array.isArray(data.gallery) && data.gallery.length > 0) {
+    let mounted = true;
+
+    Promise.all([
+      fetch('/api/public/content')
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null),
+      fetch('/api/public/services')
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null),
+    ]).then(([contentData, servicesData]) => {
+      if (!mounted) return;
+
+      if (contentData) {
+        if (contentData.settings) setSiteSettings(contentData.settings);
+        if (Array.isArray(contentData.gallery) && contentData.gallery.length > 0) {
           setGallery(
-            data.gallery.map((g: any) => ({
+            contentData.gallery.map((g: any) => ({
               id: g.id || g.title,
               src: g.src || g.image_path || '/lara-lashes-optimized.webp',
               beforeSrc: g.beforeSrc || g.before_image_path || null,
@@ -192,11 +209,24 @@ function AgendarContent() {
             })),
           );
         }
-        if (Array.isArray(data.testimonials) && data.testimonials.length > 0) {
-          setTestimonials(data.testimonials);
+        if (Array.isArray(contentData.testimonials) && contentData.testimonials.length > 0) {
+          setTestimonials(contentData.testimonials);
         }
-      })
-      .catch(() => {});
+      }
+
+      if (servicesData?.ok && Array.isArray(servicesData.data) && servicesData.data.length > 0) {
+        setServices(servicesData.data);
+      } else if (contentData?.services && Array.isArray(contentData.services) && contentData.services.length > 0) {
+        setServices(contentData.services);
+      } else {
+        setServices(defaultFallbackServices as ServiceItem[]);
+      }
+      setLoadingServices(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -211,32 +241,6 @@ function AgendarContent() {
         }));
       }
     } catch {}
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/public/services')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
-          setServices(data.data);
-        } else {
-          setServices(defaultFallbackServices as ServiceItem[]);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setServices(defaultFallbackServices as ServiceItem[]);
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoadingServices(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   useEffect(() => {
@@ -422,11 +426,13 @@ function AgendarContent() {
         fontFamily: `var(--booking-font-body)`,
       }}
     >
-      {/* GOOGLE FONTS DINÂMICAS */}
-      <link
-        rel="stylesheet"
-        href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontHeading)}:wght@400..800&family=${encodeURIComponent(fontBody)}:wght@400..700&display=swap`}
-      />
+      {/* GOOGLE FONTS DINÂMICAS (Apenas se configurado fonte diferente da padrão embutida) */}
+      {!(fontHeading === 'DM Sans' && fontBody === 'DM Sans') && (
+        <link
+          rel="stylesheet"
+          href={`https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontHeading)}:wght@400..800&family=${encodeURIComponent(fontBody)}:wght@400..700&display=swap`}
+        />
+      )}
 
       {/* CSS CUSTOM PROPERTIES DINÂMICAS */}
       <style>{`
@@ -497,6 +503,8 @@ function AgendarContent() {
               src={coverUrl}
               alt={studioTitle}
               className="w-full h-full object-cover opacity-75 filter contrast-110"
+              fetchPriority="high"
+              decoding="async"
             />
             <div
               className="absolute inset-0"
@@ -533,6 +541,8 @@ function AgendarContent() {
                   src={avatarUrl}
                   alt={studioTitle}
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               </div>
 
@@ -639,6 +649,8 @@ function AgendarContent() {
               src={coverUrl}
               alt={studioTitle}
               className="w-full h-full object-cover opacity-25 filter contrast-125"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
@@ -673,6 +685,8 @@ function AgendarContent() {
                   alt={studioTitle}
                   width={80}
                   height={80}
+                  loading="eager"
+                  decoding="async"
                   className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
                 />
               </div>
@@ -2022,6 +2036,8 @@ function AgendarContent() {
                     <img
                       src={photo.src}
                       alt={photo.alt || photo.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-x-0 bottom-0 p-2 sm:p-2.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white text-[11px] sm:text-xs font-semibold line-clamp-1">
