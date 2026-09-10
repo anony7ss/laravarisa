@@ -1,10 +1,36 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { PwaInstaller } from '@/components/pwa/pwa-installer';
+
+export const viewport: Viewport = {
+  themeColor: '#121211',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: 'Agendamento ︱ Lara Varisa · Lash Designer',
   description:
     'Reserve seu horário online em poucos toques com a Lash Designer Lara Varisa na Zona Norte de Porto Alegre. Procedimentos personalizados e acabamento impecável.',
   metadataBase: new URL('https://laravarisa.com.br'),
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Lara Varisa',
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/logo-emblem.png?v=4', sizes: 'any', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/logo-emblem.png?v=4', sizes: 'any', type: 'image/png' },
+    ],
+  },
   openGraph: {
     title: 'Agendamento ︱ Lara Varisa · Lash Designer',
     description:
@@ -42,6 +68,7 @@ export default function AgendarLayout({
 }) {
   return (
     <div className="min-h-screen bg-[var(--color-pumice)] text-[var(--color-obsidian)] font-[var(--font-body)] antialiased selection:bg-[var(--color-ember)] selection:text-white">
+      <PwaInstaller />
       {children}
     </div>
   );

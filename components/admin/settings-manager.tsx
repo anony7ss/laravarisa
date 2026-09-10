@@ -729,9 +729,9 @@ export function SettingsManager({
             WhatsApp Pessoal da Lara (Notificações & Assistente)
             <input
               name="lara_phone"
-              defaultValue={settings?.lara_phone || '5551989601662'}
+              defaultValue={settings?.lara_phone || ''}
               disabled={role !== 'admin'}
-              placeholder="Ex: 5551989601662"
+              placeholder="Ex: 5551989601662 (vazio para desativar)"
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
               Seu número pessoal autorizado para receber alertas e comandar a IA

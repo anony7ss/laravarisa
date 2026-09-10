@@ -1,0 +1,62 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Lara Varisa · Agendamento',
+    short_name: 'Lara Varisa',
+    description:
+      'Agende seu horário exclusivo de cílios e sobrancelhas com a Lash Designer Lara Varisa.',
+    start_url: '/agendar',
+    scope: '/',
+    id: '/agendar',
+    display: 'standalone',
+    display_override: ['standalone', 'minimal-ui', 'window-controls-overlay'],
+    background_color: '#121211',
+    theme_color: '#121211',
+    orientation: 'portrait',
+    lang: 'pt-BR',
+    categories: ['beauty', 'lifestyle', 'personalization'],
+    icons: [
+      {
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/maskable-icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/logo-emblem.png',
+        sizes: '719x719',
+        type: 'image/png',
+        purpose: 'any',
+      },
+    ],
+    shortcuts: [
+      {
+        name: 'Agendar Procedimento',
+        short_name: 'Agendar',
+        description: 'Reserve seu horário online',
+        url: '/agendar',
+        icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
+      },
+      {
+        name: 'Galeria de Trabalhos',
+        short_name: 'Galeria',
+        description: 'Inspire-se com resultados reais',
+        url: '/agendar?tab=galeria',
+        icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
+      },
+    ],
+  };
+}

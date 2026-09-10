@@ -139,7 +139,7 @@ export const settingsSchema = z.object({
   max_future_days: z.coerce.number().int().min(1).max(120).default(30),
   // Communication & studio
   whatsapp_phone: z.string().trim().max(25).default('5551989601662'),
-  lara_phone: z.string().trim().max(25).default('5551989601662'),
+  lara_phone: z.string().trim().max(25).default('').nullable().optional().transform((val) => (val && val.trim() ? val.trim() : null)),
   notify_lara_on_new_booking: z.boolean().default(true),
   notify_lara_on_human_transfer: z.boolean().default(true),
   notify_admin_sound: z.boolean().default(true),

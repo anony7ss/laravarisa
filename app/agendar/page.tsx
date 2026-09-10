@@ -55,6 +55,7 @@ import { FullscreenLightbox } from '@/components/fullscreen-lightbox';
 import { services as defaultFallbackServices } from '@/lib/services';
 import { galleryPhotos as fallbackGalleryPhotos, type GalleryPhoto } from '@/lib/gallery';
 import { whatsappUrl, getStudioScheduleInfo } from '@/lib/studio';
+import { PwaInstallButton } from '@/components/pwa/pwa-button';
 
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
@@ -504,15 +505,7 @@ function AgendarContent() {
             />
 
             <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
-              <div className="max-w-xl lg:max-w-4xl mx-auto flex items-center justify-between">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
-                >
-                  <ArrowLeft size={13} />
-                  <span>Início</span>
-                </Link>
-
+              <div className="max-w-xl lg:max-w-4xl mx-auto flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setShowMyAppointments(true)}
@@ -649,15 +642,7 @@ function AgendarContent() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
             <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
-              <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 hover:text-white border border-white/15 text-xs font-medium transition-colors"
-                >
-                  <ArrowLeft size={13} />
-                  <span>Início</span>
-                </Link>
-
+              <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setShowMyAppointments(true)}
@@ -2359,8 +2344,19 @@ function AgendarContent() {
                 </div>
               </div>
 
+              {/* Card de Instalação do App PWA */}
+              <div className="pt-1">
+                <PwaInstallButton
+                  style={{
+                    backgroundColor: customCardBg,
+                    borderColor: customBorder,
+                    color: customText,
+                  }}
+                />
+              </div>
+
               {/* Botão de Contato WhatsApp */}
-              <div className="pt-2">
+              <div className="pt-1">
                 <a
                   href={whatsappUrl('Olá, Lara! Tenho uma dúvida sobre o estúdio e agendamentos.')}
                   target="_blank"
@@ -2453,6 +2449,12 @@ function AgendarContent() {
                     <ChevronRight size={15} className="text-[#8c8c84] group-hover:text-[var(--color-obsidian)] transition-colors" />
                   </a>
                 </div>
+              </div>
+
+              <div className="pt-1">
+                <PwaInstallButton
+                  className="bg-white border-[#d6d6cf] text-[var(--color-obsidian)] shadow-sm"
+                />
               </div>
             </div>
 

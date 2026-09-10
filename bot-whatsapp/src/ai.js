@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import config from './config.js';
-import { ferramentasSchema, ferramentasProfissionalSchema, executarFerramenta } from './tools.js';
+import { ferramentasSchema, executarFerramenta } from './tools.js';
+import { ferramentasProfissionalSchema } from './tools-professional.js';
 import { getHistory, addMessage } from './memory.js';
 import { sendHumanizedMessage, sendHumanizedVoice, reactToMessage } from './queue.js';
 import { verificarSegurancaEntrada, verificarSegurancaSaida } from './guardrails.js';

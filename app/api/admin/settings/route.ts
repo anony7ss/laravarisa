@@ -44,6 +44,20 @@ export async function PATCH(request: Request) {
   if (error) {
     return jsonError(error.message, 400);
   }
+
+  // Sincroniza configurações da Lara no whatsapp_bot_session para consistência imediata
+  if ('lara_phone' in parsed.data || 'notify_lara_on_new_booking' in parsed.data || 'notify_lara_on_human_transfer' in parsed.data) {
+    await supabase
+      .from('whatsapp_bot_session')
+      .update({
+        lara_phone: parsed.data.lara_phone || null,
+        notify_lara_on_new_booking: parsed.data.notify_lara_on_new_booking,
+        notify_lara_on_human_transfer: parsed.data.notify_lara_on_human_transfer,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 'default');
+  }
+
   return Response.json(data, { headers: NO_STORE_HEADERS });
 }
 

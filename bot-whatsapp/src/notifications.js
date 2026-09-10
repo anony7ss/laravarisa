@@ -21,32 +21,36 @@ export async function obterConfiguracoesLara() {
   }
 
   try {
-    const { data: botData } = await supabase
-      .from('whatsapp_bot_session')
+    // 1. Busca primeiro em site_settings (fonte autoritativa do Painel Admin)
+    const { data: siteData } = await supabase
+      .from('site_settings')
       .select('lara_phone, notify_lara_on_human_transfer, notify_lara_on_new_booking')
-      .eq('id', 'default')
+      .limit(1)
       .maybeSingle();
 
-    let laraPhone = botData?.lara_phone;
-    let notifyOnHumanTransfer = botData?.notify_lara_on_human_transfer;
-    let notifyOnNewBooking = botData?.notify_lara_on_new_booking;
+    let laraPhone = siteData?.lara_phone;
+    let notifyOnHumanTransfer = siteData?.notify_lara_on_human_transfer;
+    let notifyOnNewBooking = siteData?.notify_lara_on_new_booking;
 
-    if (!laraPhone) {
-      const { data: siteData } = await supabase
-        .from('site_settings')
+    // 2. Se não estiver configurado em site_settings, busca em whatsapp_bot_session
+    if (!laraPhone || !String(laraPhone).trim()) {
+      const { data: botData } = await supabase
+        .from('whatsapp_bot_session')
         .select('lara_phone, notify_lara_on_human_transfer, notify_lara_on_new_booking')
-        .limit(1)
+        .eq('id', 'default')
         .maybeSingle();
 
-      if (siteData) {
-        laraPhone = siteData.lara_phone;
-        if (notifyOnHumanTransfer === undefined) notifyOnHumanTransfer = siteData.notify_lara_on_human_transfer;
-        if (notifyOnNewBooking === undefined) notifyOnNewBooking = siteData.notify_lara_on_new_booking;
+      if (botData?.lara_phone && String(botData.lara_phone).trim()) {
+        laraPhone = botData.lara_phone;
       }
+      if (notifyOnHumanTransfer === undefined) notifyOnHumanTransfer = botData?.notify_lara_on_human_transfer;
+      if (notifyOnNewBooking === undefined) notifyOnNewBooking = botData?.notify_lara_on_new_booking;
     }
 
+    const laraPhoneFinal = (laraPhone && String(laraPhone).trim()) ? String(laraPhone).trim() : null;
+
     configLaraCache = {
-      laraPhone: laraPhone || '5551989741970',
+      laraPhone: laraPhoneFinal,
       notifyOnHumanTransfer: notifyOnHumanTransfer !== false,
       notifyOnNewBooking: notifyOnNewBooking !== false,
     };
@@ -55,7 +59,7 @@ export async function obterConfiguracoesLara() {
   } catch (err) {
     console.warn('[notifications] Erro ao carregar config da Lara:', err?.message || err);
     return {
-      laraPhone: configLaraCache?.laraPhone || '5551989741970',
+      laraPhone: configLaraCache?.laraPhone || null,
       notifyOnHumanTransfer: true,
       notifyOnNewBooking: true,
     };

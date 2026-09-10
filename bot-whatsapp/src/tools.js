@@ -4,7 +4,6 @@ import { notificarLaraAtendimentoHumano, notificarLaraNovoAgendamento } from './
 import { reactToMessage, sendHumanizedMessage } from './queue.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
 import { obterServicosEmCache, obterConfiguracoesEmCache, invalidarCacheConfiguracoes } from './cache.js';
-import { ferramentasProfissionalSchema, executarFerramentaProfissional } from './tools-professional.js';
 
 // Inicialização do cliente Supabase para execução das ferramentas
 const supabaseUrl = config.supabaseUrl || 'https://placeholder.supabase.co';
@@ -742,11 +741,8 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
 
       default: {
         // Se for ferramenta profissional da Lara, despacha para executor dedicado
-        const isProf = ferramentasProfissionalSchema.some((f) => f.function.name === nome);
-        if (isProf) {
-          return await executarFerramentaProfissional(nome, args, context);
-        }
-        return { ok: false, erro: `Ferramenta desconhecida: "${nome}"` };
+        const { executarFerramentaProfissional } = await import('./tools-professional.js');
+        return await executarFerramentaProfissional(nome, args, context);
       }
     }
   } catch (error) {
@@ -754,8 +750,6 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
     return { ok: false, erro: error?.message || 'Falha na execução da ferramenta.' };
   }
 }
-
-export { ferramentasProfissionalSchema, executarFerramentaProfissional };
 
 export default {
   supabase,
@@ -767,7 +761,5 @@ export default {
   cancelarTodosAgendamentos,
   reagendarAgendamento,
   ferramentasSchema,
-  ferramentasProfissionalSchema,
   executarFerramenta,
-  executarFerramentaProfissional,
 };

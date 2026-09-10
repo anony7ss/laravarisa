@@ -248,15 +248,25 @@ export async function cancelarAgendamentoProfissional({
 
     if (!targetId && nome_cliente) {
       const nomeLimpo = String(nome_cliente).trim();
+      const digitos = nomeLimpo.replace(/\D/g, '');
       const agoraMenos1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: matches, error: matchErr } = await supabase
+      let query = supabase
         .from('appointments')
         .select('id, starts_at, client_name, client_phone, service:services(name)')
         .in('status', ['scheduled', 'confirmed'])
-        .gte('starts_at', agoraMenos1Dia)
-        .ilike('client_name', `%${nomeLimpo}%`)
-        .order('starts_at', { ascending: true });
+        .gte('starts_at', agoraMenos1Dia);
+
+      if (digitos.length >= 8) {
+        const last8 = digitos.slice(-8);
+        const p1 = last8.slice(0, 4);
+        const p2 = last8.slice(4);
+        query = query.or(`client_name.ilike.%${nomeLimpo}%,client_phone.ilike.%${last8}%,client_phone.ilike.%${p1}-${p2}%,client_phone.ilike.%${digitos}%`);
+      } else {
+        query = query.ilike('client_name', `%${nomeLimpo}%`);
+      }
+
+      const { data: matches, error: matchErr } = await query.order('starts_at', { ascending: true });
 
       if (matchErr || !matches || matches.length === 0) {
         return {
@@ -494,15 +504,25 @@ export async function remarcarAgendamentoProfissional({
 
     if (!targetId && nome_cliente) {
       const nomeLimpo = String(nome_cliente).trim();
+      const digitos = nomeLimpo.replace(/\D/g, '');
       const agoraMenos1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-      const { data: matches } = await supabase
+      let query = supabase
         .from('appointments')
-        .select('id, starts_at, client_name, service:services(name)')
+        .select('id, starts_at, client_name, client_phone, service:services(name)')
         .in('status', ['scheduled', 'confirmed'])
-        .gte('starts_at', agoraMenos1Dia)
-        .ilike('client_name', `%${nomeLimpo}%`)
-        .order('starts_at', { ascending: true });
+        .gte('starts_at', agoraMenos1Dia);
+
+      if (digitos.length >= 8) {
+        const last8 = digitos.slice(-8);
+        const p1 = last8.slice(0, 4);
+        const p2 = last8.slice(4);
+        query = query.or(`client_name.ilike.%${nomeLimpo}%,client_phone.ilike.%${last8}%,client_phone.ilike.%${p1}-${p2}%,client_phone.ilike.%${digitos}%`);
+      } else {
+        query = query.ilike('client_name', `%${nomeLimpo}%`);
+      }
+
+      const { data: matches } = await query.order('starts_at', { ascending: true });
 
       if (!matches || matches.length === 0) {
         return { ok: false, erro: `Não encontrei nenhum agendamento ativo para "${nomeLimpo}".` };
@@ -703,19 +723,39 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
     const termo = String(termoBruto).trim();
     const termoDigitos = termo.replace(/\D/g, '');
 
-    let query = supabase
-      .from('clients')
-      .select('id, name, phone, email, notes, origin, created_at');
-
-    if (termoDigitos.length >= 8) {
-      query = query.or(`phone.ilike.%${termoDigitos}%,name.ilike.%${termo}%`);
-    } else {
-      query = query.ilike('name', `%${termo}%`);
+    // 1. Tenta buscar via RPC inteligente (normaliza números com e sem 9, formatos com pontuação e nomes)
+    let clientes = [];
+    try {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('search_client_by_term', { p_term: termo });
+      if (!rpcErr && rpcData && rpcData.length > 0) {
+        clientes = rpcData;
+      }
+    } catch (e) {
+      // Fallback em caso de erro na RPC
     }
 
-    const { data: clientes, error: errCli } = await query.limit(3);
+    // 2. Fallback direto se a RPC não retornou clientes
+    if (!clientes || clientes.length === 0) {
+      let query = supabase
+        .from('clients')
+        .select('id, name, phone, email, notes, origin, created_at');
 
-    if (errCli || !clientes || clientes.length === 0) {
+      if (termoDigitos.length >= 8) {
+        const last8 = termoDigitos.slice(-8);
+        const p1 = last8.slice(0, 4);
+        const p2 = last8.slice(4);
+        query = query.or(`phone.ilike.%${last8}%,phone.ilike.%${p1}-${p2}%,phone.ilike.%${termoDigitos}%,name.ilike.%${termo}%`);
+      } else {
+        query = query.ilike('name', `%${termo}%`);
+      }
+
+      const { data: cliFallback } = await query.limit(3);
+      if (cliFallback && cliFallback.length > 0) {
+        clientes = cliFallback;
+      }
+    }
+
+    if (!clientes || clientes.length === 0) {
       return { ok: false, erro: `Cliente "${termo}" não encontrada no cadastro.` };
     }
 
@@ -724,16 +764,23 @@ export async function consultarHistoricoClienteProfissional({ busca, termo_busca
         ok: false,
         desambiguacao_necessaria: true,
         opcoes: clientes.map((c) => `${c.name} (${c.phone || 'Sem telefone'})`),
-        mensagem: `Encontrei ${clientes.length} clientes com esse nome. Qual delas você deseja ver?`,
+        mensagem: `Encontrei ${clientes.length} clientes com esse nome ou número. Qual delas você deseja ver?`,
       };
     }
 
     const cliente = clientes[0];
 
+    // Busca agendamentos associados (por client_id, nome ou telefone)
+    const last8Digits = (cliente.phone || termoDigitos).replace(/\D/g, '').slice(-8);
+    const condicoesOr = [`client_id.eq.${cliente.id}`, `client_name.ilike.%${cliente.name}%`];
+    if (last8Digits) {
+      condicoesOr.push(`client_phone.ilike.%${last8Digits}%`);
+    }
+
     const { data: agendamentos } = await supabase
       .from('appointments')
       .select('id, starts_at, status, notes, service:services(name, price_label)')
-      .eq('client_id', cliente.id)
+      .or(condicoesOr.join(','))
       .order('starts_at', { ascending: false });
 
     const concluidos = (agendamentos || []).filter((a) => a.status === 'completed');
