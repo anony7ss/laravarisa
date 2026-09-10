@@ -1011,8 +1011,9 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
     let respostaFinal = '';
     let loopCount = 0;
-    const MAX_LOOPS = 2; // Máximo 2 turnos: 1 para decidir/executar a ferramenta e 1 para responder o texto final
+    const MAX_LOOPS = 4; // Permite fluxo completo: 1 consulta + 1 criação + 1 resposta final textual
     let toolsAtivas = isLara ? ferramentasProfissionalSchema : ferramentasSchema;
+    const acoesExecutadas = [];
 
     // Loop de Tool Calling ultra-otimizado
     while (loopCount < MAX_LOOPS) {
@@ -1024,7 +1025,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
           messages,
           ...(toolsAtivas ? { tools: toolsAtivas, tool_choice: 'auto' } : {}),
           temperature: isLara ? 0.2 : 0.4,
-          max_tokens: isLara ? 400 : (base64Imagem ? 800 : 250),
+          max_tokens: isLara ? 500 : (base64Imagem ? 800 : 600),
         },
         {
           headers: {
@@ -1077,6 +1078,8 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
             executionCache.set(cacheKey, resultado);
           }
 
+          acoesExecutadas.push({ nome: nomeFuncao, args, resultado });
+
           let serialized = '{}';
           try {
             serialized = JSON.stringify(resultado) || '{}';
@@ -1092,8 +1095,11 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
         messages.push(...toolResults);
 
-        // Desativa ferramentas no próximo turno para forçar o modelo a gerar o texto final imediatamente
-        toolsAtivas = null;
+        // Se já atingiu 2 rodadas de execução de ferramentas, desativa ferramentas
+        // para forçar o modelo a gerar o texto final imediatamente.
+        if (loopCount >= MAX_LOOPS - 1) {
+          toolsAtivas = null;
+        }
         continue;
       }
 
@@ -1102,10 +1108,58 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       break;
     }
 
+    // Safety Net Determinístico: se ferramentas de agendamento foram executadas com sucesso,
+    // nunca permita que uma resposta vazia ou saudação genérica substitua a confirmação do cliente.
+    const criacaoSucesso = acoesExecutadas.find(
+      (a) => a.nome === 'criarAgendamento' && (a.resultado?.ok || a.resultado?.sucesso)
+    );
+
+    if (criacaoSucesso) {
+      const ehGenericoOuVazio =
+        !respostaFinal.trim() ||
+        /^(oi|ol[aá]|bom dia|boa tarde|boa noite)[!.,\s]*((tudo bem|como posso|em que posso|estou aqui)[^]*)?$/i.test(respostaFinal.trim()) ||
+        (!respostaFinal.toLowerCase().includes('agend') && !respostaFinal.toLowerCase().includes('confirm'));
+
+      if (ehGenericoOuVazio) {
+        const agendamento = criacaoSucesso.resultado?.agendamento || {};
+        const servicoNome = agendamento.service_name || 'o procedimento';
+        const dataObj = agendamento.starts_at ? new Date(agendamento.starts_at) : null;
+        let dataHoraTxt = '';
+        if (dataObj && !Number.isNaN(dataObj.getTime())) {
+          const dataFmt = dataObj.toLocaleDateString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            weekday: 'long',
+            day: '2-digit',
+            month: '2-digit',
+          });
+          const horaFmt = dataObj.toLocaleTimeString('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          dataHoraTxt = `${dataFmt} às ${horaFmt}`;
+        }
+        respostaFinal = `Confirmado! Seu agendamento para ${servicoNome} foi marcado com sucesso${dataHoraTxt ? ` para ${dataHoraTxt}` : ''}. Te esperamos no estúdio! 🤍`;
+      }
+    }
+
     if (!respostaFinal.trim()) {
-      respostaFinal = isLara
-        ? 'Oi, Lara! Estou à disposição. Como posso te ajudar na sua agenda agora?'
-        : 'Oi! Tudo bem? Como posso te ajudar hoje?';
+      const cancelamentoSucesso = acoesExecutadas.find(
+        (a) => (a.nome === 'cancelarAgendamento' || a.nome === 'cancelarTodosAgendamentos') && (a.resultado?.ok || a.resultado?.sucesso)
+      );
+      const reagendamentoSucesso = acoesExecutadas.find(
+        (a) => a.nome === 'reagendarAgendamento' && (a.resultado?.ok || a.resultado?.sucesso)
+      );
+
+      if (cancelamentoSucesso) {
+        respostaFinal = 'Seu agendamento foi cancelado com sucesso conforme solicitado. Se precisar de um novo horário no futuro, estou à disposição! 🤍';
+      } else if (reagendamentoSucesso) {
+        respostaFinal = 'Prontinho! Seu agendamento foi alterado com sucesso no sistema. Te esperamos no estúdio! 🤍';
+      } else {
+        respostaFinal = isLara
+          ? 'Oi, Lara! Estou à disposição. Como posso te ajudar na sua agenda agora?'
+          : 'Oi! Tudo bem? Como posso te ajudar hoje?';
+      }
     }
 
     // 2. Sanitização de formatação do WhatsApp: layout clean, bullets com '• ' e banimento de ✨
