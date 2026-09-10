@@ -80,16 +80,31 @@ export async function POST(request: Request) {
   // 0. Verifica se o estúdio está recebendo agendamentos online
   const { data: siteSettings } = await supabase
     .from('site_settings')
-    .select('booking_enabled, booking_closed_message')
+    .select('booking_enabled, booking_closed_message, open_days')
     .eq('id', 'global')
     .maybeSingle();
 
-  if (siteSettings && siteSettings.booking_enabled === false) {
-    return jsonError(
-      siteSettings.booking_closed_message ||
-        'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.',
-      403,
-    );
+  if (siteSettings) {
+    if (siteSettings.booking_enabled === false) {
+      return jsonError(
+        siteSettings.booking_closed_message ||
+          'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes.',
+        403,
+      );
+    }
+    const openDays = siteSettings.open_days ?? [1, 2, 3, 4, 5, 6];
+    try {
+      const spDateStr = new Date(startsAt).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+      const spDow = new Date(spDateStr).getDay();
+      if (!openDays.includes(spDow)) {
+        return jsonError(
+          'O estúdio não realiza atendimentos nesta data. Escolha um dia de funcionamento.',
+          400,
+        );
+      }
+    } catch {
+      // ignore
+    }
   }
 
   // Calculate fingerprint for database-level rate limiting

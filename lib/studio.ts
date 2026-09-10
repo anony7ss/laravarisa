@@ -69,3 +69,135 @@ export function contactUrl(data: ContactMessage, phone?: string) {
   return whatsappUrl(composeMessage(data), phone);
 }
 
+export type StudioScheduleInfo = {
+  isOpenNow: boolean;
+  isOpenToday: boolean;
+  liveStatusText: string;
+  openDaysLabel: string;
+  hoursLabel: string;
+  closedDaysLabel: string;
+  openDays: number[];
+  closedDays: number[];
+  openTime: string;
+  closeTime: string;
+  bookingEnabled: boolean;
+};
+
+export function getStudioScheduleInfo(settings?: {
+  open_days?: number[];
+  open_time?: string;
+  close_time?: string;
+  booking_enabled?: boolean;
+} | null): StudioScheduleInfo {
+  const openDays = Array.isArray(settings?.open_days) ? settings!.open_days : [1, 2, 3, 4, 5, 6];
+  const openTime = settings?.open_time || '09:00';
+  const closeTime = settings?.close_time || '19:00';
+  const bookingEnabled = settings?.booking_enabled !== false;
+
+  const dayNamesShort = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const dayNamesFull = [
+    'Domingo',
+    'Segunda-feira',
+    'Terça-feira',
+    'Quarta-feira',
+    'Quinta-feira',
+    'Sexta-feira',
+    'Sábado',
+  ];
+
+  if (openDays.length === 0) {
+    return {
+      isOpenNow: false,
+      isOpenToday: false,
+      liveStatusText: 'Agenda temporariamente fechada',
+      openDaysLabel: 'Nenhum dia selecionado',
+      hoursLabel: 'Sem expediente',
+      closedDaysLabel: 'Todos os dias: Fechado',
+      openDays,
+      closedDays: [0, 1, 2, 3, 4, 5, 6],
+      openTime,
+      closeTime,
+      bookingEnabled: false,
+    };
+  }
+
+  const sorted = [...openDays].sort((a, b) => a - b);
+  const isConsecutive = sorted.every((val, idx) => idx === 0 || val === sorted[idx - 1] + 1);
+
+  let openDaysLabel = '';
+  if (sorted.length === 7) {
+    openDaysLabel = 'Todos os dias (Segunda a Domingo)';
+  } else if (sorted.length === 6 && !sorted.includes(0)) {
+    openDaysLabel = 'Segunda a Sábado';
+  } else if (sorted.length === 5 && !sorted.includes(0) && !sorted.includes(6)) {
+    openDaysLabel = 'Segunda a Sexta';
+  } else if (isConsecutive && sorted.length > 1) {
+    openDaysLabel = `${dayNamesFull[sorted[0]]} a ${dayNamesFull[sorted[sorted.length - 1]]}`;
+  } else {
+    openDaysLabel = sorted.map((d) => dayNamesShort[d]).join(', ');
+  }
+
+  const allDays = [0, 1, 2, 3, 4, 5, 6];
+  const closedDays = allDays.filter((d) => !openDays.includes(d));
+  let closedDaysLabel = '';
+  if (closedDays.length === 0) {
+    closedDaysLabel = 'Aberto todos os dias';
+  } else if (closedDays.length === 1 && closedDays[0] === 0) {
+    closedDaysLabel = 'Domingos: Fechado';
+  } else {
+    closedDaysLabel = `${closedDays.map((d) => dayNamesFull[d]).join(' e ')}: Fechado`;
+  }
+
+  // São Paulo timezone calculation
+  let currentDow = 1;
+  let currentMinutes = 0;
+  try {
+    const now = new Date();
+    const spDateStr = now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+    const spDate = new Date(spDateStr);
+    currentDow = spDate.getDay();
+    currentMinutes = spDate.getHours() * 60 + spDate.getMinutes();
+  } catch {
+    const now = new Date();
+    currentDow = now.getDay();
+    currentMinutes = now.getHours() * 60 + now.getMinutes();
+  }
+
+  const [openH, openM] = openTime.split(':').map(Number);
+  const [closeH, closeM] = closeTime.split(':').map(Number);
+  const openMin = (isNaN(openH) ? 9 : openH) * 60 + (isNaN(openM) ? 0 : openM);
+  const closeMin = (isNaN(closeH) ? 19 : closeH) * 60 + (isNaN(closeM) ? 0 : closeM);
+
+  const isOpenToday = openDays.includes(currentDow);
+  const isWithinHours = currentMinutes >= openMin && currentMinutes < closeMin;
+  const isOpenNow = bookingEnabled && isOpenToday && isWithinHours;
+
+  let liveStatusText = 'Fechado agora';
+  if (!bookingEnabled) {
+    liveStatusText = 'Agendamentos pausados';
+  } else if (isOpenNow) {
+    liveStatusText = `Aberto agora · fecha às ${closeTime}`;
+  } else if (isOpenToday && currentMinutes < openMin) {
+    liveStatusText = `Abre hoje às ${openTime}`;
+  } else if (isOpenToday && currentMinutes >= closeMin) {
+    liveStatusText = `Encerrado por hoje · abre amanhã às ${openTime}`;
+  } else {
+    liveStatusText = 'Fechado no momento';
+  }
+
+  return {
+    isOpenNow,
+    isOpenToday,
+    liveStatusText,
+    openDaysLabel,
+    hoursLabel: `${openTime} às ${closeTime}`,
+    closedDaysLabel,
+    openDays,
+    closedDays,
+    openTime,
+    closeTime,
+    bookingEnabled,
+  };
+}
+
+

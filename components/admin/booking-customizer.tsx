@@ -34,6 +34,7 @@ import {
 import { triggerHaptic } from '@/lib/utils';
 import { services as defaultFallbackServices, type LashService } from '@/lib/services';
 import { galleryPhotos as fallbackGalleryPhotos } from '@/lib/gallery';
+import { getStudioScheduleInfo } from '@/lib/studio';
 
 function InstagramIcon({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
@@ -324,6 +325,8 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
   const [simClientName, setSimClientName] = useState<string>('Camila Rodrigues');
   const [simClientPhone, setSimClientPhone] = useState<string>('(51) 98765-4321');
   const [simClientNotes, setSimClientNotes] = useState<string>('Gostaria de um olhar marcante, mas leve.');
+
+  const studioSchedule = useMemo(() => getStudioScheduleInfo(settings), [settings]);
 
   // Estados de Upload
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -1197,12 +1200,12 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
               {/* MOCKUP DO DISPOSITIVO */}
               <div
                 style={{
-                  width: previewMode === 'mobile' ? '390px' : '100%',
-                  maxWidth: previewMode === 'mobile' ? '390px' : '100%',
+                  width: previewMode === 'mobile' ? '380px' : '100%',
+                  maxWidth: previewMode === 'mobile' ? '380px' : '100%',
                   height: '740px',
-                  borderRadius: previewMode === 'mobile' ? '36px' : '12px',
-                  border: previewMode === 'mobile' ? '10px solid #1a1a18' : '1px solid #333',
-                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+                  borderRadius: previewMode === 'mobile' ? '42px' : '12px',
+                  border: previewMode === 'mobile' ? '10px solid #141412' : '1px solid #333',
+                  boxShadow: '0 25px 60px -10px rgba(0, 0, 0, 0.65)',
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
@@ -1211,30 +1214,119 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                   transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               >
-                {/* BARRA SUPERIOR DO DISPOSITIVO (NOTCH NO MOBILE OU BROWSER NO DESKTOP) */}
+                {/* BARRA SUPERIOR DO DISPOSITIVO (STATUS BAR FLUTUANTE NO MOBILE OU BROWSER NO DESKTOP) */}
                 {previewMode === 'mobile' ? (
-                  <div
-                    style={{
-                      height: '28px',
-                      width: '100%',
-                      background: '#1a1a18',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      zIndex: 20,
-                    }}
-                  >
-                    {/* Dynamic Island / Câmera */}
+                  <>
+                    {/* Status Bar Flutuante iOS / Android sobre o Hero */}
                     <div
                       style={{
-                        width: '90px',
-                        height: '14px',
-                        background: '#000000',
-                        borderRadius: '10px',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '38px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0 22px',
+                        zIndex: 30,
+                        pointerEvents: 'none',
+                        color: '#ffffff',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          letterSpacing: '-0.2px',
+                          textShadow: '0 1px 3px rgba(0,0,0,0.7)',
+                        }}
+                      >
+                        9:41
+                      </span>
+
+                      {/* Dynamic Island Pill */}
+                      <div
+                        style={{
+                          width: '82px',
+                          height: '18px',
+                          background: '#000000',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          paddingRight: '6px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: '#1d1d1f',
+                          }}
+                        />
+                      </div>
+
+                      {/* Ícones de Rede e Bateria */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+                        }}
+                      >
+                        <svg width="12" height="10" viewBox="0 0 12 10" fill="currentColor">
+                          <rect x="0" y="7" width="2" height="3" rx="0.5" />
+                          <rect x="3" y="5" width="2" height="5" rx="0.5" />
+                          <rect x="6" y="3" width="2" height="7" rx="0.5" />
+                          <rect x="9" y="0" width="2" height="10" rx="0.5" />
+                        </svg>
+                        <svg width="12" height="10" viewBox="0 0 12 10" fill="currentColor">
+                          <path d="M6 8a1.2 1.2 0 1 1 0 2.4A1.2 1.2 0 0 1 6 8zm-3-3a4.5 4.5 0 0 1 6 0l-.8.9a3.3 3.3 0 0 0-4.4 0l-.8-.9zm-2.2-2.3a7.5 7.5 0 0 1 10.4 0l-.8.9a6.3 6.3 0 0 0-8.8 0l-.8-.9z" />
+                        </svg>
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '9px',
+                            border: '1px solid #ffffff',
+                            borderRadius: '2.5px',
+                            padding: '1px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '11px',
+                              height: '5px',
+                              background: '#ffffff',
+                              borderRadius: '1px',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra de Navegação Inferior (Home Bar) */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '6px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '120px',
+                        height: '4px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                        borderRadius: '999px',
+                        zIndex: 30,
+                        pointerEvents: 'none',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
                       }}
                     />
-                  </div>
+                  </>
                 ) : (
                   <div
                     style={{
@@ -1274,9 +1366,12 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
 
                 {/* CONTEÚDO ROLÁVEL DA PÁGINA /AGENDAR */}
                 <div
+                  className="no-scrollbar"
                   style={{
                     flex: 1,
                     overflowY: 'auto',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     color: textColor,
@@ -1986,9 +2081,27 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                         </div>
 
                         <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
-                          <span style={{ fontWeight: 700, color: primaryColor, display: 'block', marginBottom: '4px' }}>Horário de Funcionamento</span>
-                          <p style={{ margin: 0, opacity: 0.85 }}>Segunda a Sábado: 08:30 às 19:30</p>
-                          <p style={{ margin: '2px 0 0 0', opacity: 0.85 }}>Domingos: Fechado</p>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 700, color: primaryColor }}>Horário de Funcionamento</span>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '2px 7px',
+                                borderRadius: '999px',
+                                fontSize: '9.5px',
+                                fontWeight: 600,
+                                background: studioSchedule.isOpenNow ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                color: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626',
+                              }}
+                            >
+                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626' }} />
+                              {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, opacity: 0.85 }}>{studioSchedule.openDaysLabel}: {studioSchedule.hoursLabel}</p>
+                          <p style={{ margin: '2px 0 0 0', opacity: 0.7, fontSize: '10.5px' }}>{studioSchedule.closedDaysLabel}</p>
                         </div>
 
                         {/* 3º Card: Canais & Redes Sociais */}

@@ -16,6 +16,7 @@ type DayItem = {
   weekDayShort: string;
   isSunday: boolean;
   isToday: boolean;
+  isClosed: boolean;
 };
 
 const weekDaysPt = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -33,6 +34,9 @@ function formatDateKey(date: Date): string {
 
 export function DateTimePicker({
   durationMinutes = 120,
+  openDays = [1, 2, 3, 4, 5, 6],
+  bookingEnabled = true,
+  closedMessage,
   selectedDateStr,
   selectedSlot,
   onSelectDate,
@@ -42,6 +46,9 @@ export function DateTimePicker({
   variant = 'classic',
 }: {
   durationMinutes?: number;
+  openDays?: number[];
+  bookingEnabled?: boolean;
+  closedMessage?: string;
   selectedDateStr: string;
   selectedSlot: TimeSlot | null;
   onSelectDate: (dateStr: string) => void;
@@ -65,19 +72,23 @@ export function DateTimePicker({
     for (let i = 0; i < 21; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      const isSunday = d.getDay() === 0;
+      const dow = d.getDay();
+      const isSunday = dow === 0;
       const isToday = i === 0;
+      const isOpenDay = Array.isArray(openDays) && openDays.includes(dow);
+      const isClosed = !bookingEnabled || !isOpenDay;
       list.push({
         date: d,
         dateStr: formatDateKey(d),
         dayNum: d.getDate(),
-        weekDayShort: weekDaysPt[d.getDay()],
+        weekDayShort: weekDaysPt[dow],
         isSunday,
         isToday,
+        isClosed,
       });
     }
     return list;
-  }, [today]);
+  }, [today, openDays, bookingEnabled]);
 
   const selectedDateObj = useMemo(() => {
     return availableDays.find((d) => d.dateStr === selectedDateStr)?.date || today;
@@ -86,10 +97,16 @@ export function DateTimePicker({
   useEffect(() => {
     if (!selectedDateStr) return;
 
-    const dayInfo = availableDays.find((d) => d.dateStr === selectedDateStr);
-    if (dayInfo?.isSunday) {
+    if (!bookingEnabled) {
       setSlots([]);
-      setSlotError('Atendimento de segunda a sábado. Escolha outra data.');
+      setSlotError(closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
+      return;
+    }
+
+    const dayInfo = availableDays.find((d) => d.dateStr === selectedDateStr);
+    if (dayInfo?.isClosed) {
+      setSlots([]);
+      setSlotError('O estúdio não realiza atendimentos nesta data. Por favor, escolha outro dia aberto.');
       return;
     }
 
@@ -104,7 +121,7 @@ export function DateTimePicker({
         if (data.ok) {
           if (data.closed) {
             setSlots([]);
-            setSlotError(data.message || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
+            setSlotError(data.message || closedMessage || 'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp.');
             return;
           }
           if (Array.isArray(data.slots)) {
@@ -127,7 +144,7 @@ export function DateTimePicker({
     return () => {
       isMounted = false;
     };
-  }, [selectedDateStr, durationMinutes, availableDays]);
+  }, [selectedDateStr, durationMinutes, availableDays, bookingEnabled, closedMessage]);
 
   const pickerContent = (
     <div className="space-y-4">
@@ -143,7 +160,7 @@ export function DateTimePicker({
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0 touch-pan-x">
           {availableDays.map((item) => {
             const isSelected = item.dateStr === selectedDateStr;
-            const disabled = item.isSunday;
+            const disabled = item.isClosed;
 
             return (
               <button
@@ -151,40 +168,46 @@ export function DateTimePicker({
                 type="button"
                 disabled={disabled}
                 onClick={() => {
+                  if (disabled) return;
                   triggerHaptic('light');
                   onSelectDate(item.dateStr);
                 }}
                 style={{
                   backgroundColor: isSelected ? '#070607' : disabled ? 'transparent' : '#f7f6f2',
-                  color: isSelected ? '#ffffff' : '#070607',
-                  borderColor: isSelected ? '#070607' : '#e8e8e4',
+                  color: isSelected ? '#ffffff' : disabled ? '#b0b0a8' : '#070607',
+                  borderColor: isSelected ? '#070607' : disabled ? '#e8e8e4' : '#e8e8e4',
                 }}
                 className={`flex-shrink-0 w-13 sm:w-14 py-2.5 rounded-2xl text-center transition-all cursor-pointer border flex flex-col items-center justify-center gap-0.5 ${
                   disabled
-                    ? 'opacity-25 cursor-not-allowed border-transparent'
+                    ? 'opacity-35 cursor-not-allowed bg-neutral-100/50'
                     : isSelected
                     ? 'shadow-sm scale-[1.02]'
                     : 'hover:bg-white hover:border-[#b5b5ac] active:scale-95'
                 }`}
+                title={disabled ? 'Estúdio fechado nesta data' : undefined}
               >
                 <span
                   className="text-[10px] font-semibold uppercase tracking-wider"
-                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : '#8c8c84' }}
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.75)' : disabled ? '#a8a8a0' : '#8c8c84' }}
                 >
                   {item.weekDayShort}
                 </span>
                 <span
                   className="text-lg sm:text-xl font-bold leading-none"
-                  style={{ color: isSelected ? '#ffffff' : '#070607' }}
+                  style={{ color: isSelected ? '#ffffff' : disabled ? '#9e9e96' : '#070607' }}
                 >
                   {item.dayNum}
                 </span>
-                {item.isToday && (
+                {item.isClosed ? (
+                  <span className="text-[8.5px] font-medium text-rose-500 uppercase tracking-tighter leading-none mt-0.5">
+                    Fechado
+                  </span>
+                ) : item.isToday ? (
                   <span
                     className="w-1 h-1 rounded-full mt-0.5"
                     style={{ backgroundColor: isSelected ? '#ffffff' : 'var(--color-ember)' }}
                   />
-                )}
+                ) : null}
               </button>
             );
           })}
@@ -275,7 +298,7 @@ export function DateTimePicker({
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none touch-pan-x -mx-1 px-1">
             {availableDays.map((item, idx) => {
               const isSelected = item.dateStr === selectedDateStr;
-              const disabled = item.isSunday;
+              const disabled = item.isClosed;
               const labelTop =
                 idx === 0
                   ? 'Hoje'
@@ -298,6 +321,7 @@ export function DateTimePicker({
                   type="button"
                   disabled={disabled}
                   onClick={() => {
+                    if (disabled) return;
                     triggerHaptic('light');
                     onSelectDate(item.dateStr);
                   }}
@@ -308,7 +332,7 @@ export function DateTimePicker({
                     color: isSelected
                       ? '#ffffff'
                       : disabled
-                      ? 'rgba(0,0,0,0.3)'
+                      ? '#a8a8a0'
                       : 'var(--booking-text, #121211)',
                     borderColor: isSelected
                       ? 'var(--booking-primary, #121211)'
@@ -316,14 +340,17 @@ export function DateTimePicker({
                   }}
                   className={`shrink-0 w-[78px] sm:w-[86px] p-2 sm:p-2.5 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     disabled
-                      ? 'opacity-30 cursor-not-allowed'
+                      ? 'opacity-35 cursor-not-allowed bg-neutral-100/50'
                       : isSelected
-                      ? 'shadow-sm'
+                      ? 'shadow-sm scale-[1.02]'
                       : 'hover:border-black/30'
                   }`}
+                  title={disabled ? 'Estúdio fechado nesta data' : undefined}
                 >
                   <span className="text-xs font-bold block whitespace-nowrap">{labelTop}</span>
-                  <span className="text-[10px] opacity-75 block capitalize">{labelBottom}</span>
+                  <span className="text-[10px] opacity-75 block capitalize">
+                    {disabled ? 'Fechado' : labelBottom}
+                  </span>
                 </button>
               );
             })}

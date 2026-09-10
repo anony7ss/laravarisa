@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   CalendarDays,
   Clock,
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { adminRequest } from './api';
 import { BookingCustomizer } from './booking-customizer';
+import { getStudioScheduleInfo } from '@/lib/studio';
+
 
 const DAYS_OF_WEEK = [
   { day: 0, label: 'Dom', full: 'Domingo' },
@@ -46,6 +48,90 @@ export function SettingsManager({
       ? initialSettings.open_days
       : [1, 2, 3, 4, 5, 6],
   );
+  const [openTime, setOpenTime] = useState<string>(
+    initialSettings?.open_time || '09:00',
+  );
+  const [closeTime, setCloseTime] = useState<string>(
+    initialSettings?.close_time || '19:00',
+  );
+
+  const studioSchedule = useMemo(() => {
+    return getStudioScheduleInfo({
+      open_days: openDays,
+      open_time: openTime,
+      close_time: closeTime,
+      booking_enabled: bookingEnabled,
+    });
+  }, [openDays, openTime, closeTime, bookingEnabled]);
+
+  const statusInfo = useMemo(() => {
+    if (!bookingEnabled) {
+      return {
+        badge: 'AGENDAMENTOS PAUSADOS',
+        isGreen: false,
+        color: '#f87171',
+        bg: 'rgba(239, 68, 68, 0.1)',
+        border: 'rgba(239, 68, 68, 0.25)',
+        title: 'Agendamentos temporariamente bloqueados',
+        desc: 'Novos agendamentos estão pausados manualmente. Visitantes e clientes verão aviso explicativo no site.',
+      };
+    }
+
+    if (openDays.length === 0) {
+      return {
+        badge: 'AGENDA BLOQUEADA (SEM DIAS)',
+        isGreen: false,
+        color: '#f87171',
+        bg: 'rgba(239, 68, 68, 0.1)',
+        border: 'rgba(239, 68, 68, 0.25)',
+        title: 'Nenhum dia de atendimento selecionado',
+        desc: 'Você desmarcou todos os dias da semana. O sistema bloqueia agendamentos pois não há dias disponíveis.',
+      };
+    }
+
+    if (!studioSchedule.isOpenToday) {
+      return {
+        badge: 'FECHADO HOJE',
+        isGreen: false,
+        color: '#fbbf24',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.25)',
+        title: 'Hoje não há atendimentos presenciais no estúdio',
+        desc: `Atendimento presencial fechado hoje. Agendamentos no site continuam abertos para os dias com atendimento (${studioSchedule.openDaysLabel}).`,
+      };
+    }
+
+    if (!studioSchedule.isOpenNow) {
+      return {
+        badge: 'FECHADO NO MOMENTO',
+        isGreen: false,
+        color: '#fbbf24',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.25)',
+        title: `Fora do horário de expediente (${studioSchedule.hoursLabel})`,
+        desc: `Atendimento presencial fechado agora. Clientes podem agendar normalmente no site para horários futuros.`,
+      };
+    }
+
+    return {
+      badge: 'ESTÚDIO ABERTO AGORA',
+      isGreen: true,
+      color: '#4ade80',
+      bg: 'rgba(34, 197, 94, 0.1)',
+      border: 'rgba(34, 197, 94, 0.25)',
+      title: `Recebendo agendamentos e atendimento ativo (${studioSchedule.hoursLabel})`,
+      desc: 'Clientes conseguem agendar horários livremente através do site e da Lara IA.',
+    };
+  }, [bookingEnabled, openDays, studioSchedule]);
+
+  const mergedSettings = useMemo(() => ({
+    ...settings,
+    open_days: openDays,
+    open_time: openTime,
+    close_time: closeTime,
+    booking_enabled: bookingEnabled,
+  }), [settings, openDays, openTime, closeTime, bookingEnabled]);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -229,7 +315,7 @@ export function SettingsManager({
 
       {/* ABA: PERSONALIZAÇÃO VISUAL DO AGENDAMENTO (/agendar) */}
       <div style={{ display: activeTab === 'visual' ? 'grid' : 'none', gap: '24px' }}>
-        <BookingCustomizer settings={settings} disabled={role !== 'admin'} />
+        <BookingCustomizer settings={mergedSettings} disabled={role !== 'admin'} />
       </div>
 
       {/* ABA 1: DIAS E HORÁRIOS & ESTADO DO ESTÚDIO */}
@@ -275,9 +361,9 @@ export function SettingsManager({
                       fontSize: '11px',
                       fontWeight: 600,
                       letterSpacing: '0.3px',
-                      background: bookingEnabled ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      color: bookingEnabled ? '#4ade80' : '#f87171',
-                      border: `1px solid ${bookingEnabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                      background: statusInfo.bg,
+                      color: statusInfo.color,
+                      border: `1px solid ${statusInfo.border}`,
                     }}
                   >
                     <span
@@ -285,21 +371,17 @@ export function SettingsManager({
                         width: '6px',
                         height: '6px',
                         borderRadius: '50%',
-                        background: bookingEnabled ? '#4ade80' : '#f87171',
+                        background: statusInfo.color,
                       }}
                     />
-                    {bookingEnabled ? 'ESTÚDIO ABERTO' : 'ESTÚDIO FECHADO'}
+                    {statusInfo.badge}
                   </span>
                 </div>
                 <strong style={{ display: 'block', fontSize: '13.5px', color: 'var(--admin-ink)', fontWeight: 500, marginBottom: '2px' }}>
-                  {bookingEnabled
-                    ? 'Recebendo novos agendamentos no site e WhatsApp'
-                    : 'Agendamentos temporariamente bloqueados'}
+                  {statusInfo.title}
                 </strong>
                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-muted)', lineHeight: 1.5 }}>
-                  {bookingEnabled
-                    ? 'Clientes conseguem agendar horários livremente através do site e da Lara IA.'
-                    : 'Novos agendamentos estão pausados. Visitantes e clientes verão aviso explicativo.'}
+                  {statusInfo.desc}
                 </p>
               </div>
 
@@ -456,7 +538,8 @@ export function SettingsManager({
             <input
               name="open_time"
               type="time"
-              defaultValue={settings?.open_time || '09:00'}
+              value={openTime}
+              onChange={(e) => setOpenTime(e.target.value)}
               disabled={role !== 'admin'}
               required
             />
@@ -470,7 +553,8 @@ export function SettingsManager({
             <input
               name="close_time"
               type="time"
-              defaultValue={settings?.close_time || '19:00'}
+              value={closeTime}
+              onChange={(e) => setCloseTime(e.target.value)}
               disabled={role !== 'admin'}
               required
             />

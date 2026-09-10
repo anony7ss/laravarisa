@@ -130,20 +130,31 @@ html.dark .admin-root,
   gap: 16px;
   padding: 10px 18px;
   border-radius: 12px;
-  background: rgba(24, 24, 21, 0.85);
+  background: rgba(24, 24, 21, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
   margin-top: 24px;
   transition: all 0.2s ease;
+  color: var(--admin-ink, #f7f7f2);
 }
 
-html:not(.dark) .admin-sticky-bar,
+.admin-root.dark .admin-sticky-bar,
+html.dark .admin-sticky-bar,
+body.dark .admin-sticky-bar,
+html:has(.admin-root.dark) .admin-sticky-bar {
+  background: rgba(24, 24, 21, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  color: #f7f7f2 !important;
+}
+
 .admin-root:not(.dark) .admin-sticky-bar {
-  background: rgba(251, 250, 246, 0.9);
-  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(251, 250, 246, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  color: #11110f;
 }
 
 .admin-sticky-bar-info {
@@ -152,6 +163,14 @@ html:not(.dark) .admin-sticky-bar,
   gap: 8px;
   font-size: 12px;
   color: var(--admin-muted);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 .admin-danger {
   color: #a72b1c;

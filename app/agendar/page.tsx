@@ -54,7 +54,7 @@ import { MyAppointmentsSheet } from '@/components/booking/my-appointments-sheet'
 import { FullscreenLightbox } from '@/components/fullscreen-lightbox';
 import { services as defaultFallbackServices } from '@/lib/services';
 import { galleryPhotos as fallbackGalleryPhotos, type GalleryPhoto } from '@/lib/gallery';
-import { whatsappUrl } from '@/lib/studio';
+import { whatsappUrl, getStudioScheduleInfo } from '@/lib/studio';
 
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
@@ -403,6 +403,14 @@ function AgendarContent() {
 
   const layoutStyle = siteSettings?.booking_layout_style || 'modern-app';
   const isModernApp = layoutStyle !== 'classic-centered';
+
+  const studioSchedule = useMemo(() => getStudioScheduleInfo(siteSettings), [siteSettings]);
+  const isStudioClosed =
+    siteSettings?.booking_enabled === false ||
+    (Array.isArray(siteSettings?.open_days) && siteSettings!.open_days.length === 0);
+  const closedAlertMessage =
+    siteSettings?.booking_closed_message ||
+    'Agendamentos online temporariamente pausados. Fale conosco no WhatsApp para encaixes e lista de espera.';
 
   return (
     <div
@@ -804,27 +812,41 @@ function AgendarContent() {
               </div>
             )}
 
-            {siteSettings?.booking_enabled === false && bookingStep !== 4 ? (
-              <div className="text-center p-7 sm:p-9 rounded-3xl bg-white border border-[#d6d6cf] shadow-sm space-y-4 my-6">
-                <div className="w-12 h-12 mx-auto rounded-full bg-[#f4f4f0] text-[#4a4a45] border border-[#e2e2dc] flex items-center justify-center">
-                  <Clock3 size={20} strokeWidth={1.5} />
+            {isStudioClosed && bookingStep !== 4 ? (
+              <div
+                className="text-center p-7 sm:p-9 rounded-3xl border shadow-sm space-y-4 my-6 animate-in fade-in duration-200"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                  color: customText,
+                }}
+              >
+                <div
+                  className="w-12 h-12 mx-auto rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: `${customAccent}20`,
+                    color: customAccent,
+                    border: `1px solid ${customBorder}`,
+                  }}
+                >
+                  <Clock3 size={22} strokeWidth={1.75} />
                 </div>
                 <div className="space-y-1.5">
-                  <h3 className="font-bold text-lg sm:text-xl text-[var(--color-obsidian)]">
+                  <h3 className="font-bold text-lg sm:text-xl" style={{ color: customPrimary }}>
                     Agendamentos Online Pausados
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#595952] leading-relaxed max-w-sm mx-auto">
-                    {siteSettings.booking_closed_message ||
-                      'No momento os agendamentos pelo site estão pausados. Fale conosco no WhatsApp para verificar encaixes!'}
+                  <p className="text-xs sm:text-sm leading-relaxed max-w-sm mx-auto opacity-80">
+                    {closedAlertMessage}
                   </p>
                 </div>
                 <a
                   href={whatsappUrl('Olá, Lara! Vi no site que os agendamentos online estão pausados. Gostaria de saber se há horários de encaixe disponíveis.')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-[var(--color-obsidian)] text-white text-xs font-semibold hover:bg-neutral-800 transition-colors shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-white text-xs font-semibold transition-transform active:scale-95 shadow-sm"
+                  style={{ backgroundColor: customPrimary }}
                 >
-                  <MessageCircle size={15} />
+                  <MessageCircle size={15} style={{ color: customAccent }} />
                   <span>Falar com a Lara no WhatsApp</span>
                 </a>
               </div>
@@ -942,7 +964,6 @@ function AgendarContent() {
                                   >
                                     <Clock3 size={13} className="shrink-0" />
                                     <span>{service.duration}</span>
-                                    {service.maintenance && <span>· {service.maintenance}</span>}
                                   </div>
                                   <button
                                     type="button"
@@ -1117,12 +1138,6 @@ function AgendarContent() {
                                       <Clock3 size={12} className="shrink-0 text-[#a0a098]" />
                                       {service.duration}
                                     </span>
-                                    {service.maintenance && (
-                                      <>
-                                        <span>·</span>
-                                        <span>{service.maintenance}</span>
-                                      </>
-                                    )}
                                   </div>
                                 </div>
 
@@ -1226,6 +1241,9 @@ function AgendarContent() {
                             onSelectSlot={(slot) => setSelectedSlot(slot)}
                             durationMinutes={selectedService.durationMinutes || 120}
                             variant="modern"
+                            openDays={siteSettings?.open_days ?? [1, 2, 3, 4, 5, 6]}
+                            bookingEnabled={!isStudioClosed}
+                            closedMessage={closedAlertMessage}
                           />
 
                           {selectedSlot && (
@@ -1446,6 +1464,9 @@ function AgendarContent() {
                               setSelectedSlot(slot);
                             }}
                             durationMinutes={selectedService.durationMinutes || 120}
+                            openDays={siteSettings?.open_days ?? [1, 2, 3, 4, 5, 6]}
+                            bookingEnabled={!isStudioClosed}
+                            closedMessage={closedAlertMessage}
                           />
 
                           {selectedSlot && (
@@ -1552,7 +1573,7 @@ function AgendarContent() {
                                 {selectedService.name}
                               </strong>
                               <span className="text-xs text-[#707068] block mt-0.5">
-                                Duração aprox. {selectedService.duration} {selectedService.maintenance ? `· ${selectedService.maintenance}` : ''}
+                                Duração aprox. {selectedService.duration}
                               </span>
                             </div>
                           </div>
@@ -1589,6 +1610,9 @@ function AgendarContent() {
                           durationMinutes={selectedService.durationMinutes || 120}
                           hideHeader={true}
                           plainContainer={true}
+                          openDays={siteSettings?.open_days ?? [1, 2, 3, 4, 5, 6]}
+                          bookingEnabled={!isStudioClosed}
+                          closedMessage={closedAlertMessage}
                         />
                       </div>
 
@@ -2214,11 +2238,26 @@ function AgendarContent() {
                   borderColor: customBorder,
                 }}
               >
-                <span className="font-bold text-xs sm:text-sm block" style={{ color: customPrimary }}>
-                  Horário de Funcionamento
-                </span>
-                <p className="m-0 opacity-85">Segunda a Sábado: 08:30 às 19:30</p>
-                <p className="m-0 opacity-85">Domingos: Fechado</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs sm:text-sm block" style={{ color: customPrimary }}>
+                    Horário de Funcionamento
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
+                    style={{
+                      backgroundColor: studioSchedule.isOpenNow ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                      color: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626',
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626' }}
+                    />
+                    {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                  </span>
+                </div>
+                <p className="m-0 opacity-85">{studioSchedule.openDaysLabel}: {studioSchedule.hoursLabel}</p>
+                <p className="m-0 opacity-70 text-[11px]">{studioSchedule.closedDaysLabel}</p>
               </div>
 
               {/* Canais & Redes Sociais */}
@@ -2339,30 +2378,42 @@ function AgendarContent() {
             {/* Coluna Esquerda: Horários e Canais de Contato */}
             <div className="lg:col-span-5 space-y-4">
               <div className="bg-white p-5 lg:p-6 rounded-3xl border border-[#d6d6cf] shadow-sm space-y-3">
-                <div className="flex items-center gap-2 border-b border-[#f0f0ed] pb-3">
-                  <Clock3 size={18} className="text-[var(--color-ember)]" />
-                  <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)]">
-                    Horários de Funcionamento
-                  </h3>
+                <div className="flex items-center justify-between border-b border-[#f0f0ed] pb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock3 size={18} className="text-[var(--color-ember)]" />
+                    <h3 className="font-bold text-sm sm:text-base text-[var(--color-obsidian)]">
+                      Horários de Funcionamento
+                    </h3>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                      studioSchedule.isOpenNow
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        studioSchedule.isOpenNow ? 'bg-emerald-500' : 'bg-rose-500'
+                      }`}
+                    />
+                    {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                  </span>
                 </div>
 
                 <div className="text-xs sm:text-sm space-y-2 text-[#595952]">
                   <div className="flex items-center justify-between">
-                    <span>Segunda a Sexta</span>
+                    <span>{studioSchedule.openDaysLabel}</span>
                     <span className="font-semibold text-[var(--color-obsidian)]">
-                      {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
+                      {studioSchedule.hoursLabel}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span>Sábado</span>
-                    <span className="font-semibold text-[var(--color-obsidian)]">
-                      {siteSettings?.open_time || '09:00'} - {siteSettings?.close_time || '19:00'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[#a0a098]">
-                    <span>Domingo</span>
-                    <span>Fechado</span>
-                  </div>
+                  {studioSchedule.closedDays.length > 0 && (
+                    <div className="flex items-center justify-between text-[#a0a098]">
+                      <span>{studioSchedule.closedDaysLabel}</span>
+                      <span>Fechado</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
