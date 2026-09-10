@@ -485,6 +485,7 @@ function AgendarContent() {
       <MyAppointmentsSheet
         isOpen={showMyAppointments}
         onClose={() => setShowMyAppointments(false)}
+        initialPhone={clientData.phone}
       />
 
       {/* HEADER BOUTIQUE COM BANNER & FOTO DINÂMICOS */}

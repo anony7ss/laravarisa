@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
   }
 
   const cleanPhone = phone.replace(/\D/g, '');
-  if (cleanPhone.length < 10 || cleanPhone.length > 13) {
-    return jsonError('Telefone inválido.', 400);
+  if (cleanPhone.length < 8 || cleanPhone.length > 14) {
+    return jsonError('Telefone inválido. Digite ao menos 8 dígitos.', 400);
   }
 
   const supabase = createPublicSupabase();

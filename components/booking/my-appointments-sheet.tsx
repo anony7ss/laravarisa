@@ -41,7 +41,7 @@ export function MyAppointmentsSheet({
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen && initialPhone && initialPhone.replace(/\D/g, '').length >= 10) {
+    if (isOpen && initialPhone && initialPhone.replace(/\D/g, '').length >= 8) {
       setPhone(initialPhone);
       fetchAppointments(initialPhone);
     }
@@ -49,8 +49,8 @@ export function MyAppointmentsSheet({
 
   async function fetchAppointments(searchPhone: string) {
     const clean = searchPhone.replace(/\D/g, '');
-    if (clean.length < 10) {
-      setError('Informe seu número de WhatsApp com DDD.');
+    if (clean.length < 8) {
+      setError('Informe seu número de WhatsApp.');
       return;
     }
 
