@@ -29,7 +29,7 @@ export async function PATCH(
   if (!staff) return jsonError('Não autorizado.', 401);
   if (staff.profile.role === 'viewer') return jsonError('Sem permissão.', 403);
   const { resource, id } = await context.params;
-  if (!z.string().uuid().safeParse(id).success)
+  if (!z.uuid().safeParse(id).success)
     return jsonError('ID inválido.', 400);
   const config = resources[resource as keyof typeof resources];
   if (!config) return jsonError('Recurso inválido.', 404);
@@ -183,7 +183,7 @@ export async function DELETE(
   if (staff.profile.role !== 'admin')
     return jsonError('Somente administradores podem excluir.', 403);
   const { resource, id } = await context.params;
-  if (!z.string().uuid().safeParse(id).success)
+  if (!z.uuid().safeParse(id).success)
     return jsonError('ID inválido.', 400);
   const config = resources[resource as keyof typeof resources];
   if (!config) return jsonError('Recurso inválido.', 404);

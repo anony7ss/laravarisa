@@ -37,9 +37,8 @@ const galleryPath = z
 export const leadSchema = z.object({
   name: cleanText(80).min(2),
   email: z
-    .string()
-    .trim()
     .email()
+    .trim()
     .max(254)
     .transform((v) => v.toLowerCase()),
   phone: z.string().trim().max(24).default(''),
@@ -50,9 +49,8 @@ export const leadSchema = z.object({
 
 export const loginSchema = z.object({
   email: z
-    .string()
-    .trim()
     .email()
+    .trim()
     .max(254)
     .transform((v) => v.toLowerCase()),
   password: z.string().min(8).max(256),

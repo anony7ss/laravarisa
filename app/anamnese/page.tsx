@@ -295,12 +295,13 @@ function AnamneseForm() {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#595952]">
+                  <label htmlFor="anamnesis-name" className="block text-[11px] font-bold uppercase tracking-wider text-[#595952]">
                     Nome Completo
                   </label>
                   <div className="relative">
                     <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8c8c84]" />
                     <input
+                      id="anamnesis-name"
                       type="text"
                       required
                       value={clientName}
@@ -312,12 +313,13 @@ function AnamneseForm() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#595952]">
+                  <label htmlFor="anamnesis-phone" className="block text-[11px] font-bold uppercase tracking-wider text-[#595952]">
                     WhatsApp com DDD
                   </label>
                   <div className="relative">
                     <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8c8c84]" />
                     <input
+                      id="anamnesis-phone"
                       type="tel"
                       required
                       value={clientPhone}

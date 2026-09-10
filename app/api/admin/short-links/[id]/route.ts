@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const { id } = await params;
-  if (!z.string().uuid().safeParse(id).success) {
+  if (!z.uuid().safeParse(id).success) {
     return jsonError('ID inválido.', 400);
   }
 
@@ -70,7 +70,7 @@ export async function DELETE(
 ) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
   const { id } = await params;
-  if (!z.string().uuid().safeParse(id).success) {
+  if (!z.uuid().safeParse(id).success) {
     return jsonError('ID inválido.', 400);
   }
 

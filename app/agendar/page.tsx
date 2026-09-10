@@ -1,8 +1,10 @@
 'use client';
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Cards with nested actions use an accessible keyboard role. */
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   CalendarDays,
   Sparkles,
@@ -91,6 +93,20 @@ type TestimonialItem = {
   client_role: string;
   content: string;
   rating: number;
+};
+
+type ApiGalleryItem = {
+  id?: string;
+  title?: string;
+  src?: string;
+  image_path?: string;
+  beforeSrc?: string | null;
+  before_image_path?: string | null;
+  subtitle?: string;
+  alt?: string;
+  object_position?: string;
+  position?: string;
+  zoom?: number;
 };
 
 function AgendarContent() {
@@ -187,7 +203,7 @@ function AgendarContent() {
   useEffect(() => {
     let mounted = true;
 
-    Promise.all([
+    void Promise.all([
       fetch('/api/public/content')
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
@@ -201,7 +217,7 @@ function AgendarContent() {
         if (contentData.settings) setSiteSettings(contentData.settings);
         if (Array.isArray(contentData.gallery) && contentData.gallery.length > 0) {
           setGallery(
-            contentData.gallery.map((g: any) => ({
+            contentData.gallery.map((g: ApiGalleryItem) => ({
               id: g.id || g.title,
               src: g.src || g.image_path || '/lara-lashes-optimized.webp',
               beforeSrc: g.beforeSrc || g.before_image_path || null,
@@ -225,6 +241,10 @@ function AgendarContent() {
       } else {
         setServices(defaultFallbackServices as ServiceItem[]);
       }
+      setLoadingServices(false);
+    }).catch(() => {
+      if (!mounted) return;
+      setServices(defaultFallbackServices as ServiceItem[]);
       setLoadingServices(false);
     });
 
@@ -503,12 +523,14 @@ function AgendarContent() {
         <header className="w-full bg-[var(--booking-bg)]">
           {/* Banner com fade inferior suave para o fundo da página */}
           <div className="relative h-36 sm:h-44 md:h-52 w-full overflow-hidden bg-[#1c1b18]">
-            <img
+            <Image
               src={coverUrl}
               alt={studioTitle}
+              fill
+              sizes="100vw"
+              unoptimized={/^https:\/\//i.test(coverUrl)}
               className="w-full h-full object-cover opacity-75 filter contrast-110"
-              fetchPriority="high"
-              decoding="async"
+              priority
             />
             <div
               className="absolute inset-0"
@@ -541,14 +563,14 @@ function AgendarContent() {
                   backgroundColor: customCardBg,
                 }}
               >
-                <img
+                <Image
                   src={avatarUrl}
                   alt={studioTitle}
                   width={84}
                   height={84}
+                  unoptimized={/^https:\/\//i.test(avatarUrl)}
                   className="w-full h-full object-cover"
-                  loading="eager"
-                  decoding="async"
+                  priority
                 />
               </div>
 
@@ -632,7 +654,7 @@ function AgendarContent() {
                   type="button"
                   onClick={() => {
                     triggerHaptic('light');
-                    setActiveTab(tab.id as any);
+                    setActiveTab(tab.id as 'agendar' | 'galeria' | 'avaliacoes' | 'estudio');
                   }}
                   className="pb-2.5 text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer relative"
                   style={{
@@ -651,12 +673,14 @@ function AgendarContent() {
       ) : (
         <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
           <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
-            <img
+            <Image
               src={coverUrl}
               alt={studioTitle}
+              fill
+              sizes="100vw"
+              unoptimized={/^https:\/\//i.test(coverUrl)}
               className="w-full h-full object-cover opacity-25 filter contrast-125"
-              fetchPriority="high"
-              decoding="async"
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
@@ -686,13 +710,13 @@ function AgendarContent() {
                   border: `2px solid ${customBorder}`,
                 }}
               >
-                <img
+                <Image
                   src={avatarUrl}
                   alt={studioTitle}
                   width={80}
                   height={80}
-                  loading="eager"
-                  decoding="async"
+                  unoptimized={/^https:\/\//i.test(avatarUrl)}
+                  priority
                   className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 object-contain"
                 />
               </div>
@@ -911,9 +935,18 @@ function AgendarContent() {
                             return (
                               <div
                                 key={service.id}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => {
                                   triggerHaptic('light');
                                   setSelectedService(service);
+                                }}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    triggerHaptic('light');
+                                    setSelectedService(service);
+                                  }
                                 }}
                                 className="rounded-2xl p-4 transition-all cursor-pointer flex flex-col gap-2 group active:scale-[0.99]"
                                 style={{
@@ -1118,7 +1151,15 @@ function AgendarContent() {
                             return (
                               <div
                                 key={service.id}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => handleSelectService(service)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    handleSelectService(service);
+                                  }
+                                }}
                                 className="group relative bg-white hover:bg-[#fafaf8] p-4 sm:p-4.5 lg:p-5 rounded-2xl lg:rounded-3xl border border-[#d6d6cf] hover:border-[var(--color-obsidian)]/60 shadow-sm hover:shadow-md transition-all cursor-pointer flex lg:flex-col items-center lg:items-stretch justify-between gap-3 lg:gap-4 active:scale-[0.99] lg:hover:-translate-y-0.5"
                               >
                                 <div className="space-y-1 lg:space-y-2 min-w-0 flex-1">
@@ -1311,10 +1352,11 @@ function AgendarContent() {
                           {/* Campos do Formulário */}
                           <div className="space-y-3">
                             <div>
-                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                              <label htmlFor="booking-name" className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
                                 Seu Nome Completo *
                               </label>
                               <input
+                                id="booking-name"
                                 type="text"
                                 required
                                 placeholder="Ex: Maria Eduarda Silva"
@@ -1330,10 +1372,11 @@ function AgendarContent() {
                             </div>
 
                             <div>
-                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                              <label htmlFor="booking-phone" className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
                                 WhatsApp com DDD *
                               </label>
                               <input
+                                id="booking-phone"
                                 type="tel"
                                 required
                                 placeholder="(51) 99999-9999"
@@ -1360,10 +1403,11 @@ function AgendarContent() {
                             </div>
 
                             <div>
-                              <label className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
+                              <label htmlFor="booking-notes" className="text-xs font-semibold mb-1 block" style={{ color: customText }}>
                                 Observações (Opcional)
                               </label>
                               <input
+                                id="booking-notes"
                                 type="text"
                                 placeholder="Alergias, preferências de curvatura..."
                                 value={clientData.notes}
@@ -1814,7 +1858,7 @@ function AgendarContent() {
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`);
+                                void navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`).catch(() => undefined);
                                 setCopiedCode(true);
                                 setTimeout(() => setCopiedCode(false), 2000);
                               }}
@@ -1915,7 +1959,7 @@ function AgendarContent() {
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`);
+                              void navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`).catch(() => undefined);
                               setCopiedCode(true);
                               setTimeout(() => setCopiedCode(false), 2000);
                             }}
@@ -2029,9 +2073,17 @@ function AgendarContent() {
                 ]).map((photo, index) => (
                   <div
                     key={photo.id || index}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       triggerHaptic('light');
                       setLightboxIndex(index);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setLightboxIndex(index);
+                      }
                     }}
                     className="relative aspect-square rounded-xl overflow-hidden shadow-xs cursor-pointer border transition-transform active:scale-[0.98]"
                     style={{
@@ -2039,11 +2091,12 @@ function AgendarContent() {
                       borderColor: customBorder,
                     }}
                   >
-                    <img
+                    <Image
                       src={photo.src}
                       alt={photo.alt || photo.title}
-                      loading="lazy"
-                      decoding="async"
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      unoptimized={/^https:\/\//i.test(photo.src)}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-x-0 bottom-0 p-2 sm:p-2.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent text-white text-[11px] sm:text-xs font-semibold line-clamp-1">
@@ -2068,16 +2121,26 @@ function AgendarContent() {
               {gallery.map((photo, index) => (
                 <div
                   key={photo.id || index}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     triggerHaptic('light');
                     setLightboxIndex(index);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setLightboxIndex(index);
+                    }
+                  }}
                   className="group relative aspect-square rounded-2xl lg:rounded-3xl overflow-hidden bg-[#161614] border border-[#d6d6cf] shadow-sm hover:shadow-md cursor-pointer transition-all"
                 >
-                  <img
+                  <Image
                     src={photo.src}
                     alt={photo.alt || photo.title}
-                    loading="lazy"
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                    unoptimized={/^https:\/\//i.test(photo.src)}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2.5 sm:p-3 text-white">
@@ -2143,7 +2206,7 @@ function AgendarContent() {
                     className="text-xs leading-relaxed m-0"
                     style={{ color: customText, opacity: 0.85 }}
                   >
-                    "{t.content}"
+                    “{t.content}”
                   </p>
                 </div>
               ))}
@@ -2202,7 +2265,7 @@ function AgendarContent() {
                         </div>
                       </div>
                       <p className="text-xs sm:text-sm text-[#595952] leading-relaxed italic">
-                        "{t.content}"
+                        “{t.content}”
                       </p>
                     </div>
                   </div>

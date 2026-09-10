@@ -7,7 +7,7 @@ const broadcastPayloadSchema = z.object({
   message_template: z.string().min(5).max(2000),
   recipients: z.array(
     z.object({
-      id: z.string().uuid().optional(),
+      id: z.uuid().optional(),
       name: z.string(),
       phone: z.string(),
     })

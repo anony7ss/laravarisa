@@ -295,12 +295,12 @@ export function DateTimePicker({
       <div className="space-y-4">
         {/* 1. Selecione a Data */}
         <div>
-          <label
+          <p
             className="text-xs font-bold mb-2 block"
             style={{ color: 'var(--booking-primary, #121211)' }}
           >
             1. Selecione a Data
-          </label>
+          </p>
           <div
             className="flex gap-2 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1 overscroll-x-contain"
             style={{ WebkitOverflowScrolling: 'touch' }}
