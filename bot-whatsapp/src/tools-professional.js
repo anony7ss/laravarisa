@@ -692,14 +692,15 @@ export async function consultarDisponibilidadeProfissional({
  * 10. consultarHistoricoClienteProfissional
  * CRM rápido pelo WhatsApp com isolamento de dados
  */
-export async function consultarHistoricoClienteProfissional({ busca, actor_phone } = {}) {
+export async function consultarHistoricoClienteProfissional({ busca, termo_busca, cliente_nome, nome, actor_phone } = {}) {
   try {
     if (!actor_phone) {
       return { ok: false, erro: 'Identidade da profissional não confirmada.' };
     }
-    if (!busca) return { ok: false, erro: 'Informe o nome ou telefone da cliente.' };
+    const termoBruto = busca || termo_busca || cliente_nome || nome || '';
+    if (!termoBruto || !String(termoBruto).trim()) return { ok: false, erro: 'Informe o nome ou telefone da cliente.' };
 
-    const termo = String(busca).trim();
+    const termo = String(termoBruto).trim();
     const termoDigitos = termo.replace(/\D/g, '');
 
     let query = supabase

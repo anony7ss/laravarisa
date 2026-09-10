@@ -27,13 +27,21 @@ DECLARE
   v_clean_incoming text;
   v_clean_owner text;
 BEGIN
-  SELECT coalesce(w.lara_phone, s.lara_phone) INTO v_lara_phone
-  FROM public.whatsapp_bot_session w
-  FULL OUTER JOIN public.site_settings s ON s.id = 'global'
-  LIMIT 1;
+  -- Tenta buscar primeiro em whatsapp_bot_session
+  SELECT lara_phone INTO v_lara_phone
+  FROM public.whatsapp_bot_session
+  WHERE id = 'default' AND lara_phone IS NOT NULL AND trim(lara_phone) <> '';
+
+  -- Se não encontrar, busca em site_settings
+  IF v_lara_phone IS NULL OR trim(v_lara_phone) = '' THEN
+    SELECT lara_phone INTO v_lara_phone
+    FROM public.site_settings
+    WHERE lara_phone IS NOT NULL AND trim(lara_phone) <> ''
+    LIMIT 1;
+  END IF;
 
   v_clean_incoming := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
-  v_clean_owner := regexp_replace(coalesce(v_lara_phone, '5551989601662'), '\D', '', 'g');
+  v_clean_owner := regexp_replace(coalesce(v_lara_phone, '5551989741970'), '\D', '', 'g');
 
   IF v_clean_incoming = '' OR v_clean_owner = '' THEN
     RETURN false;

@@ -858,9 +858,9 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
   }
 
   try {
-    // Carrega histórico recente da sessão (limita aos últimos 8 turnos para velocidade máxima de resposta)
+    // Carrega histórico recente da sessão (limita para máxima velocidade de resposta)
     const historicoCompleto = getHistory(chaveMemoria);
-    const historico = historicoCompleto.slice(-8);
+    const historico = historicoCompleto.slice(isLara ? -4 : -8);
 
     // Monta mensagens com o system prompt atualizado
     const messages = [
@@ -927,9 +927,10 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
     let respostaFinal = '';
     let loopCount = 0;
-    const MAX_LOOPS = 5;
+    const MAX_LOOPS = 2; // Máximo 2 turnos: 1 para decidir/executar a ferramenta e 1 para responder o texto final
+    let toolsAtivas = isLara ? ferramentasProfissionalSchema : ferramentasSchema;
 
-    // Loop de Tool Calling
+    // Loop de Tool Calling ultra-otimizado
     while (loopCount < MAX_LOOPS) {
       loopCount++;
 
@@ -937,14 +938,13 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         {
           model: modeloUsado,
           messages,
-          tools: isLara ? ferramentasProfissionalSchema : ferramentasSchema,
-          tool_choice: 'auto',
-          temperature: isLara ? 0.3 : 0.5,
-          max_tokens: isLara ? 800 : (base64Imagem ? 1000 : 250),
+          ...(toolsAtivas ? { tools: toolsAtivas, tool_choice: 'auto' } : {}),
+          temperature: isLara ? 0.2 : 0.4,
+          max_tokens: isLara ? 160 : (base64Imagem ? 800 : 200),
         },
         {
           headers: {
-            'x-opencode-session': isLara ? 'wa_lara_copilot' : `wa_${jidLimpo}`,
+            'x-opencode-session': isLara ? `wa_lara_${Date.now()}` : `wa_${jidLimpo}`,
           },
         }
       );
@@ -988,7 +988,8 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
         messages.push(...toolResults);
 
-        // Continua o loop para o modelo ler o retorno das ferramentas e prosseguir
+        // Desativa ferramentas no próximo turno para forçar o modelo a gerar o texto final imediatamente
+        toolsAtivas = null;
         continue;
       }
 
