@@ -130,7 +130,7 @@ export async function processarLembretes(sock) {
           const nomeServico = ag.service?.name || 'Procedimento';
 
           const templatePadrao =
-            'Oi, {nome}! Passando pra lembrar do seu horário de {procedimento} amanhã às {horario}. Consegue me confirmar se você vem? 💕';
+            'Oi, {nome}! Passando pra lembrar do seu horário de {procedimento} amanhã às {horario}. Consegue me confirmar se você vem?';
 
           const mensagem = preencherTemplate(settings.reminder_message_template || templatePadrao, {
             nome: nomeCliente,
@@ -201,7 +201,7 @@ export async function processarLembretes(sock) {
           const nomeServico = ag.service?.name || 'Procedimento';
 
           const templatePadraoDia =
-            'Oi, {nome}! Tudo pronto pra te receber hoje às {horario} no estúdio ({local}). Até já 💕';
+            'Oi, {nome}! Tudo pronto pra te receber hoje às {horario} no estúdio ({local}). Até já!';
 
           const mensagem = preencherTemplate(settings.reminder_same_day_message_template || templatePadraoDia, {
             nome: nomeCliente,

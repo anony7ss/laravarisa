@@ -463,7 +463,7 @@ async function enviarRespostaHumanizadaOuVoz(sock, jid, textoResposta, pushName,
           await sendHumanizedMessage(
             sock,
             jid,
-            `Agende online pelo link:\n🔗 ${link} 💕`,
+            `Agende online pelo link:\n🔗 ${link}`,
             { immediate: true }
           );
         }
@@ -673,7 +673,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
           .limit(1);
       } catch {}
     } else {
-      const msgFalhaAudio = 'Oi! Tive uma pequena dificuldade para ouvir seu áudio. Consegue me mandar por texto? Se preferir falar direto com a Lara, é só me avisar 💕';
+      const msgFalhaAudio = 'Oi! Tive uma pequena dificuldade para ouvir seu áudio. Consegue me mandar por texto? Se preferir falar direto com a Lara, é só me avisar.';
       await sendHumanizedMessage(sock, jid, msgFalhaAudio);
       return msgFalhaAudio;
     }
@@ -1000,7 +1000,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     if (!respostaFinal.trim()) {
       respostaFinal = isLara
         ? 'Oi, Lara! Estou à disposição. Como posso te ajudar na sua agenda agora?'
-        : 'Oi! Tudo bem? Como posso te ajudar hoje? 💕';
+        : 'Oi! Tudo bem? Como posso te ajudar hoje?';
     }
 
     // 2. Sanitização de formatação do WhatsApp: layout clean, bullets com '• ', banimento de ✨ e garantia de pelo menos 1 emoji
@@ -1055,7 +1055,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     } catch (fallbackErr) {
       logError('Fallback', `Erro no fallback: ${fallbackErr?.message || fallbackErr}`);
       const mensagemEmergencial =
-        'Oi! Tive uma pequena oscilação aqui no sistema, mas você pode agendar online no nosso site a qualquer momento:\n🔗 https://laravarisa.netlify.app/agendar 💕';
+        'Oi! Tive uma pequena oscilação aqui no sistema, mas você pode agendar online no nosso site a qualquer momento:\n🔗 https://laravarisa.netlify.app/agendar';
       if (sock) {
         await sendHumanizedMessage(sock, jid, mensagemEmergencial);
       }

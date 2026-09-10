@@ -127,7 +127,7 @@ export function verificarSegurancaSaida(respostaLLM) {
   const padraoNegacaoAudio = /\b(não|nao)\s+(mando|envio|gravo|consigo mandar|posso mandar|tenho como mandar)\s+(audio|áudio|voz)\b|\b(aqui\s+é\s+tudo\s+por\s+texto|sou\s+apenas\s+texto|só\s+atendo\s+por\s+texto)\b/i;
   if (padraoNegacaoAudio.test(respostaLLM)) {
     console.warn('[guardrails] LLM tentou negar capacidade de áudio. Substituindo por resposta coerente.');
-    return 'Oi! Consigo te mandar áudios sim 💕 Te ajudo por aqui com valores, procedimentos e horários de agendamento. Como posso te ajudar hoje?';
+    return 'Oi! Consigo te mandar áudios sim! Te ajudo por aqui com valores, procedimentos e horários de agendamento. Como posso te ajudar hoje?';
   }
 
   return respostaLLM;

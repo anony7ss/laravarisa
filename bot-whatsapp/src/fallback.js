@@ -209,12 +209,12 @@ function identificarServico(texto = '', servicosAtivos = [], aceitarNumero = fal
  */
 function formatarCatalogoServicos(servicos = []) {
   if (!servicos || servicos.length === 0) {
-    return `Os valores dos principais:\n\nFio a fio — R$ 120 (2h)\nLash lifting — R$ 130 (1h15)\nVolume egípcio — R$ 165 (2h15)\nFox eyes — R$ 170 (2h15)\nVolume russo — R$ 190 (2h30)\nManutenção — a partir de R$ 85 (1h30)\nRemoção segura — R$ 45 (40min)\n\nQual deles combina mais com você? 💕`;
+    return `Os valores dos principais:\n\nFio a Fio: R$ 120 (2h)\nLash Lifting: R$ 130 (1h15)\nVolume Egípcio: R$ 165 (2h15)\nFox Eyes: R$ 170 (2h15)\nVolume Russo: R$ 190 (2h30)\nManutenção: a partir de R$ 85 (1h30)\nRemoção Segura: R$ 45 (40min)\n\nQual deles combina mais com você?`;
   }
 
-  const linhas = servicos.map((s) => `${s.nome} — ${s.preco} (${s.duracao || `${s.duracao_minutos}min`})`);
+  const linhas = servicos.map((s) => `• ${s.nome}: ${s.preco} (${s.duracao || `${s.duracao_minutos}min`})`);
 
-  return `Os valores dos principais:\n\n${linhas.join('\n')}\n\nQual deles combina mais com você? 💕`;
+  return `Os valores dos principais:\n\n${linhas.join('\n')}\n\nQual deles combina mais com você?`;
 }
 
 /**
@@ -224,7 +224,7 @@ function formatarCatalogoServicos(servicos = []) {
  */
 function getMenuPrincipal(pushName = 'Cliente') {
   const primeiroNome = pushName.trim().split(' ')[0];
-  return `Oi, ${primeiroNome}! Tudo bem? Aqui é do Studio Lara Varisa.\n\nComo posso te ajudar hoje? Se quiser ver horários ou procedimentos, é só me falar 💕`;
+  return `Oi, ${primeiroNome}! Tudo bem? Aqui é a Arla AI, assistente do estúdio Lara Varisa.\n\nComo posso te ajudar hoje? Se quiser ver horários ou procedimentos, é só me falar.`;
 }
 
 /**
@@ -238,7 +238,7 @@ function getFaqCuidados() {
     `• Evite vapor muito quente e produtos oleosos.\n` +
     `• Penteie delicadamente com a escovinha.\n` +
     `• Manutenção recomendada a cada 15 a 20 dias.\n\n` +
-    `Se quiser agendar seu horário, é só me chamar por aqui 💕`;
+    `Se quiser agendar seu horário, é só me chamar por aqui.`;
 }
 
 /**
@@ -250,7 +250,7 @@ function getLocalizacao() {
     `• Zona Norte de Porto Alegre - RS\n` +
     `• Segunda a Sábado, das 09h às 19h\n` +
     `• Pix, cartões e dinheiro no atendimento\n\n` +
-    `Se quiser marcar seu horário, só me falar aqui 💕`;
+    `Se quiser marcar seu horário, só me falar aqui.`;
 }
 
 /**
@@ -310,7 +310,7 @@ export async function processarFallback(texto = '', context = {}) {
   if (ehComandoVoltarOuCancelar) {
     if (estadoAtual) {
       clearState(jid);
-      return `Sem problemas! Cancelei essa etapa. Me conta como posso te ajudar: saber sobre procedimentos, valores, tirar alguma dúvida ou falar com a Lara? 💕`;
+      return `Sem problemas! Cancelei essa etapa. Me conta como posso te ajudar: saber sobre procedimentos, valores, tirar alguma dúvida ou falar com a Lara?`;
     }
   }
 
@@ -345,7 +345,7 @@ export async function processarFallback(texto = '', context = {}) {
         motivo: 'Solicitação de atendente/dono via Fallback',
       }).catch((err) => console.error('[fallback:notificarLara] Erro:', err?.message || err));
     }
-    return `Prontinho, ${pushName.split(' ')[0]}! Já notifiquei a Lara agora mesmo 🔔 Em breve ela (ou alguém da equipe) vai te responder diretamente por aqui! Se precisar de algo enquanto isso, estou por aqui 💕`;
+    return `Prontinho, ${pushName.split(' ')[0]}! Já notifiquei a Lara agora mesmo 🔔 Em breve ela (ou alguém da equipe) vai te responder diretamente por aqui! Se precisar de algo enquanto isso, estou por aqui.`;
   }
 
   // 2.3 Pergunta de Identidade ("Você é IA?", "É um robô?", "É a Lara?")
@@ -428,10 +428,10 @@ export async function processarFallback(texto = '', context = {}) {
     norm.includes('referencia')
   ) {
     if (norm.includes('pix') || norm.includes('comprovante') || norm.includes('paguei')) {
-      return `Comprovante recebido com sucesso! Muito obrigada 💕`;
+      return `Comprovante recebido com sucesso! Muito obrigada.`;
     }
     if (context.ehImagem) {
-      return `Recebi sua foto de referência! A Lara personaliza e reproduz perfeitamente esse modelo no seu olhar (seja 4D, 5D, Fox Eyes ou Russo). Quer aproveitar e marcar seu horário? 💕`;
+      return `Recebi sua foto de referência! A Lara personaliza e reproduz perfeitamente esse modelo no seu olhar (seja 4D, 5D, Fox Eyes ou Russo). Quer aproveitar e marcar seu horário?`;
     }
   }
 
@@ -450,18 +450,18 @@ export async function processarFallback(texto = '', context = {}) {
 
   if (ehDuvidaModelosCilios) {
     if (/\b(4d|5d|6d|8d|mega)\b/i.test(norm)) {
-      return `O Volume 4D e 5D utilizam leques artesanais levíssimos para um acabamento aveludado, bem pretinho e marcante. A Lara personaliza essa densidade no nosso Volume Russo ou Egípcio! Quer marcar seu horário? 💕`;
+      return `O Volume 4D e 5D utilizam leques artesanais levíssimos para um acabamento aveludado, bem pretinho e marcante. A Lara personaliza essa densidade no nosso Volume Russo ou Egípcio! Quer marcar seu horário?`;
     }
     if (norm.includes('wet') || norm.includes('molhado')) {
-      return `O Wet Look dá aquele acabamento sofisticado e moderno de fios alinhados com efeito molhado. A Lara domina e adora fazer essa estilização! Quer agendar o seu? 💕`;
+      return `O Wet Look dá aquele acabamento sofisticado e moderno de fios alinhados com efeito molhado. A Lara domina e adora fazer essa estilização! Quer agendar o seu?`;
     }
     if (norm.includes('wispy') || norm.includes('kim') || norm.includes('pluma')) {
-      return `O estilo Wispy (Kim K) alterna fios mais longos em destaque criando uma textura linda, moderna e despojada. A Lara personaliza esse efeito no estúdio! Quer marcar? 💕`;
+      return `O estilo Wispy (Kim K) alterna fios mais longos em destaque criando uma textura linda, moderna e despojada. A Lara personaliza esse efeito no estúdio! Quer marcar?`;
     }
     if (norm.includes('boneca') || norm.includes('gatinho')) {
-      return `O efeito Gatinho (ou Fox Eyes) alonga o canto externo e o Boneca abre o olhar no centro. A Lara faz o visagismo ideal para valorizar seus olhos! Quer agendar? 💕`;
+      return `O efeito Gatinho (ou Fox Eyes) alonga o canto externo e o Boneca abre o olhar no centro. A Lara faz o visagismo ideal para valorizar seus olhos! Quer agendar?`;
     }
-    return `Trabalhamos com Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo (incluindo 4D e 5D) e Lash Lifting! Você pode me mandar uma foto de referência que te oriento com carinho 💕`;
+    return `Trabalhamos com Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo (incluindo 4D e 5D) e Lash Lifting! Você pode me mandar uma foto de referência que te oriento com carinho.`;
   }
 
   // 2.5 Pergunta de Preço Específico (ex: "quanto tá o volume egípcio?")
@@ -474,7 +474,7 @@ export async function processarFallback(texto = '', context = {}) {
       norm.includes('custa') ||
       norm.includes('tabela'))
   ) {
-    return `O *${servicoEspecifico.nome}* está ${servicoEspecifico.preco} (${servicoEspecifico.duracao || `${servicoEspecifico.duracao_minutos}min`}). Quer agendar um horário? 💕`;
+    return `O *${servicoEspecifico.nome}* está ${servicoEspecifico.preco} (${servicoEspecifico.duracao || `${servicoEspecifico.duracao_minutos}min`}). Quer agendar um horário?`;
   }
 
   // 2.6 Agradecimento Rápido
@@ -483,7 +483,7 @@ export async function processarFallback(texto = '', context = {}) {
     norm.length <= 25
   ) {
     if (estadoAtual) clearState(jid);
-    return `Imagina, fico à disposição! Até logo 💕`;
+    return `Imagina, fico à disposição! Até logo.`;
   }
 
   // 2.7 Cancelamento de Agendamento no Banco (quando o cliente pede explicitamente)
@@ -505,7 +505,7 @@ export async function processarFallback(texto = '', context = {}) {
       });
       return `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`;
     }
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar! 💕`;
+    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar!`;
   }
 
   // =========================================================================
@@ -526,14 +526,14 @@ export async function processarFallback(texto = '', context = {}) {
           'Cancelado via atendimento WhatsApp'
         );
         if (resCancel.ok) {
-          return `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema. 💕\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 https://laravarisa.netlify.app/agendar`;
+          return `Seu agendamento foi cancelado com sucesso e o horário já foi liberado no sistema.\n\nQuando quiser marcar uma nova data, será um prazer atender você! Você pode me chamar por aqui ou agendar direto pelo nosso site:\n🔗 https://laravarisa.netlify.app/agendar`;
         }
         return `Tive um pequeno contratempo ao liberar o horário no sistema, mas já anotei aqui. Qualquer dúvida me avise!`;
       }
 
       if (norm.includes('nao') || norm.includes('não') || norm.includes('manter')) {
         clearState(jid);
-        return `Perfeito! Seu agendamento permanece confirmado. Te espero no estúdio 💕`;
+        return `Perfeito! Seu agendamento permanece confirmado. Te espero no estúdio.`;
       }
     }
 
@@ -549,7 +549,7 @@ export async function processarFallback(texto = '', context = {}) {
           servicePrice: servicoEscolhido.preco,
         });
 
-        return `Perfeito, *${servicoEscolhido.nome}* (${servicoEscolhido.preco})! Para qual dia você prefere? (ex: amanhã ou sexta) 💕`;
+        return `Perfeito, *${servicoEscolhido.nome}* (${servicoEscolhido.preco})! Para qual dia você prefere? (ex: amanhã ou sexta)`;
       }
 
       // Se o cliente pediu para ver os serviços ou procedimentos
@@ -565,7 +565,7 @@ export async function processarFallback(texto = '', context = {}) {
       }
 
       // Se não reconheceu como serviço nem pergunta geral, orienta com gentileza
-      return `Qual procedimento você gostaria de fazer? Me conta se prefere Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo, Lash Lifting ou Manutenção 💕`;
+      return `Qual procedimento você gostaria de fazer? Me conta se prefere Fio a Fio, Volume Egípcio, Fox Eyes, Volume Russo, Lash Lifting ou Manutenção.`;
     }
 
     // 3.3 Seleção de Data pendente
@@ -585,7 +585,7 @@ export async function processarFallback(texto = '', context = {}) {
           serviceDuration: outroServico.duracao_minutos || 120,
           servicePrice: outroServico.preco,
         });
-        return `Perfeito, mudei para *${outroServico.nome}* (${outroServico.preco})! Para qual dia você prefere? 💕`;
+        return `Perfeito, mudei para *${outroServico.nome}* (${outroServico.preco})! Para qual dia você prefere?`;
       }
 
       const dataEscolhida = extrairData(texto);
@@ -596,11 +596,11 @@ export async function processarFallback(texto = '', context = {}) {
         );
 
         if (slotsRes.fechado) {
-          return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você? 💕`;
+          return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h. Que outro dia fica bom pra você?`;
         }
 
         if (!slotsRes.ok || !slotsRes.slots || slotsRes.slots.length === 0) {
-          return `Para o dia ${dataEscolhida} todos os horários já estão preenchidos. Quer tentar outro dia? 💕`;
+          return `Para o dia ${dataEscolhida} todos os horários já estão preenchidos. Quer tentar outro dia?`;
         }
 
         setState(jid, {
@@ -610,11 +610,17 @@ export async function processarFallback(texto = '', context = {}) {
           slotsDisponiveis: slotsRes.slots,
         });
 
-        const listaHorarios = slotsRes.slots.map((s) => `• *${s.horario}*`).join('\n');
-        return `Para *${dataEscolhida}*, tenho esses horários livres:\n\n${listaHorarios}\n\nQual fica melhor pra você? 💕`;
+        const manha = slotsRes.slots.filter((s) => s.horario < '12:00').map((s) => s.horario);
+        const tarde = slotsRes.slots.filter((s) => s.horario >= '12:00').map((s) => s.horario);
+        let linhasHorarios = [];
+        if (manha.length > 0) linhasHorarios.push(`Manhã: ${manha.join(', ')}`);
+        if (tarde.length > 0) linhasHorarios.push(`Tarde: ${tarde.join(', ')}`);
+        const listaFormatada = linhasHorarios.length > 0 ? linhasHorarios.join('\n') : slotsRes.slots.map((s) => `• *${s.horario}*`).join('\n');
+
+        return `Para *${dataEscolhida}*, tenho esses horários livres:\n\n${listaFormatada}\n\nQual fica melhor pra você?`;
       }
 
-      return `Para qual dia você prefere? Pode me dizer amanhã ou outro dia da semana 💕`;
+      return `Para qual dia você prefere? Pode me dizer amanhã ou outro dia da semana.`;
     }
 
     // 3.4 Seleção de Horário pendente -> Conclusão do Agendamento
@@ -633,14 +639,14 @@ export async function processarFallback(texto = '', context = {}) {
           });
 
           if (resAgendar.ok) {
-            return `Prontinho, agendado! Seu *${estadoAtual.serviceName}* tá confirmado para ${estadoAtual.dataEscolhida} às *${horaEscolhida}*. Te espero no estúdio 💕`;
+            return `Prontinho, agendado! Seu *${estadoAtual.serviceName}* tá confirmado para ${estadoAtual.dataEscolhida} às *${horaEscolhida}*. Te espero no estúdio.`;
           }
 
-          return `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário? 💕`;
+          return `Esse horário de ${horaEscolhida} acabou de ser preenchido. Quer escolher outro horário?`;
         }
       }
 
-      return `Qual horário fica melhor pra você? 💕`;
+      return `Qual horário fica melhor pra você?`;
     }
   }
 
@@ -703,13 +709,13 @@ export async function processarFallback(texto = '', context = {}) {
     );
 
     if (slotsRes.fechado) {
-      return `Oi! Aos domingos nosso estúdio é fechado para descanso. Atendemos de segunda a sábado das 09h às 19h! Que outro dia fica bom pra você? 💕`;
+      return `Oi! Aos domingos nosso estúdio é fechado para descanso. Atendemos de segunda a sábado das 09h às 19h! Que outro dia fica bom pra você?`;
     }
 
     const slotDisponivel = slotsRes.slots?.find((s) => s.horario === horarioDetectado);
     if (!slotDisponivel) {
       const opcoesHorarios = slotsRes.slots?.map((s) => s.horario).join(', ') || 'Nenhum horário livre';
-      return `Oi, ${pushName.split(' ')[0]}! O horário das ${horarioDetectado} no dia ${dataDetectada} já está ocupado. 💖\n\nPra esse dia, ainda temos vagas em: *${opcoesHorarios}*.\n\nQual deles você prefere?`;
+      return `Oi, ${pushName.split(' ')[0]}! O horário das ${horarioDetectado} no dia ${dataDetectada} já está ocupado.\n\nPra esse dia, ainda temos vagas em: *${opcoesHorarios}*.\n\nQual deles você prefere?`;
     }
 
     // Cria agendamento imediato
@@ -722,10 +728,10 @@ export async function processarFallback(texto = '', context = {}) {
     });
 
     if (resAgendar.ok) {
-      return `Prontinho, agendado! Seu *${servicoDetectado.nome}* tá confirmado para ${dataDetectada} às *${horarioDetectado}*. Te espero no estúdio 💕`;
+      return `Prontinho, agendado! Seu *${servicoDetectado.nome}* tá confirmado para ${dataDetectada} às *${horarioDetectado}*. Te espero no estúdio.`;
     }
 
-    return `Não consegui confirmar o horário no momento. Que tal escolher outro horário? 💕`;
+    return `Não consegui confirmar o horário no momento. Que tal escolher outro horário?`;
   }
 
   // =========================================================================
@@ -741,7 +747,7 @@ export async function processarFallback(texto = '', context = {}) {
         serviceDuration: servicoDetectado.duracao_minutos || 120,
         servicePrice: servicoDetectado.preco,
       });
-      return `Perfeito, *${servicoDetectado.nome}* (${servicoDetectado.preco})! Para qual dia você prefere? 💕`;
+      return `Perfeito, *${servicoDetectado.nome}* (${servicoDetectado.preco})! Para qual dia você prefere?`;
     }
 
     // Não informou o serviço: exibe o catálogo para iniciar
@@ -787,9 +793,9 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
-      return `Presença confirmada, ${pushName.split(' ')[0]}! Já tá tudo pronto pra te receber no seu ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Até logo 💕`;
+      return `Presença confirmada, ${pushName.split(' ')[0]}! Já tá tudo pronto pra te receber no seu ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Até logo.`;
     }
-    return `Perfeito! Se você quiser agendar um horário ou tiver alguma dúvida, é só me chamar 💕`;
+    return `Perfeito! Se você quiser agendar um horário ou tiver alguma dúvida, é só me chamar.`;
   }
 
   // =========================================================================
@@ -810,7 +816,7 @@ export async function processarFallback(texto = '', context = {}) {
       return `Você tem um agendamento de *${ag.procedimento}* dia *${ag.data} às ${ag.horario}*.\n\nConfirma o cancelamento? Responda *sim* ou *não*.`;
     }
 
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar! 💕`;
+    return `Oi, ${pushName.split(' ')[0]}! Não encontrei nenhum agendamento ativo no seu número. Se precisar marcar um horário, é só me chamar!`;
   }
 
   // =========================================================================
@@ -834,10 +840,10 @@ export async function processarFallback(texto = '', context = {}) {
         )
         .join('\n');
 
-      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento:\n\n${listaAg}\n\nSe precisar remarcar ou cancelar, só me avisar 💕`;
+      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento:\n\n${listaAg}\n\nSe precisar remarcar ou cancelar, só me avisar.`;
     }
 
-    return `Oi, ${pushName.split(' ')[0]}! Não encontrei agendamentos futuros no seu número. Se quiser marcar um horário, é só me dizer 💕`;
+    return `Oi, ${pushName.split(' ')[0]}! Não encontrei agendamentos futuros no seu número. Se quiser marcar um horário, é só me dizer.`;
   }
 
   // =========================================================================
@@ -854,10 +860,10 @@ export async function processarFallback(texto = '', context = {}) {
     const resCons = await consultarAgendamentoCliente(telefone);
     if (resCons.ok && resCons.possui_agendamento && resCons.agendamentos?.length > 0) {
       const ag = resCons.agendamentos[0];
-      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento atual é ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Para qual data você prefere mudar? 💕`;
+      return `Oi, ${pushName.split(' ')[0]}! Seu agendamento atual é ${ag.procedimento} dia ${ag.data} às ${ag.horario}. Para qual data você prefere mudar?`;
     }
 
-    return `Você não possui nenhum agendamento ativo para reagendar. Quer marcar um horário? Basta me dizer 💕`;
+    return `Você não possui nenhum agendamento ativo para reagendar. Quer marcar um horário? Basta me dizer.`;
   }
 
   // =========================================================================
@@ -880,15 +886,21 @@ export async function processarFallback(texto = '', context = {}) {
     const slotsRes = await consultarHorarios(dataConsulta, 120);
 
     if (slotsRes.fechado) {
-      return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h 💕`;
+      return `Aos domingos o estúdio não abre. Atendemos de segunda a sábado das 09h às 19h.`;
     }
 
     if (!slotsRes.ok || !slotsRes.slots || slotsRes.slots.length === 0) {
-      return `Para o dia ${dataConsulta} não temos mais horários livres no momento. Quer tentar outra data? 💕`;
+      return `Para o dia ${dataConsulta} não temos mais horários livres no momento. Quer tentar outra data?`;
     }
 
-    const lista = slotsRes.slots.map((s) => `• ${s.horario}`).join('\n');
-    return `Para *${dataConsulta}*, tenho esses horários livres:\n\n${lista}\n\nQual fica melhor pra você? 💕`;
+    const manha = slotsRes.slots.filter((s) => s.horario < '12:00').map((s) => s.horario);
+    const tarde = slotsRes.slots.filter((s) => s.horario >= '12:00').map((s) => s.horario);
+    let linhasHorarios = [];
+    if (manha.length > 0) linhasHorarios.push(`Manhã: ${manha.join(', ')}`);
+    if (tarde.length > 0) linhasHorarios.push(`Tarde: ${tarde.join(', ')}`);
+    const listaFormatada = linhasHorarios.length > 0 ? linhasHorarios.join('\n') : slotsRes.slots.map((s) => `• ${s.horario}`).join('\n');
+
+    return `Para *${dataConsulta}*, temos esses horários disponíveis:\n\n${listaFormatada}\n\nQual desses horários fica melhor pra você?`;
   }
 
   // =========================================================================
@@ -930,13 +942,13 @@ export async function processarFallback(texto = '', context = {}) {
   if (
     norm.match(/^(oi|ola|oie|olaa|oii|oiii|bom dia|boa tarde|boa noite|opa|tudo bem|tudo bom|e ai)\b/i)
   ) {
-    return `Oi, ${pushName.split(' ')[0]}! Tudo bem? Aqui é do Studio Lara Varisa. Como posso te ajudar hoje? 💕`;
+    return `Oi, ${pushName.split(' ')[0]}! Tudo bem? Aqui é a Arla AI, assistente do estúdio Lara Varisa. Como posso te ajudar hoje?`;
   }
 
   // =========================================================================
   // 16. RESPOSTA PADRÃO ACOLHEDORA E NATURAL (SEM NÚMEROS!)
   // =========================================================================
-  return `Oi, ${pushName.split(' ')[0]}! Me conta como posso te ajudar: você gostaria de saber sobre os procedimentos, valores ou marcar um horário? 💕`;
+  return `Oi, ${pushName.split(' ')[0]}! Me conta como posso te ajudar: você gostaria de saber sobre procedimentos, valores ou marcar um horário?`;
 }
 
 export default {

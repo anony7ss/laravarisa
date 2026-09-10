@@ -146,7 +146,7 @@ export async function notificarLaraAtendimentoHumano(sock, {
       `📱 *WhatsApp:* ${formatarTelefoneExibicao(clienteTelefone || 'Não informado')}\n` +
       `💬 *Mensagem da cliente:* "${String(mensagem || motivo).trim()}"\n` +
       `⏰ *Horário:* ${horaFormatada}\n\n` +
-      `👉 _Responda diretamente pelo WhatsApp do estúdio ou chame a cliente no número acima._ 💕`;
+      `👉 _Responda diretamente pelo WhatsApp do estúdio ou chame a cliente no número acima._`;
 
     const laraJid = `${laraPhoneLimpo}@s.whatsapp.net`;
     await sendHumanizedMessage(sock, laraJid, textoNotificacao, { immediate: true });
@@ -219,7 +219,7 @@ export async function notificarLaraNovoAgendamento(sock, agendamento) {
       textoNotificacao += `📝 *Observação:* "${agendamento.notes.trim()}"\n`;
     }
 
-    textoNotificacao += `\n_Se precisar de detalhes ou alterar algo, é só me falar por aqui! 💕_`;
+    textoNotificacao += `\n_Se precisar de detalhes ou alterar algo, é só me falar por aqui!_`;
 
     const laraJid = `${laraPhoneLimpo}@s.whatsapp.net`;
     await sendHumanizedMessage(sock, laraJid, textoNotificacao, { immediate: true });

@@ -51,8 +51,13 @@ export function sanitizarMensagemWhatsApp(text, options = {}) {
   // 7. Corrige markdown duplo (**texto**) para negrito limpo (*texto*) ou direto
   cleaned = cleaned.replace(/\*\*([^*\n]+)\*\*/g, '*$1*');
 
-  // 8. Normaliza travessão longo (—) para dois pontos limpos (: ) para evitar estilo de IA
+  // 8. Normaliza travessão longo (—) e traços médios (–) para linguagem natural sem estilo de IA
+  // 8.1 Intervalos de horário (ex: 10h–12h ou 09:00–18:00) -> 10h às 12h
+  cleaned = cleaned.replace(/(\d+h?(?::\d+)?)\s*[—–]\s*(\d+h?(?::\d+)?)/gi, '$1 às $2');
+  // 8.2 Separador de preço ou especificação (ex: Fio a Fio — R$ 120) -> Fio a Fio: R$ 120
   cleaned = cleaned.replace(/(\S)\s*[—–]\s*(R\$|\d)/gi, '$1: $2');
+  // 8.3 Qualquer outro travessão longo substituído por hífen simples ou dois pontos
+  cleaned = cleaned.replace(/\s*—\s*/g, ' - ');
 
   // 9. Corrige dois pontos colados dentro de asteriscos: *Total:* -> *Total*:
   cleaned = cleaned.replace(/\*([^*\n]+):\*/g, '*$1*:');
@@ -67,15 +72,18 @@ export function sanitizarMensagemWhatsApp(text, options = {}) {
   // 11. Garante espaçamento limpo entre seções (seção anterior -> título da próxima)
   cleaned = cleaned.replace(/([^\n])\n(\*[A-ZÀ-ÖØ-öø-ÿ][a-zçãõáéíóúâêîôû]+\*)/g, '$1\n\n$2');
 
-  // 12. Controle de Emojis: no máximo 1 ou 2 emojis elegantes, sem forçar emoji quando a mensagem não pede
-  cleaned = cleaned.replace(/✨/gu, '');
+  // 12. Remove emojis desnecessários colados imediatamente após pontos de interrogação (ex: "? 💕" -> "?")
+  cleaned = cleaned.replace(/\?\s*[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]+/gu, '?');
+
+  // 13. Controle de Emojis: respeita maxEmojis (padrão 1), sem forçar nenhum emoji
+  const maxPermitido = typeof options.maxEmojis === 'number' ? options.maxEmojis : 1;
   const emojisEncontrados = [...cleaned.matchAll(EMOJI_REGEX)];
 
-  if (emojisEncontrados.length > 2) {
+  if (emojisEncontrados.length > maxPermitido) {
     let count = 0;
     cleaned = cleaned.replace(EMOJI_REGEX, (match) => {
       count++;
-      if (count <= 2) {
+      if (count <= maxPermitido) {
         return match;
       }
       return '';

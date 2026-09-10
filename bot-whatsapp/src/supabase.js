@@ -277,7 +277,7 @@ export async function notificarAgendamentoSite(sock, agendamento) {
   }
 
   const templatePadrao =
-    'Oi, {nome}! Seu horário para {procedimento} tá confirmado para {data} às {horario}. Qualquer dúvida estou por aqui 💕';
+    'Oi, {nome}! Seu horário para {procedimento} tá confirmado para {data} às {horario}. Qualquer dúvida estou por aqui!';
 
   const mensagem = (templateMensagem || templatePadrao)
     .replaceAll('{nome}', primeiroNome)
