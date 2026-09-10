@@ -45,6 +45,7 @@ export interface WhatsAppSession {
   action_requested?: string | null;
   lara_phone?: string | null;
   notify_lara_on_human_transfer?: boolean;
+  notify_lara_on_new_booking?: boolean;
   audio_mode?: 'direct_request' | 'mirror' | 'always' | 'disabled' | null;
   audio_voice?: string | null;
   updated_at?: string | null;
@@ -93,9 +94,10 @@ export function WhatsAppManager({
   const inFlightRef = useRef(false);
   const lastFetchRef = useRef(0);
 
-  // Configurações de notificação pessoal da Lara
+  // Configurações de notificação pessoal da Lara & Modo Profissional
   const [laraPhone, setLaraPhone] = useState(initialSession.lara_phone || '5551989601662');
   const [notifyLara, setNotifyLara] = useState(initialSession.notify_lara_on_human_transfer !== false);
+  const [notifyLaraBooking, setNotifyLaraBooking] = useState(initialSession.notify_lara_on_new_booking !== false);
   const [savingLaraSettings, setSavingLaraSettings] = useState(false);
   const [laraFeedback, setLaraFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -115,6 +117,9 @@ export function WhatsAppManager({
     if (session.notify_lara_on_human_transfer !== undefined) {
       setNotifyLara(session.notify_lara_on_human_transfer);
     }
+    if (session.notify_lara_on_new_booking !== undefined) {
+      setNotifyLaraBooking(session.notify_lara_on_new_booking);
+    }
     if (session.ai_enabled !== undefined) {
       setAiEnabled(session.ai_enabled);
     }
@@ -124,7 +129,7 @@ export function WhatsAppManager({
     if (session.audio_voice) {
       setAudioVoice(session.audio_voice);
     }
-  }, [session.lara_phone, session.notify_lara_on_human_transfer, session.ai_enabled, session.audio_mode, session.audio_voice]);
+  }, [session.lara_phone, session.notify_lara_on_human_transfer, session.notify_lara_on_new_booking, session.ai_enabled, session.audio_mode, session.audio_voice]);
 
   const handleSelectAudioVoice = async (newVoice: string) => {
     if (role !== 'admin') return;
@@ -242,6 +247,7 @@ export function WhatsAppManager({
           action: 'update_settings',
           lara_phone: laraPhone,
           notify_lara_on_human_transfer: notifyLara,
+          notify_lara_on_new_booking: notifyLaraBooking,
         }),
       });
       const data = await res.json();
@@ -1657,17 +1663,87 @@ export function WhatsAppManager({
               </p>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={notifyLara}
-                onChange={(e) => setNotifyLara(e.target.checked)}
-                style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '13px', color: 'var(--admin-ink)', fontWeight: 500 }}>
-                Receber alerta no WhatsApp pessoal quando pedirem para falar com atendente / Lara
-              </span>
-            </label>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={notifyLaraBooking}
+                  onChange={(e) => setNotifyLaraBooking(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--admin-ink)', fontWeight: 500 }}>
+                  Receber notificação no WhatsApp pessoal a cada <strong>novo agendamento</strong> (Site e WhatsApp)
+                </span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={notifyLara}
+                  onChange={(e) => setNotifyLara(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--admin-ink)', fontWeight: 500 }}>
+                  Receber alerta quando pedirem para falar com atendente / Lara (transbordo humano)
+                </span>
+              </label>
+            </div>
+
+            {/* Destaque do Modo Profissional */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.06), rgba(249, 115, 22, 0.02))',
+                border: '1px solid rgba(234, 88, 12, 0.2)',
+                borderRadius: '16px',
+                padding: '16px',
+                display: 'grid',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>✨</span>
+                <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>Modo Profissional Ativado no WhatsApp</strong>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    padding: '2px 8px',
+                    borderRadius: '20px',
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    color: '#15803d',
+                  }}
+                >
+                  Assistente Ativa
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.5 }}>
+                Ao enviar mensagens deste número para o WhatsApp do estúdio, a IA vira sua <strong>assistente operacional</strong>. Você pode conversar naturalmente para gerenciar o dia a dia:
+              </p>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '8px',
+                  fontSize: '11.5px',
+                  color: 'var(--admin-ink)',
+                }}
+              >
+                <div style={{ padding: '8px 10px', background: 'var(--admin-bg)', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
+                  🗓️ <em>"Quem tenho hoje?"</em> ou <em>"Agenda de amanhã"</em>
+                </div>
+                <div style={{ padding: '8px 10px', background: 'var(--admin-bg)', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
+                  ✂️ <em>"Cancela o da Juliana"</em> ou <em>"Remarca Maria p/ sexta às 15h"</em>
+                </div>
+                <div style={{ padding: '8px 10px', background: 'var(--admin-bg)', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
+                  🔒 <em>"Bloqueia amanhã às 18h"</em> ou <em>"Intervalo de almoço"</em>
+                </div>
+                <div style={{ padding: '8px 10px', background: 'var(--admin-bg)', borderRadius: '8px', border: '1px solid var(--admin-line)' }}>
+                  💰 <em>"Quanto vou faturar essa semana?"</em> ou <em>"Clientes inativas"</em>
+                </div>
+              </div>
+            </div>
 
             {laraFeedback && (
               <div
@@ -1704,7 +1780,7 @@ export function WhatsAppManager({
                 ) : (
                   <>
                     <Save size={14} />
-                    Salvar WhatsApp da Lara
+                    Salvar Configurações da Lara
                   </>
                 )}
               </button>

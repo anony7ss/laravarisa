@@ -54,6 +54,8 @@ import config from './src/config.js';
 import { iniciarSincronizacaoSite } from './src/supabase.js';
 import { iniciarLembretesAutomaticos } from './src/reminders.js';
 import { iniciarProcessadorOutbox } from './src/outbox.js';
+import { iniciarRotinasProgramadas } from './src/routines.js';
+import { obterConfiguracoesLara, normalizarTelefoneBR } from './src/notifications.js';
 import { testarConexaoIA, processarMensagemComIA, extrairPrimeiroNome } from './src/ai.js';
 import {
   iniciarHeartbeat,
@@ -214,19 +216,40 @@ async function handleIncomingMessage(sock, msgOrJid, textParam, pushNameParam) {
             mediaUrl: mediaUrl,
           });
 
-          if (!isAiEnabled()) {
-            logInfo('Atendimento', `IA global pausada pelo Admin - mensagem de "${pushName}" silenciada para atendimento manual.`);
-            return;
-          }
+          const configLara = await obterConfiguracoesLara();
+          const laraPhoneLimpo = normalizarTelefoneBR(configLara.laraPhone);
+          const isLaraMsg = Boolean(
+            laraPhoneLimpo && (
+              realPhone === laraPhoneLimpo ||
+              (realPhone.length >= 8 && laraPhoneLimpo.length >= 8 && realPhone.slice(-8) === laraPhoneLimpo.slice(-8))
+            )
+          );
 
-          if (isChatAiPaused(jid) || (realPhone && isChatAiPaused(realPhone))) {
-            logInfo('Atendimento', `IA pausada para este contato (${pushName}) - atendimento manual da Lara.`);
-            return;
+          if (!isLaraMsg) {
+            if (!isAiEnabled()) {
+              logInfo('Atendimento', `IA global pausada pelo Admin - mensagem de "${pushName}" silenciada para atendimento manual.`);
+              return;
+            }
+
+            if (isChatAiPaused(jid) || (realPhone && isChatAiPaused(realPhone))) {
+              logInfo('Atendimento', `IA pausada para este contato (${pushName}) - atendimento manual da Lara.`);
+              return;
+            }
           }
 
           await processarMensagemComIA(sock, msg, null, pushName);
         } else {
-          if (!isAiEnabled() || isChatAiPaused(jid)) {
+          const configLara = await obterConfiguracoesLara();
+          const laraPhoneLimpo = normalizarTelefoneBR(configLara.laraPhone);
+          const jidPhone = String(jid).replace(/\D/g, '');
+          const isLaraMsg = Boolean(
+            laraPhoneLimpo && (
+              jidPhone === laraPhoneLimpo ||
+              (jidPhone.length >= 8 && laraPhoneLimpo.length >= 8 && jidPhone.slice(-8) === laraPhoneLimpo.slice(-8))
+            )
+          );
+
+          if (!isLaraMsg && (!isAiEnabled() || isChatAiPaused(jid))) {
             logInfo('Atendimento', 'IA pausada para este contato - atendimento manual.');
             return;
           }
@@ -269,6 +292,7 @@ function handleConnectionUpdate(sock, update) {
     iniciarSincronizacaoSite(sock);
     iniciarLembretesAutomaticos(sock);
     iniciarProcessadorOutbox(sock);
+    iniciarRotinasProgramadas(sock);
   } else if (connection === 'close') {
     updateStatus('whatsapp', 'Desconectado');
     updateStatus('supabase', 'Pausado');

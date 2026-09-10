@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       sanitizedPhone = `55${sanitizedPhone}`;
     }
     const notifyLara = (body as any).notify_lara_on_human_transfer !== false;
+    const notifyLaraBooking = (body as any).notify_lara_on_new_booking !== false;
 
     const sessionUpdate: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -74,6 +75,9 @@ export async function POST(request: Request) {
     }
     if ('notify_lara_on_human_transfer' in body) {
       sessionUpdate.notify_lara_on_human_transfer = notifyLara;
+    }
+    if ('notify_lara_on_new_booking' in body) {
+      sessionUpdate.notify_lara_on_new_booking = notifyLaraBooking;
     }
     if (typeof (body as any).ai_enabled === 'boolean') {
       sessionUpdate.ai_enabled = (body as any).ai_enabled;
@@ -104,6 +108,9 @@ export async function POST(request: Request) {
     }
     if ('notify_lara_on_human_transfer' in body) {
       siteSettingsUpdate.notify_lara_on_human_transfer = notifyLara;
+    }
+    if ('notify_lara_on_new_booking' in body) {
+      siteSettingsUpdate.notify_lara_on_new_booking = notifyLaraBooking;
     }
     if ('audio_mode' in body) {
       siteSettingsUpdate.whatsapp_audio_mode = (body as any).audio_mode;

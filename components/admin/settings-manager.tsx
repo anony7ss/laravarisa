@@ -203,6 +203,12 @@ export function SettingsManager({
         form.get('whatsapp_booking_message') || '',
       ),
 
+      // Notificações para a Lara & Painel
+      lara_phone: String(form.get('lara_phone') || '5551989601662').replace(/\D/g, ''),
+      notify_lara_on_new_booking: form.get('notify_lara_on_new_booking') === 'on',
+      notify_lara_on_human_transfer: form.get('notify_lara_on_human_transfer') === 'on',
+      notify_admin_sound: form.get('notify_admin_sound') === 'on',
+
       // Lembretes Automáticos sem IA
       reminder_active: form.get('reminder_active') === 'on',
       reminder_hours_before: Number(form.get('reminder_hours_before') || 24),
@@ -715,9 +721,80 @@ export function SettingsManager({
               placeholder="Ex: 5551989601662"
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
-              Código do país (55) + DDD + Número sem traços
+              Número do WhatsApp conectado ao robô de atendimento
             </small>
           </label>
+
+          <label>
+            WhatsApp Pessoal da Lara (Notificações & Assistente)
+            <input
+              name="lara_phone"
+              defaultValue={settings?.lara_phone || '5551989601662'}
+              disabled={role !== 'admin'}
+              placeholder="Ex: 5551989601662"
+            />
+            <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
+              Seu número pessoal autorizado para receber alertas e comandar a IA
+            </small>
+          </label>
+
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              padding: '16px 20px',
+              borderRadius: '16px',
+              background: 'var(--admin-bg)',
+              border: '1px solid var(--admin-line)',
+              display: 'grid',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bell size={18} style={{ color: 'var(--admin-orange)' }} />
+              <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                Canais de Notificação & Alertas da Lara
+              </strong>
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0 }}>
+              <input
+                type="checkbox"
+                name="notify_lara_on_new_booking"
+                defaultChecked={settings?.notify_lara_on_new_booking !== false}
+                disabled={role !== 'admin'}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                Receber notificação detalhada no <strong>WhatsApp pessoal</strong> a cada novo agendamento
+              </span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0 }}>
+              <input
+                type="checkbox"
+                name="notify_lara_on_human_transfer"
+                defaultChecked={settings?.notify_lara_on_human_transfer !== false}
+                disabled={role !== 'admin'}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                Receber alerta no <strong>WhatsApp pessoal</strong> quando cliente solicitar falar com a Lara (humano)
+              </span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', margin: 0 }}>
+              <input
+                type="checkbox"
+                name="notify_admin_sound"
+                defaultChecked={settings?.notify_admin_sound !== false}
+                disabled={role !== 'admin'}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--admin-orange)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>
+                Tocar <strong>alerta sonoro no painel do site</strong> ao receber novos agendamentos em tempo real
+              </span>
+            </label>
+          </div>
 
           <label className="wide">
             Modelo de Mensagem de Confirmação Manual (WhatsApp 1 Clique na Agenda)

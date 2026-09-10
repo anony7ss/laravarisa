@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
-import { notificarLaraAtendimentoHumano } from './notifications.js';
-import { reactToMessage } from './queue.js';
-import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
+import { notificarLaraAtendimentoHumano, notificarLaraNovoAgendamento } from './notifications.js';
+import { reactToMessage, sendHumanizedMessage } from './queue.js';
+import { resolverJidWhatsApp } from './phone-utils.js';
+import { obterServicosEmCache, obterConfiguracoesEmCache, invalidarCacheConfiguracoes } from './cache.js';
+import { ferramentasProfissionalSchema, executarFerramentaProfissional } from './tools-professional.js';
 
 // Inicialização do cliente Supabase para execução das ferramentas
 const supabaseUrl = config.supabaseUrl || 'https://placeholder.supabase.co';
@@ -237,6 +239,22 @@ export async function criarAgendamento(params = {}) {
       } catch (errRem) {
         console.warn('[tools:criarAgendamento] Aviso ao inicializar flags de lembrete:', errRem?.message || errRem);
       }
+    }
+
+    // Notifica também o WhatsApp pessoal da Lara em tempo real com ações interativas
+    if (params.sock) {
+      notificarLaraNovoAgendamento(params.sock, {
+        client_name: clientName,
+        client_phone: cleanPhone,
+        starts_at: startsAt,
+        service_name: data?.service_name,
+        price_label: data?.price_label,
+        duration_label: data?.duration_label,
+        origin: 'whatsapp_bot',
+        notes: notes,
+      }).catch((errLara) => {
+        console.warn('[tools:criarAgendamento] Aviso ao notificar Lara:', errLara?.message || errLara);
+      });
     }
 
     return {
@@ -722,14 +740,22 @@ export async function executarFerramenta(nome, args = {}, context = {}) {
         });
       }
 
-      default:
+      default: {
+        // Se for ferramenta profissional da Lara, despacha para executor dedicado
+        const isProf = ferramentasProfissionalSchema.some((f) => f.function.name === nome);
+        if (isProf) {
+          return await executarFerramentaProfissional(nome, args, context);
+        }
         return { ok: false, erro: `Ferramenta desconhecida: "${nome}"` };
+      }
     }
   } catch (error) {
     console.error(`[tools:executarFerramenta] Erro ao executar "${nome}":`, error);
     return { ok: false, erro: error?.message || 'Falha na execução da ferramenta.' };
   }
 }
+
+export { ferramentasProfissionalSchema, executarFerramentaProfissional };
 
 export default {
   supabase,
@@ -741,5 +767,7 @@ export default {
   cancelarTodosAgendamentos,
   reagendarAgendamento,
   ferramentasSchema,
+  ferramentasProfissionalSchema,
   executarFerramenta,
+  executarFerramentaProfissional,
 };

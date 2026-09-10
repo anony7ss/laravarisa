@@ -23,13 +23,14 @@ export async function obterConfiguracoesLara() {
   try {
     const { data } = await supabase
       .from('whatsapp_bot_session')
-      .select('lara_phone, notify_lara_on_human_transfer')
+      .select('lara_phone, notify_lara_on_human_transfer, notify_lara_on_new_booking')
       .eq('id', 'default')
       .maybeSingle();
 
     configLaraCache = {
       laraPhone: data?.lara_phone || '5551989601662',
       notifyOnHumanTransfer: data?.notify_lara_on_human_transfer !== false,
+      notifyOnNewBooking: data?.notify_lara_on_new_booking !== false,
     };
     lastFetchTime = now;
     return configLaraCache;
@@ -38,6 +39,7 @@ export async function obterConfiguracoesLara() {
     return {
       laraPhone: configLaraCache?.laraPhone || '5551989601662',
       notifyOnHumanTransfer: true,
+      notifyOnNewBooking: true,
     };
   }
 }
@@ -135,9 +137,83 @@ export async function notificarLaraAtendimentoHumano(sock, {
   }
 }
 
+/**
+ * Envia notificação instantânea de novo agendamento para a Lara no WhatsApp pessoal
+ * Permite que ela interaja com sua assistente imediatamente para ver detalhes ou alterar
+ */
+export async function notificarLaraNovoAgendamento(sock, agendamento) {
+  if (!sock || !agendamento) return { ok: false, erro: 'Dados insuficientes' };
+
+  try {
+    const config = await obterConfiguracoesLara();
+    if (config.notifyOnNewBooking === false) {
+      return { ok: false, motivo: 'Notificação de novos agendamentos desativada no painel' };
+    }
+
+    const laraPhoneLimpo = normalizarTelefoneBR(config.laraPhone);
+    if (!laraPhoneLimpo) {
+      logWarn('Notificação', 'Número pessoal da Lara não configurado no painel.');
+      return { ok: false, erro: 'Número pessoal da Lara não configurado' };
+    }
+
+    // Formatação elegante de data e horário no fuso de Brasília
+    const dataObj = new Date(agendamento.starts_at);
+    const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const horaFormatada = dataObj.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const nomeCliente = (agendamento.client_name || 'Cliente').trim();
+    const telCliente = agendamento.client_phone || 'Não informado';
+    const nomeProcedimento = agendamento.service_name || agendamento.service?.name || agendamento.service_label || 'Procedimento';
+    const valorLabel = agendamento.price_label || agendamento.service?.price_label || '';
+    const duracaoLabel = agendamento.duration_label || (agendamento.service?.duration_minutes ? `${agendamento.service.duration_minutes} min` : '');
+    const origem = agendamento.origin === 'whatsapp_bot' ? 'WhatsApp (IA)' : 'Site';
+
+    let textoNotificacao =
+      `✨ *Novo Agendamento Confirmado!*\n\n` +
+      `👤 *${nomeCliente}*\n` +
+      `✨ *${nomeProcedimento}*\n` +
+      `📅 *${dataFormatada} às ${horaFormatada}*\n`;
+
+    if (valorLabel) {
+      textoNotificacao += `💰 *${valorLabel}*`;
+      if (duracaoLabel) textoNotificacao += ` (⏱️ ${duracaoLabel})`;
+      textoNotificacao += `\n`;
+    }
+
+    textoNotificacao += `📱 *WhatsApp:* ${formatarTelefoneExibicao(telCliente)}\n` +
+      `🌐 *Agendado pelo ${origem}.*\n`;
+
+    if (agendamento.notes && agendamento.notes.trim()) {
+      textoNotificacao += `📝 *Observação:* "${agendamento.notes.trim()}"\n`;
+    }
+
+    textoNotificacao += `\n_Se precisar de detalhes ou alterar algo, é só me falar por aqui! 💕_`;
+
+    const laraJid = `${laraPhoneLimpo}@s.whatsapp.net`;
+    await sendHumanizedMessage(sock, laraJid, textoNotificacao, { immediate: true });
+
+    logInfo('Notificação', `Alerta de novo agendamento enviado para o WhatsApp da Lara (${formatarTelefoneExibicao(laraPhoneLimpo)})`);
+    return { ok: true };
+  } catch (error) {
+    logError('Notificação', `Falha ao alertar Lara sobre novo agendamento: ${error?.message || error}`);
+    return { ok: false, erro: error?.message };
+  }
+}
+
 export default {
   obterConfiguracoesLara,
   normalizarTelefoneBR,
   formatarTelefoneExibicao,
   notificarLaraAtendimentoHumano,
+  notificarLaraNovoAgendamento,
 };

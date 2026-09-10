@@ -3,6 +3,7 @@ import config from './config.js';
 import { sendHumanizedMessage } from './queue.js';
 import { logSiteBooking, logInfo, logWarn, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
+import { notificarLaraNovoAgendamento } from './notifications.js';
 import {
   obterServicosEmCache,
   obterConfiguracoesEmCache,
@@ -325,6 +326,14 @@ export async function notificarAgendamentoSite(sock, agendamento) {
   }
 
   logSiteBooking(primeiroNome, nomeServico, `${dataFormatada} às ${horaFormatada}`);
+
+  // Notifica imediatamente a Lara no WhatsApp pessoal com ação interativa
+  notificarLaraNovoAgendamento(activeSock, {
+    ...agendamento,
+    service_name: nomeServico,
+  }).catch((errLara) => {
+    logWarn('Notificação', `Aviso ao notificar WhatsApp pessoal da Lara: ${errLara?.message || errLara}`);
+  });
 
   return { ok: true, jid: targetJid, mensagem };
 }

@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
 import config from './config.js';
-import { ferramentasSchema, executarFerramenta } from './tools.js';
+import { ferramentasSchema, ferramentasProfissionalSchema, executarFerramenta } from './tools.js';
 import { getHistory, addMessage } from './memory.js';
 import { sendHumanizedMessage, sendHumanizedVoice, reactToMessage } from './queue.js';
 import { verificarSegurancaEntrada, verificarSegurancaSaida } from './guardrails.js';
 import { processarFallback } from './fallback.js';
-import { notificarLaraAtendimentoHumano } from './notifications.js';
+import { notificarLaraAtendimentoHumano, obterConfiguracoesLara, normalizarTelefoneBR } from './notifications.js';
 import { logIncoming, logOutgoing, logAction, logWarn, logError } from './terminal.js';
 import { obterServicosEmCache, obterConfiguracoesEmCache } from './cache.js';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
@@ -558,6 +558,53 @@ function parseToolArguments(rawArgs, nomeFuncao = '') {
 }
 
 /**
+ * System Prompt da Assistente Executiva e Operacional da Lara (Modo Profissional)
+ */
+export async function getSystemPromptProfissional() {
+  const now = new Date();
+  const dataHoje = now.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const dataIso = now.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  const horaAtual = now.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `Você é a Assistente Pessoal e Operacional da Lara Varisa (Lara Varisa Lash Designer).
+Hoje é ${dataHoje} (${dataIso}) e agora são exatamente ${horaAtual} (horário de Brasília / Porto Alegre).
+
+Seu papel é ser o braço direito da Lara no WhatsApp: uma assistente executiva de alto nível, ágil, acolhedora, carinhosa e altamente eficiente. Trate-a com carinho e respeito profissional ("Oi, Lara!", "Com certeza, Lara!", "Prontinho!").
+
+VOCÊ TEM FERRAMENTAS REAIS INTEGRADAS AO SISTEMA DO ESTÚDIO:
+1. "consultarAgendaProfissional": Lista os atendimentos de hoje, amanhã ou de qualquer data (ex: "Quem tenho hoje?", "Agenda de amanhã").
+2. "consultarProximoAtendimento": Informa quem é a próxima cliente a ser atendida hoje e quantos minutos faltam.
+3. "cancelarAgendamentoProfissional": Cancela o agendamento de uma cliente pelo ID ou nome e libera o horário no sistema.
+4. "cancelarVariosAgendamentosProfissional": REGRA CRÍTICA: Se a Lara pedir para cancelar vários horários (ex: "cancela todos os horários de amanhã"), NUNCA cancele direto! Primeiro consulte, liste os agendamentos e pergunte: "Lara, você tem X agendamentos amanhã: ... Quer realmente cancelar todos os X?". Somente após a Lara confirmar expressamente ("sim", "confirmo"), chame esta ferramenta com confirmacao_expressa=true!
+5. "remarcarAgendamentoProfissional": Altera a data/horário de uma cliente para um novo horário vago com revalidação atômica e lock no banco.
+6. "bloquearHorarioProfissional": Bloqueia intervalos ou folgas na agenda (ex: "Bloqueia amanhã às 18h", "Intervalo de almoço das 12h às 13h"). Se houver clientes já agendadas no período, você será avisada do conflito.
+7. "desbloquearHorarioProfissional": Remove um bloqueio de horário.
+8. "consultarHistoricoClienteProfissional": CRM rápido da cliente (quantas vezes já veio, última data, procedimento preferido, cancelamentos, notas).
+9. "listarClientesInativasProfissional": Lista clientes que não vêm há mais de 45/60/90 dias para reengajamento.
+10. "consultarResumoFinanceiroProfissional": Calcula faturamento previsto e realizado para hoje, semana ou mês.
+11. "configurarRotinaAutomaticaProfissional": Programa envios automáticos diários no banco (ex: "Me manda todo dia às 08:00 o resumo da agenda").
+12. "listarRotinasAutomaticasProfissional" e "desativarRotinaAutomaticaProfissional".
+13. "configurarNotificacoesProfissional": Liga ou desliga alertas de novos agendamentos no WhatsApp da Lara.
+14. "enviarMensagemParaCliente": Envia um recado via WhatsApp para uma cliente.
+
+DIRETRIZES DE OURO:
+• Aja como uma assistente humana de verdade: seja concisa, direta, sem jargões de programação (nunca diga "executando ferramenta", "chamando RPC" ou "Modo Profissional").
+• Se a Lara disser apenas "Quem tenho hoje?" ou "Próximo horário?", responda de bate-pronto após consultar a ferramenta.
+• Se houver mais de uma cliente com o mesmo nome (ex: duas "Marias"), NUNCA adivinhe: pergunte qual delas ela quer alterar.
+• Apresente listas e resumos de forma limpa e organizada com marcadores (•) e emojis sutis.`;
+}
+
+/**
  * Processa mensagens recebidas pelo WhatsApp através do motor de IA OpenCode Go
  * com suporte a Tool Calling e envio humanizado de resposta.
  * 
@@ -672,11 +719,28 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     pushName = await resolverNomeCliente(jid, telefoneLimpo, rawPushName);
   }
 
+  // Identifica se a mensagem veio do número pessoal autorizado da Lara (Modo Profissional)
+  const configLara = await obterConfiguracoesLara();
+  const laraPhoneLimpo = normalizarTelefoneBR(configLara.laraPhone);
+  const isLara = Boolean(
+    laraPhoneLimpo && (
+      telefoneLimpo === laraPhoneLimpo ||
+      (telefoneLimpo.length >= 8 && laraPhoneLimpo.length >= 8 && telefoneLimpo.slice(-8) === laraPhoneLimpo.slice(-8))
+    )
+  );
+
+  if (isLara) {
+    pushName = 'Lara';
+  }
+
+  // Isolamento estrito de memória: Lara possui chave 'lara_admin' para que conversas com clientes não poluam o contexto
+  const chaveMemoria = isLara ? 'lara_admin' : jid;
+
   // Registra chegada limpa da mensagem
   if (base64Imagem) {
-    logIncoming(pushName, `[Foto enviada]${texto.trim() ? `: "${texto.trim()}"` : ''}`);
+    logIncoming(isLara ? 'Lara (Copilot)' : pushName, `[Foto enviada]${texto.trim() ? `: "${texto.trim()}"` : ''}`);
   } else if (!ehAudio) {
-    logIncoming(pushName, texto.trim());
+    logIncoming(isLara ? 'Lara (Copilot)' : pushName, texto.trim());
   }
 
 
@@ -690,12 +754,12 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     }
   }
 
-  // 1. Guardrail Pré-IA: intercepta prompt injections, pedidos de scripts/python e fuga de contexto
-  if (texto.trim()) {
+  // 1. Guardrail Pré-IA: intercepta prompt injections, pedidos de scripts/python e fuga de contexto (apenas clientes)
+  if (!isLara && texto.trim()) {
     const checkSeguranca = verificarSegurancaEntrada(texto);
     if (checkSeguranca.bloqueado) {
-      addMessage(jid, 'user', texto.trim());
-      addMessage(jid, 'assistant', checkSeguranca.resposta);
+      addMessage(chaveMemoria, 'user', texto.trim());
+      addMessage(chaveMemoria, 'assistant', checkSeguranca.resposta);
       if (sock) {
         await sendHumanizedMessage(sock, jid, checkSeguranca.resposta);
       }
@@ -705,11 +769,11 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     }
   }
 
-  // Registra a mensagem da usuária no histórico em memória de forma leve
+  // Registra a mensagem da usuária no histórico em memória com isolamento
   const textoParaMemoria = base64Imagem
     ? `[Foto enviada]: ${texto.trim() || 'Foto de inspiração de cílios/olhar'}`
     : texto.trim();
-  addMessage(jid, 'user', textoParaMemoria);
+  addMessage(chaveMemoria, 'user', textoParaMemoria);
 
   // Constrói o contexto da chamada de ferramentas e fallback
   const context = {
@@ -721,12 +785,22 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     msgKey: jidOrMsg?.key || null,
     ehImagem,
     base64Imagem,
+    isLara,
+    actor_phone: isLara ? (laraPhoneLimpo || telefoneLimpo) : telefoneLimpo,
   };
 
   // Se a IA não estiver validada/conectada, roteia diretamente para o fallback determinístico
   if (!isIAConectada()) {
+    if (isLara) {
+      const respostaOffline = 'Oi, Lara! Minha conexão com o modelo de IA está indisponível no momento. Verifique as chaves ou tente novamente em instantes.';
+      addMessage(chaveMemoria, 'assistant', respostaOffline);
+      if (sock) {
+        await sendHumanizedMessage(sock, jid, respostaOffline);
+      }
+      return respostaOffline;
+    }
     const respostaFallback = await processarFallback(texto, context);
-    addMessage(jid, 'assistant', respostaFallback);
+    addMessage(chaveMemoria, 'assistant', respostaFallback);
     if (sock) {
       await enviarRespostaHumanizadaOuVoz(sock, jid, respostaFallback, pushName, { ehAudio, pediuAudio });
     } else {
@@ -736,7 +810,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
   }
   // Se a cliente pediu atendimento humano, dispara notificação imediata para a Lara
   const normTexto = String(texto).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  const ehChamadaHumano =
+  const ehChamadaHumano = !isLara && (
     /\b(dono|dona|proprietari[ao]|gerente|responsavel)\b/i.test(normTexto) ||
     normTexto.includes('falar com a lara') ||
     normTexto.includes('falar com lara') ||
@@ -754,7 +828,8 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     normTexto.includes('chama o dono') ||
     normTexto.includes('atendente') ||
     normTexto.includes('humano') ||
-    normTexto.includes('atendimento humano');
+    normTexto.includes('atendimento humano')
+  );
 
   if (ehChamadaHumano && sock) {
     if (jidOrMsg?.key) {
@@ -770,14 +845,16 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
   try {
     // Carrega histórico recente da sessão (limita aos últimos 8 turnos para velocidade máxima de resposta)
-    const historicoCompleto = getHistory(jid);
+    const historicoCompleto = getHistory(chaveMemoria);
     const historico = historicoCompleto.slice(-8);
 
     // Monta mensagens com o system prompt atualizado
     const messages = [
       {
         role: 'system',
-        content: await getSystemPrompt(pushName, telefoneLimpo),
+        content: isLara
+          ? await getSystemPromptProfissional()
+          : await getSystemPrompt(pushName, telefoneLimpo),
       },
       ...historico.map((m, idx) => {
         // Se a mensagem atual possui imagem e este é o turno recém-adicionado do usuário
@@ -846,14 +923,14 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         {
           model: modeloUsado,
           messages,
-          tools: ferramentasSchema,
+          tools: isLara ? ferramentasProfissionalSchema : ferramentasSchema,
           tool_choice: 'auto',
-          temperature: 0.5,
-          max_tokens: base64Imagem ? 1000 : 250,
+          temperature: isLara ? 0.3 : 0.5,
+          max_tokens: isLara ? 800 : (base64Imagem ? 1000 : 250),
         },
         {
           headers: {
-            'x-opencode-session': `wa_${jidLimpo}`,
+            'x-opencode-session': isLara ? 'wa_lara_copilot' : `wa_${jidLimpo}`,
           },
         }
       );
@@ -875,7 +952,7 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
             const nomeFuncao = toolCall.function.name;
             const args = parseToolArguments(toolCall.function.arguments, nomeFuncao);
 
-            logAction('Ferramenta', `${nomeFuncao} (${pushName})`);
+            logAction(isLara ? 'Copilot Lara' : 'Ferramenta', `${nomeFuncao} (${isLara ? 'Lara' : pushName})`);
             const resultado = await executarFerramenta(nomeFuncao, args, context);
 
             return {
@@ -898,36 +975,49 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
     }
 
     if (!respostaFinal.trim()) {
-      respostaFinal = 'Oi! Tudo bem? Como posso te ajudar hoje? 💕';
+      respostaFinal = isLara
+        ? 'Oi, Lara! Estou à disposição. Como posso te ajudar na sua agenda agora?'
+        : 'Oi! Tudo bem? Como posso te ajudar hoje? 💕';
     }
 
-    // 2. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves
-    respostaFinal = verificarSegurancaSaida(respostaFinal);
+    // 2. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves (apenas clientes)
+    if (!isLara) {
+      respostaFinal = verificarSegurancaSaida(respostaFinal);
 
-    // 3. Sanitização do Nome: Garante que NUNCA fale sobrenome ou nome composto
-    if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
-      respostaFinal = respostaFinal.replaceAll(rawPushName, pushName);
+      // 3. Sanitização do Nome: Garante que NUNCA fale sobrenome ou nome composto
+      if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
+        respostaFinal = respostaFinal.replaceAll(rawPushName, pushName);
+      }
     }
 
-    // Salva a resposta do assistente no histórico em memória
-    addMessage(jid, 'assistant', respostaFinal);
+    // Salva a resposta do assistente no histórico em memória com chave isolada
+    addMessage(chaveMemoria, 'assistant', respostaFinal);
 
     // Envia resposta humanizada via Baileys (áudio PTT ou texto) com controle anti-ban
     if (sock) {
       await enviarRespostaHumanizadaOuVoz(sock, jid, respostaFinal, pushName, { ehAudio, pediuAudio });
     } else {
-      logOutgoing(pushName, respostaFinal);
+      logOutgoing(isLara ? 'Lara (Copilot)' : pushName, respostaFinal);
     }
     return respostaFinal;
   } catch (error) {
     logError('IA', `Erro no modelo de IA: ${error?.message || error}. Ativando contingência...`);
+
+    if (isLara) {
+      const msgErroLara = 'Lara, tive uma instabilidade temporária na conexão com a inteligência artificial. Pode repetir sua mensagem ou tentar novamente em instantes?';
+      addMessage(chaveMemoria, 'assistant', msgErroLara);
+      if (sock) {
+        await sendHumanizedMessage(sock, jid, msgErroLara);
+      }
+      return msgErroLara;
+    }
 
     try {
       let fallbackResposta = await processarFallback(texto, context);
       if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
         fallbackResposta = fallbackResposta.replaceAll(rawPushName, pushName);
       }
-      addMessage(jid, 'assistant', fallbackResposta);
+      addMessage(chaveMemoria, 'assistant', fallbackResposta);
       if (sock) {
         await enviarRespostaHumanizadaOuVoz(sock, jid, fallbackResposta, pushName, { ehAudio, pediuAudio });
       } else {
