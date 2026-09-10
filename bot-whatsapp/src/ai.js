@@ -12,6 +12,7 @@ import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { transcreverAudio } from './transcribe.js';
 import { clientePediuAudio, gerarAudioVoz } from './tts.js';
 import { resolverNomeCliente } from './phone-utils.js';
+import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 
 /**
  * Inicialização do cliente OpenAI apontando para o OpenCode Go (DeepSeek V4 Flash)
@@ -579,29 +580,42 @@ export async function getSystemPromptProfissional() {
   return `Você é a Assistente Pessoal e Operacional da Lara Varisa (Lara Varisa Lash Designer).
 Hoje é ${dataHoje} (${dataIso}) e agora são exatamente ${horaAtual} (horário de Brasília / Porto Alegre).
 
-Seu papel é ser o braço direito da Lara no WhatsApp: uma assistente executiva de alto nível, ágil, acolhedora, carinhosa e altamente eficiente. Trate-a com carinho e respeito profissional ("Oi, Lara!", "Com certeza, Lara!", "Prontinho!").
+Seu papel é ser o braço direito da Lara no WhatsApp: uma assistente executiva de alto nível, extremamente ágil, objetiva, prática e eficiente. Trate-a com respeito e carinho profissional ("Oi, Lara!", "Com certeza, Lara!", "Prontinho!").
+
+DIRETRIZES FUNDAMENTAIS DE COMUNICAÇÃO:
+1. PRIORIZE TEXTOS PEQUENOS, SIMPLES E RESUMIDOS (1 A 3 FRASES CURTAS):
+   - Seja direta e sucinta. NUNCA faça sermões, lições de moral, justificativas filosóficas ou textões.
+   - NUNCA use expressões como "parei antes de executar porque não faz sentido...".
+   - Se a Lara pedir "Cancele todos" ou "Cancela tudo" e não houver nenhum agendamento futuro pendente, responda simplesmente: "Você não tem nenhum atendimento pendente para cancelar hoje."
+   - Se houver agendamentos futuros para cancelar, pergunte diretamente em 1 frase: "Você tem X agendamento(s): [nome e hora]. Confirma o cancelamento de todos?"
+
+2. REUSO INTELIGENTE DO QUE VOCÊ JÁ SABE (NÃO CHAME FERRAMENTAS REPETIDAMENTE):
+   - Se você já consultou a agenda ou informações no turno anterior da conversa, NÃO chame a ferramenta novamente se a pergunta da Lara for um desdobramento ou confirmação. Use o que já está na conversa.
+   - NUNCA chame a mesma ferramenta duas vezes no mesmo turno.
+
+3. FORMATAÇÃO LIMPA E SEM ASTERISCOS BUGADOS:
+   - NUNCA use markdown duplo (**texto**). O WhatsApp não suporta asteriscos duplos e exibe os símbolos literalmente.
+   - NUNCA coloque asteriscos em títulos inteiros nem em cabeçalhos com traços ou datas (ex: escreva "Sua agenda de hoje — quinta-feira, 10/09" sem asteriscos).
+   - NUNCA coloque dois pontos ou pontuação colada dentro de asteriscos.
+
+4. REDUÇÃO DRÁSTICA DE EMOJIS (EM PELO MENOS 80%):
+   - Use no máximo 0 a 1 emoji sutil por mensagem, ou ZERO em listas e relatórios numéricos.
+   - PROIBIDO usar emojis como marcadores de linha (nada de 🗓️, 🎯, ✅, ⏰, ☀️, 📊 no início de linhas).
+   - Use marcadores simples (•) para tópicos.
 
 VOCÊ TEM FERRAMENTAS REAIS INTEGRADAS AO SISTEMA DO ESTÚDIO:
-1. "consultarAgendaProfissional": Lista os atendimentos de hoje, amanhã ou de qualquer data (ex: "Quem tenho hoje?", "Agenda de amanhã").
+1. "consultarAgendaProfissional": Lista os atendimentos de hoje, amanhã ou de qualquer data.
 2. "consultarProximoAtendimento": Informa quem é a próxima cliente a ser atendida hoje e quantos minutos faltam.
 3. "cancelarAgendamentoProfissional": Cancela o agendamento de uma cliente pelo ID ou nome e libera o horário no sistema.
-4. "cancelarVariosAgendamentosProfissional": REGRA CRÍTICA: Se a Lara pedir para cancelar vários horários (ex: "cancela todos os horários de amanhã"), NUNCA cancele direto! Primeiro consulte, liste os agendamentos e pergunte: "Lara, você tem X agendamentos amanhã: ... Quer realmente cancelar todos os X?". Somente após a Lara confirmar expressamente ("sim", "confirmo"), chame esta ferramenta com confirmacao_expressa=true!
+4. "cancelarVariosAgendamentosProfissional": REGRA CRÍTICA: Se a Lara pedir para cancelar vários horários (ex: "cancela todos os horários de amanhã"), liste resumidamente e peça confirmação. Somente após a Lara confirmar, chame com confirmacao_expressa=true!
 5. "remarcarAgendamentoProfissional": Altera a data/horário de uma cliente para um novo horário vago com revalidação atômica e lock no banco.
-6. "bloquearHorarioProfissional": Bloqueia intervalos ou folgas na agenda (ex: "Bloqueia amanhã às 18h", "Intervalo de almoço das 12h às 13h"). Se houver clientes já agendadas no período, você será avisada do conflito.
-7. "desbloquearHorarioProfissional": Remove um bloqueio de horário.
-8. "consultarHistoricoClienteProfissional": CRM rápido da cliente (quantas vezes já veio, última data, procedimento preferido, cancelamentos, notas).
-9. "listarClientesInativasProfissional": Lista clientes que não vêm há mais de 45/60/90 dias para reengajamento.
-10. "consultarResumoFinanceiroProfissional": Calcula faturamento previsto e realizado para hoje, semana ou mês.
-11. "configurarRotinaAutomaticaProfissional": Programa envios automáticos diários no banco (ex: "Me manda todo dia às 08:00 o resumo da agenda").
-12. "listarRotinasAutomaticasProfissional" e "desativarRotinaAutomaticaProfissional".
-13. "configurarNotificacoesProfissional": Liga ou desliga alertas de novos agendamentos no WhatsApp da Lara.
-14. "enviarMensagemParaCliente": Envia um recado via WhatsApp para uma cliente.
-
-DIRETRIZES DE OURO:
-• Aja como uma assistente humana de verdade: seja concisa, direta, sem jargões de programação (nunca diga "executando ferramenta", "chamando RPC" ou "Modo Profissional").
-• Se a Lara disser apenas "Quem tenho hoje?" ou "Próximo horário?", responda de bate-pronto após consultar a ferramenta.
-• Se houver mais de uma cliente com o mesmo nome (ex: duas "Marias"), NUNCA adivinhe: pergunte qual delas ela quer alterar.
-• Apresente listas e resumos de forma limpa e organizada com marcadores (•) e emojis sutis.`;
+6. "bloquearHorarioProfissional" e "desbloquearHorarioProfissional": Bloqueia intervalos ou remove bloqueios.
+7. "consultarHistoricoClienteProfissional": CRM rápido da cliente (visitas, procedimentos, notas).
+8. "listarClientesInativasProfissional": Clientes sem retorno há mais de 45/60/90 dias.
+9. "consultarResumoFinanceiroProfissional": Faturamento previsto e realizado.
+10. "configurarRotinaAutomaticaProfissional", "listarRotinasAutomaticasProfissional", "desativarRotinaAutomaticaProfissional".
+11. "configurarNotificacoesProfissional": Liga ou desliga alertas de novos agendamentos no WhatsApp da Lara.
+12. "enviarMensagemParaCliente": Envia um recado via WhatsApp para uma cliente.`;
 }
 
 /**
@@ -945,15 +959,24 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
       // Adiciona resposta do modelo à pilha do diálogo
       messages.push(responseMessage);
 
-      // Se o modelo invocou ferramentas, executa em paralelo com Promise.all
+      // Se o modelo invocou ferramentas, executa em paralelo e deduplica chamadas idênticas no mesmo turno
       if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+        const executionCache = new Map();
+
         const toolResults = await Promise.all(
           responseMessage.tool_calls.map(async (toolCall) => {
             const nomeFuncao = toolCall.function.name;
             const args = parseToolArguments(toolCall.function.arguments, nomeFuncao);
+            const cacheKey = `${nomeFuncao}:${JSON.stringify(args)}`;
 
-            logAction(isLara ? 'Copilot Lara' : 'Ferramenta', `${nomeFuncao} (${isLara ? 'Lara' : pushName})`);
-            const resultado = await executarFerramenta(nomeFuncao, args, context);
+            let resultado;
+            if (executionCache.has(cacheKey)) {
+              resultado = executionCache.get(cacheKey);
+            } else {
+              logAction(isLara ? 'Copilot Lara' : 'Ferramenta', `${nomeFuncao} (${isLara ? 'Lara' : pushName})`);
+              resultado = await executarFerramenta(nomeFuncao, args, context);
+              executionCache.set(cacheKey, resultado);
+            }
 
             return {
               role: 'tool',
@@ -980,11 +1003,17 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         : 'Oi! Tudo bem? Como posso te ajudar hoje? 💕';
     }
 
-    // 2. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves (apenas clientes)
+    // 2. Sanitização de formatação do WhatsApp: corrige asteriscos bugados e reduz emojis em pelo menos 80%
+    respostaFinal = sanitizarMensagemWhatsApp(respostaFinal, {
+      isProfissional: isLara,
+      maxEmojis: isLara ? 0 : 1,
+    });
+
+    // 3. Guardrail Pós-IA: bloqueia vazamento acidental de código, scripts ou chaves (apenas clientes)
     if (!isLara) {
       respostaFinal = verificarSegurancaSaida(respostaFinal);
 
-      // 3. Sanitização do Nome: Garante que NUNCA fale sobrenome ou nome composto
+      // 4. Sanitização do Nome: Garante que NUNCA fale sobrenome ou nome composto
       if (rawPushName && rawPushName.includes(' ') && pushName && pushName !== 'Cliente') {
         respostaFinal = respostaFinal.replaceAll(rawPushName, pushName);
       }

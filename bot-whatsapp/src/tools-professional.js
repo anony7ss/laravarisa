@@ -336,7 +336,7 @@ export async function cancelarVariosAgendamentosProfissional({
 
     const { data: lista, error: listErr } = await supabase
       .from('appointments')
-      .select('id, starts_at, client_name, service:services(name)')
+      .select('id, starts_at, ends_at, client_name, service:services(name)')
       .in('status', ['scheduled', 'confirmed'])
       .gte('starts_at', startIso)
       .lte('starts_at', endIso)
@@ -346,17 +346,27 @@ export async function cancelarVariosAgendamentosProfissional({
       return { ok: false, erro: 'Erro ao consultar agendamentos.' };
     }
 
-    if (!lista || lista.length === 0) {
+    const hojeYmd = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+    const agora = new Date();
+
+    // Se for a data de hoje, considera apenas os agendamentos que ainda não se encerraram
+    const agendamentosPendentes = (dataYmd === hojeYmd)
+      ? (lista || []).filter((item) => new Date(item.ends_at || item.starts_at) > agora)
+      : (lista || []);
+
+    if (!agendamentosPendentes || agendamentosPendentes.length === 0) {
       return {
         ok: true,
         total: 0,
-        mensagem: `Não há nenhum agendamento ativo em ${dataYmd} para cancelar.`,
+        mensagem: dataYmd === hojeYmd
+          ? 'Você não tem nenhum atendimento pendente para cancelar hoje.'
+          : `Não há nenhum agendamento ativo em ${dataYmd} para cancelar.`,
       };
     }
 
-    // Regra de segurança: se a Lara ainda não confirmou expressamente a ação em massa, lista e pede confirmação
+    // Regra de segurança: se a Lara ainda não confirmou expressamente a ação em massa, lista e pede confirmação curta
     if (confirmacao_expressa !== true) {
-      const resumo = lista.map((item) => {
+      const resumo = agendamentosPendentes.map((item) => {
         const d = new Date(item.starts_at);
         const horaFmt = d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' });
         return `• ${horaFmt} — ${item.client_name} (${item.service?.name || 'Procedimento'})`;
@@ -365,9 +375,9 @@ export async function cancelarVariosAgendamentosProfissional({
       return {
         ok: false,
         confirmacao_necessaria: true,
-        total: lista.length,
+        total: agendamentosPendentes.length,
         data: dataYmd,
-        mensagem: `Lara, você tem ${lista.length} agendamento(s) para este dia:\n\n${resumo}\n\n⚠️ *Quer realmente cancelar todos os ${lista.length}?* Me responda confirmando para eu executar.`,
+        mensagem: `Você tem ${agendamentosPendentes.length} agendamento(s) pendente(s):\n${resumo}\n\nConfirma o cancelamento?`,
       };
     }
 

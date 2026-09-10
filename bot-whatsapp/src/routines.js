@@ -95,32 +95,29 @@ export async function verificarRotinasAgendadas(sock) {
       let mensagem = '';
 
       if (rotina.routine_type === 'daily_agenda_briefing') {
-        const agenda = await consultarAgendaProfissional({ data: 'hoje' });
+        const agenda = await consultarAgendaProfissional({ data: 'hoje', actor_phone: laraPhoneLimpo });
         if (agenda.total === 0) {
-          mensagem = `☀️ *Bom dia, Lara!*\n\nSua agenda de hoje está totalmente livre (sem atendimentos agendados). Aproveite o dia! 💕`;
+          mensagem = `Bom dia, Lara! Sua agenda de hoje está livre (sem atendimentos agendados).`;
         } else {
-          const itens = agenda.agendamentos.map((ag) => `• *${ag.hora_inicio}* — ${ag.cliente} (${ag.procedimento})`).join('\n');
+          const itens = (agenda.agendamentos || []).map((ag) => `• ${ag.hora_inicio} — ${ag.cliente} (${ag.procedimento})`).join('\n');
           mensagem =
-            `☀️ *Bom dia, Lara! Aqui está o resumo da sua agenda de hoje:*\n\n` +
+            `Bom dia, Lara! Resumo da sua agenda de hoje:\n\n` +
             `${itens}\n\n` +
-            `📊 *Total de atendimentos:* ${agenda.total}\n` +
-            `Tenha um dia maravilhoso e produtivo! 💕`;
+            `Total: ${agenda.total} atendimento(s) | Previsto: ${agenda.valor_total_previsto_fmt}`;
         }
       } else if (rotina.routine_type === 'financial_report') {
-        const fin = await consultarResumoFinanceiroProfissional({ periodo: 'hoje' });
+        const fin = await consultarResumoFinanceiroProfissional({ periodo: 'hoje', actor_phone: laraPhoneLimpo });
         mensagem =
-          `📊 *Relatório Financeiro do Dia (${fin.periodo}):*\n\n` +
-          `• Atendimentos realizados: ${fin.total_atendimentos_concluidos}\n` +
-          `• Faturamento realizado: *${fin.faturamento_realizado_fmt}*\n` +
-          `• Procedimento destaque: ${fin.servico_mais_agendado}\n\n` +
-          `Ótimo trabalho hoje, Lara! ✨`;
+          `Relatório Financeiro (${fin.periodo}):\n\n` +
+          `• Atendimentos concluídos: ${fin.total_atendimentos_concluidos}\n` +
+          `• Faturamento: ${fin.faturamento_realizado_fmt}\n` +
+          `• Destaque: ${fin.servico_mais_agendado}`;
       } else if (rotina.routine_type === 'inactive_clients_alert') {
-        const inat = await listarClientesInativasProfissional({ dias_sem_vir: 60 });
+        const inat = await listarClientesInativasProfissional({ dias_sem_vir: 60, actor_phone: laraPhoneLimpo });
         if (inat.total > 0) {
           mensagem =
-            `🔔 *Lara, encontrei ${inat.total} clientes que não vêm há mais de 60 dias:*\n\n` +
-            inat.clientes.slice(0, 5).map((c) => `• ${c.cliente} (última visita: ${c.ultima_visita})`).join('\n') +
-            `\n\n_Quer preparar uma mensagem carinhosa ou promoção de retorno para elas?_ 💕`;
+            `Lara, ${inat.total} cliente(s) não vêm há mais de 60 dias:\n\n` +
+            inat.clientes.slice(0, 5).map((c) => `• ${c.cliente} (última visita: ${c.ultima_visita})`).join('\n');
         }
       }
 

@@ -3,6 +3,7 @@
  */
 
 import { registrarMensagemChat } from './web-sync.js';
+import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 
 const queues = new Map();
 
@@ -48,13 +49,11 @@ export async function sendHumanizedMessage(sock, jid, text, options = {}) {
     throw new Error('Parâmetros inválidos: sock, jid e text são obrigatórios');
   }
 
-  // Sanitiza quebras de linha literais (\n e \r\n escapados) para quebras de linha reais
-  let formattedText = typeof text === 'string' ? text : String(text || '');
-  formattedText = formattedText
-    .replace(/\\r\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\n')
-    .trim();
+  // Sanitiza quebras de linha, asteriscos bugados e reduz emojis em pelo menos 80%
+  let formattedText = sanitizarMensagemWhatsApp(text, {
+    isProfissional: options.isProfissional || Boolean(options.senderType === 'bot_copilot'),
+    maxEmojis: options.maxEmojis ?? 1,
+  });
 
   return enqueue(jid, async () => {
     if (!options.skipTyping && !options.immediate) {
