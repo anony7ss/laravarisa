@@ -118,7 +118,7 @@ export function PwaInstaller() {
 
   return (
     <>
-      {/* BANNER FLUTUANTE INFERIOR */}
+      {/* BANNER FLUTUANTE INFERIOR (TEMA BRANCO LUXO COMBINANDO COM O SITE) */}
       {showBanner && (
         <div
           className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 sm:max-w-md z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
@@ -127,14 +127,14 @@ export function PwaInstaller() {
         >
           <div
             style={{
-              background: 'rgba(18, 18, 17, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.65), 0 2px 10px rgba(0, 0, 0, 0.3)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              borderRadius: '20px',
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.15), 0 4px 14px rgba(0, 0, 0, 0.06)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: '22px',
               padding: '12px 14px',
-              color: '#ffffff',
+              color: '#121211',
             }}
             className="flex items-center gap-3"
           >
@@ -143,19 +143,19 @@ export function PwaInstaller() {
               <img
                 src="/icons/icon-192x192.png"
                 alt="Lara Varisa"
-                className="w-11 h-11 rounded-2xl object-cover border border-white/10 shadow-sm"
+                className="w-11 h-11 rounded-2xl object-cover border border-black/8 shadow-xs"
               />
-              <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#cca352] text-black flex items-center justify-center text-[9px] font-bold shadow-xs">
+              <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#cca352] text-[#121211] flex items-center justify-center text-[9px] font-bold shadow-xs">
                 ★
               </span>
             </div>
 
             {/* Texto */}
             <div className="flex-1 min-w-0">
-              <span className="text-xs font-bold text-white block truncate leading-tight">
+              <span className="text-xs font-bold text-[#121211] block truncate leading-tight">
                 Instalar App Lara Varisa
               </span>
-              <p className="text-[11px] text-[#b0b0a8] m-0 truncate leading-snug mt-0.5">
+              <p className="text-[11px] text-[#6b6b64] m-0 truncate leading-snug mt-0.5 font-medium">
                 Adicione à tela inicial para agendar mais rápido
               </p>
             </div>
@@ -165,17 +165,17 @@ export function PwaInstaller() {
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-[#121211] transition-all hover:opacity-95 active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-sm"
-                style={{ backgroundColor: '#cca352' }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-95 active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-sm"
+                style={{ backgroundColor: '#121211' }}
               >
-                <Download size={13} strokeWidth={2.5} />
+                <Download size={13} strokeWidth={2.5} style={{ color: '#cca352' }} />
                 <span>Instalar</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-[#8c8c84] hover:text-[#121211] hover:bg-black/5 transition-colors cursor-pointer"
                 title="Fechar aviso"
               >
                 <X size={15} />
@@ -187,20 +187,20 @@ export function PwaInstaller() {
 
       {/* NOTIFICAÇÃO DE SUCESSO APÓS INSTALAÇÃO */}
       {installedSuccess && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#121211] border border-emerald-500/40 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 animate-in fade-in duration-300">
-          <Check size={15} className="text-emerald-400" />
-          <span>App instalado com sucesso na sua tela de início!</span>
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-white border border-emerald-500/30 text-emerald-800 text-xs px-4 py-2.5 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in duration-300">
+          <Check size={15} className="text-emerald-600" />
+          <span className="font-medium">App instalado com sucesso na sua tela de início!</span>
         </div>
       )}
 
       {/* MODAL / BOTTOM SHEET DE INSTRUÇÕES PARA IPHONE (SAFARI) */}
       {showIosModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
           onClick={() => setShowIosModal(false)}
         >
           <div
-            className="w-full sm:max-w-md bg-[#181816] border border-white/15 rounded-t-3xl sm:rounded-3xl p-6 text-white shadow-2xl space-y-5 animate-in slide-in-from-bottom-6 duration-300"
+            className="w-full sm:max-w-md bg-white border border-[#e8e8e4] rounded-t-3xl sm:rounded-3xl p-6 text-[#121211] shadow-2xl space-y-5 animate-in slide-in-from-bottom-6 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -209,51 +209,51 @@ export function PwaInstaller() {
                 <img
                   src="/icons/icon-192x192.png"
                   alt="Lara Varisa"
-                  className="w-12 h-12 rounded-2xl border border-white/10"
+                  className="w-12 h-12 rounded-2xl border border-black/8 shadow-xs"
                 />
                 <div>
-                  <h3 className="text-base font-bold leading-tight">Instalar no iPhone</h3>
-                  <span className="text-xs text-[#b0b0a8]">Lara Varisa · Lash Designer</span>
+                  <h3 className="text-base font-bold leading-tight text-[#121211]">Instalar no iPhone</h3>
+                  <span className="text-xs text-[#707068]">Lara Varisa · Lash Designer</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowIosModal(false)}
-                className="p-2 rounded-full text-white/50 hover:text-white hover:bg-white/10"
+                className="p-2 rounded-full text-[#707068] hover:text-[#121211] hover:bg-black/5 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Passos Ilustrados */}
-            <div className="space-y-3 pt-1 text-xs">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#cca352] flex items-center justify-center shrink-0">
+            <div className="space-y-2.5 pt-1 text-xs">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
+                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
                   <Share2 size={16} />
                 </div>
                 <div>
-                  <strong className="block text-white font-semibold">1. Toque em Compartilhar</strong>
-                  <span className="text-[#a0a098]">No menu inferior do Safari do seu iPhone.</span>
+                  <strong className="block text-[#121211] font-semibold">1. Toque em Compartilhar</strong>
+                  <span className="text-[#707068]">No menu inferior do Safari do seu iPhone.</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#cca352] flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
+                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
                   <PlusSquare size={16} />
                 </div>
                 <div>
-                  <strong className="block text-white font-semibold">2. "Adicionar à Tela de Início"</strong>
-                  <span className="text-[#a0a098]">Role as opções e selecione o ícone com o sinal de +.</span>
+                  <strong className="block text-[#121211] font-semibold">2. "Adicionar à Tela de Início"</strong>
+                  <span className="text-[#707068]">Role as opções e selecione o ícone com o sinal de +.</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#cca352] flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
+                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
                   <Smartphone size={16} />
                 </div>
                 <div>
-                  <strong className="block text-white font-semibold">3. Toque em "Adicionar"</strong>
-                  <span className="text-[#a0a098]">No canto superior direito para confirmar.</span>
+                  <strong className="block text-[#121211] font-semibold">3. Toque em "Adicionar"</strong>
+                  <span className="text-[#707068]">No canto superior direito para confirmar.</span>
                 </div>
               </div>
             </div>
@@ -266,9 +266,9 @@ export function PwaInstaller() {
                 setShowIosModal(false);
                 setShowBanner(false);
               }}
-              className="w-full py-3 rounded-2xl font-bold text-xs bg-[#cca352] text-[#121211] transition-transform active:scale-95 shadow-md cursor-pointer"
+              className="w-full py-3 rounded-2xl font-bold text-xs bg-[#121211] text-white hover:opacity-90 transition-transform active:scale-95 shadow-md cursor-pointer flex items-center justify-center gap-2"
             >
-              Entendi
+              <span>Entendi</span>
             </button>
           </div>
         </div>

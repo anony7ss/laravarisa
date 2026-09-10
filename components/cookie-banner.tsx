@@ -1,21 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Cookie, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export function CookieBanner() {
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Não exibe no painel administrativo
+    if (pathname?.startsWith('/admin')) return;
+
     const hasConsent = localStorage.getItem('cookie-consent');
     if (!hasConsent) {
-      // Delay showing the banner slightly for better UX
-      const timer = setTimeout(() => setShow(true), 1000);
+      // Delay suave para exibição
+      const timer = setTimeout(() => setShow(true), 1500);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [pathname]);
 
-  if (!show) return null;
+  if (!show || pathname?.startsWith('/admin')) return null;
 
   const accept = () => {
     localStorage.setItem('cookie-consent', 'true');
@@ -24,70 +29,54 @@ export function CookieBanner() {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        bottom: '24px',
-        right: '24px',
-        width: 'calc(100% - 48px)',
-        maxWidth: '400px',
-        zIndex: 50,
-        background: '#fff',
-        borderRadius: '16px',
-        padding: '20px',
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0,0,0,0.05)',
-        border: '1px solid rgba(0,0,0,0.05)',
-        animation: 'fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}
+      className="fixed bottom-4 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-[380px] z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto"
+      role="region"
+      aria-label="Aviso de Privacidade e Cookies"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#111' }}>Privacidade e Cookies</h3>
-        <button 
-          onClick={accept}
-          style={{
-            background: 'transparent',
-            border: 0,
-            color: '#333',
-            cursor: 'pointer',
-            padding: '12px',
-            margin: '-12px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '48px',
-            minHeight: '48px',
-          }}
-          aria-label="Fechar aviso de cookies"
-        >
-          <X size={18} />
-        </button>
-      </div>
-      <p style={{ margin: 0, fontSize: '13px', color: '#444', lineHeight: 1.5 }}>
-        Utilizamos cookies para oferecer a melhor experiência. Ao continuar navegando, você concorda com o uso de cookies.
-      </p>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-        <button 
-          onClick={accept}
-          style={{
-            background: '#b03200',
-            color: '#fff',
-            border: 0,
-            borderRadius: '99px',
-            padding: '12px 24px',
-            fontSize: '14px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            flex: 1,
-            minHeight: '48px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          Aceitar
-        </button>
+      <div
+        style={{
+          background: 'rgba(255, 255, 255, 0.96)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.12), 0 4px 14px rgba(0, 0, 0, 0.05)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '10px 14px',
+          color: '#121211',
+        }}
+        className="flex items-center gap-3"
+      >
+        {/* Ícone Cookie com dourado discreto */}
+        <div className="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e8dfcf] flex items-center justify-center shrink-0 text-[#cca352]">
+          <Cookie size={16} strokeWidth={2.2} />
+        </div>
+
+        {/* Texto compacto */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] text-[#4a4a44] m-0 leading-tight">
+            Utilizamos cookies para melhorar sua navegação no site.
+          </p>
+        </div>
+
+        {/* Ações */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={accept}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-95 active:scale-95 cursor-pointer shadow-xs"
+            style={{ backgroundColor: '#121211' }}
+          >
+            Aceitar
+          </button>
+          <button
+            type="button"
+            onClick={accept}
+            className="p-1 rounded-lg text-[#8c8c84] hover:text-[#121211] hover:bg-black/5 transition-colors cursor-pointer"
+            aria-label="Fechar aviso de cookies"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );
