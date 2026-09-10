@@ -14,7 +14,7 @@ import {
 
 const bookingRequestSchema = z.object({
   serviceId: z.string().trim().min(1, 'Selecione um serviço válido'),
-  startsAt: z.string().datetime({ offset: true }),
+  startsAt: z.iso.datetime({ offset: true }),
   clientName: z.string().trim().min(2, 'Informe seu nome completo').max(80),
   clientPhone: z
     .string()
@@ -22,7 +22,7 @@ const bookingRequestSchema = z.object({
     .min(10, 'Informe um telefone com DDD válido')
     .max(24),
   clientEmail: z
-    .union([z.literal(''), z.string().trim().email().max(254)])
+    .union([z.literal(''), z.email().trim().max(254)])
     .default(''),
   notes: z.string().trim().max(1000).default(''),
   turnstileToken: z.string().max(4096).optional().default(''),
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
   // 0. Verifica se o estúdio está recebendo agendamentos online
   const { data: siteSettings } = await supabase
-    .from('site_settings')
+    .from('public_site_settings')
     .select('booking_enabled, booking_closed_message, open_days')
     .eq('id', 'global')
     .maybeSingle();
@@ -162,4 +162,3 @@ export async function POST(request: Request) {
     return jsonError('Erro interno ao processar agendamento.', 500);
   }
 }
-

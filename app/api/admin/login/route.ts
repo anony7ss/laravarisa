@@ -11,6 +11,11 @@ import {
   jsonError,
   NO_STORE_HEADERS,
 } from '@/lib/security';
+import {
+  createOtpCode,
+  hashOtpCode,
+  sealTwoFactorPending,
+} from '@/lib/two-factor';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -93,14 +98,15 @@ export async function POST(request: Request) {
       cleanPhone = `55${cleanPhone}`;
     }
 
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpCode = createOtpCode();
     const tempToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await authClient
       .from('profiles')
       .update({
-        two_factor_code: otpCode,
+        // Store only a digest. The plaintext code is sent once through the outbox.
+        two_factor_code: hashOtpCode(otpCode),
         two_factor_expires_at: expiresAt,
         two_factor_temp_token: tempToken,
       })
@@ -119,7 +125,7 @@ export async function POST(request: Request) {
         ? `${cleanPhone.slice(0, 4)}****${cleanPhone.slice(-2)}`
         : '****';
 
-    const pendingPayload = JSON.stringify({
+    const pendingValue = sealTwoFactorPending({
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       user_id: data.user.id,
@@ -127,7 +133,14 @@ export async function POST(request: Request) {
       remember,
     });
 
-    cookieStore.set('lv_2fa_pending', Buffer.from(pendingPayload).toString('base64'), {
+    if (!pendingValue) {
+      return jsonError(
+        'A autenticação em duas etapas ainda não está configurada com segurança.',
+        503,
+      );
+    }
+
+    cookieStore.set('lv_2fa_pending', pendingValue, {
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -177,4 +190,3 @@ export async function POST(request: Request) {
 
   return Response.json({ ok: true }, { headers: NO_STORE_HEADERS });
 }
-

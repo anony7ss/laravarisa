@@ -11,6 +11,7 @@ import {
   jsonError,
   NO_STORE_HEADERS,
 } from '@/lib/security';
+import { openTwoFactorPending, safeCompareOtpCode } from '@/lib/two-factor';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -39,23 +40,13 @@ export async function POST(request: Request) {
     return jsonError('Sessão expirada. Faça login novamente.', 401);
   }
 
-  let pendingData: {
-    access_token: string;
-    refresh_token: string;
-    user_id: string;
-    temp_token: string;
-    remember: boolean;
-  };
-
-  try {
-    const jsonStr = Buffer.from(rawPending, 'base64').toString('utf-8');
-    pendingData = JSON.parse(jsonStr);
-  } catch {
+  const pendingData = openTwoFactorPending(rawPending);
+  if (!pendingData) {
     cookieStore.delete('lv_2fa_pending');
     return jsonError('Sessão corrompida. Faça login novamente.', 400);
   }
 
-  if (tempToken && pendingData.temp_token !== tempToken) {
+  if (!tempToken || pendingData.temp_token !== tempToken) {
     return jsonError('Token de segurança incompatível.', 401);
   }
 
@@ -87,7 +78,7 @@ export async function POST(request: Request) {
     return jsonError('Usuário não encontrado.', 404);
   }
 
-  if (!profile.two_factor_code || profile.two_factor_code !== code.trim()) {
+  if (!profile.two_factor_code || !safeCompareOtpCode(code.trim(), profile.two_factor_code)) {
     return jsonError('Código de verificação incorreto.', 401);
   }
 

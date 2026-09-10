@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.get_public_client_appointments(p_phone text)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, pg_temp
-AS 
+AS $$
 DECLARE
   v_raw_phone text;
   v_clean_phone text;
@@ -98,6 +98,6 @@ BEGIN
 
   RETURN v_results;
 END;
-;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.get_public_client_appointments(text) TO anon, authenticated;

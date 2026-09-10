@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Clock3, CalendarDays, Loader2, AlertCircle } from 'lucide-react';
+import { CalendarDays, Loader2, AlertCircle } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
 export type TimeSlot = {
@@ -57,10 +57,13 @@ export function DateTimePicker({
   plainContainer?: boolean;
   variant?: 'classic' | 'modern';
 }) {
-  const today = useMemo(() => {
+  // Keep the first render deterministic for SSR/hydration; replace it with the
+  // real local day immediately after mount.
+  const [today, setToday] = useState(() => new Date(2000, 0, 1));
+  useEffect(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
-    return d;
+    setToday(d);
   }, []);
 
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -453,4 +456,3 @@ export function DateTimePicker({
     </div>
   );
 }
-

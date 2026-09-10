@@ -7,6 +7,7 @@ import {
   jsonError,
   NO_STORE_HEADERS,
 } from '@/lib/security';
+import { hashOtpCode, createOtpCode, openTwoFactorPending } from '@/lib/two-factor';
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -23,11 +24,8 @@ export async function POST(request: Request) {
     return jsonError('Sessão expirada. Faça login novamente.', 401);
   }
 
-  let pendingData: { user_id: string; temp_token: string; access_token?: string; refresh_token?: string };
-  try {
-    const jsonStr = Buffer.from(rawPending, 'base64').toString('utf-8');
-    pendingData = JSON.parse(jsonStr);
-  } catch {
+  const pendingData = openTwoFactorPending(rawPending);
+  if (!pendingData) {
     return jsonError('Sessão corrompida. Faça login novamente.', 400);
   }
 
@@ -63,13 +61,13 @@ export async function POST(request: Request) {
     cleanPhone = `55${cleanPhone}`;
   }
 
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpCode = createOtpCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
   await db
     .from('profiles')
     .update({
-      two_factor_code: otpCode,
+      two_factor_code: hashOtpCode(otpCode),
       two_factor_expires_at: expiresAt,
     })
     .eq('id', pendingData.user_id);

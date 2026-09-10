@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   const durationParam = searchParams.get('duration');
   const duration = durationParam ? parseInt(durationParam, 10) : 120;
 
+  if (!Number.isInteger(duration) || duration < 10 || duration > 720) {
+    return jsonError('Duração inválida.', 400);
+  }
+
   if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return jsonError('Data inválida. Use o formato YYYY-MM-DD.', 400);
   }
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest) {
   if (supabase) {
     try {
       const { data: s } = await supabase
-        .from('site_settings')
+        .from('public_site_settings')
         .select('*')
         .eq('id', 'global')
         .maybeSingle();
@@ -125,27 +129,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Fallback slot generator if Supabase is offline or not configured
-  const standardTimes = ['09:00', '10:00', '11:30', '14:00', '15:30', '17:00'];
-  const simulatedSlots = standardTimes
-    .map((t) => {
-      const [h, m] = t.split(':').map(Number);
-      const slotDate = new Date(`${dateStr}T${t}:00-03:00`);
-      return {
-        time: t,
-        dateTime: slotDate.toISOString(),
-        available: slotDate > now,
-      };
-    })
-    .filter((s) => s.available)
-    .map(({ time, dateTime }) => ({ time, dateTime }));
-
+  // Nunca invente horários disponíveis quando o banco estiver indisponível:
+  // isso cria reservas impossíveis e quebra a confiança da agenda.
   return Response.json(
     {
       ok: true,
       date: dateStr,
-      closed: false,
-      slots: simulatedSlots,
+      closed: true,
+      message: 'A agenda está temporariamente indisponível. Tente novamente em instantes.',
+      slots: [],
     },
     { headers: NO_STORE_HEADERS },
   );

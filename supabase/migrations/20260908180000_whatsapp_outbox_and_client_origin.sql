@@ -43,7 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_whatsapp_outbox_queue
 ON public.whatsapp_outbox (status, scheduled_for, created_at);
 
 -- 4. Add whatsapp_outbox to supabase_realtime publication
-DO 
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1
@@ -54,7 +54,7 @@ BEGIN
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_outbox;
   END IF;
-END ;
+END $$;
 
 -- 5. Add status change notification settings to site_settings
 ALTER TABLE public.site_settings
@@ -77,7 +77,7 @@ CREATE OR REPLACE FUNCTION public.submit_public_booking(
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
-AS 
+AS $$
 DECLARE
   v_settings record;
   v_service record;
@@ -197,4 +197,4 @@ BEGIN
     'duration_label', v_service.duration_label
   );
 END;
-;
+$$;

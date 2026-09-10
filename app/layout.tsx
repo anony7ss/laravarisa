@@ -24,7 +24,6 @@ const dmSans = DM_Sans({
 import { CookieBanner } from '@/components/cookie-banner';
 import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
-import { AntiDebugger } from '@/components/anti-debugger';
 import { ScrollToTop } from '@/components/scroll-to-top';
 import { PublicThemeGuard } from '@/components/public-theme-guard';
 
@@ -84,13 +83,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <PublicThemeGuard />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{document.cookie="nl-hud:public:v1=hidden;path=/;max-age=31536000;SameSite=Lax";localStorage.setItem("nl-hud:public:v1","hidden");if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}catch(e){}`,
-          }}
-        />
         <ScrollToTop />
-        <AntiDebugger />
         <PromoBanner />
         {children}
         <CookieBanner />

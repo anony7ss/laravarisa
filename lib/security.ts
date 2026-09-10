@@ -31,6 +31,10 @@ export function hasValidOrigin(request: Request): boolean {
     const hostname = parsedUrl.hostname.toLowerCase();
     const host = parsedUrl.host.toLowerCase();
 
+    if (process.env.NODE_ENV !== 'development' && parsedUrl.protocol !== 'https:') {
+      return false;
+    }
+
     // 1. Exact trusted production domains
     if (TRUSTED_PRODUCTION_HOSTNAMES.has(hostname)) {
       return true;
@@ -41,17 +45,22 @@ export function hasValidOrigin(request: Request): boolean {
       return true;
     }
 
-    // 3. Localhost & LAN development testing
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      host.startsWith('localhost:') ||
-      host.startsWith('127.0.0.1:') ||
-      hostname.startsWith('192.168.') ||
-      hostname.startsWith('10.') ||
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
-    ) {
-      return true;
+    // Hosts privados só são aceitos durante desenvolvimento local. Em produção,
+    // aceitar qualquer origem da LAN permitiria que outro dispositivo da rede
+    // executasse requisições com a sessão do administrador.
+    if (process.env.NODE_ENV === 'development') {
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        host.startsWith('localhost:') ||
+        host.startsWith('127.0.0.1:') ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+      ) {
+        return true;
+      }
     }
 
     return false;
@@ -123,13 +132,14 @@ export async function verifyTurnstile(token: string, request: Request) {
 }
 
 export function getClientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  return (
-    forwarded ||
-    request.headers.get('cf-connecting-ip') ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1'
-  );
+  const candidates = [
+    request.headers.get('x-nf-client-connection-ip'),
+    request.headers.get('cf-connecting-ip'),
+    request.headers.get('x-real-ip'),
+    request.headers.get('x-forwarded-for')?.split(',')[0],
+  ];
+  const value = candidates.find((candidate) => candidate && /^[a-f0-9:.]{3,64}$/i.test(candidate.trim()));
+  return value?.trim() || '127.0.0.1';
 }
 
 // In-memory sliding window rate limiter
@@ -195,4 +205,3 @@ export const NO_STORE_HEADERS = {
   'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
   Pragma: 'no-cache',
 } as const;
-

@@ -13,7 +13,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 STABLE SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp'
-AS 
+AS $$
 DECLARE
   v_digits text := regexp_replace(coalesce(p_term, ''), '\D', '', 'g');
   v_last8 text := '';
@@ -70,14 +70,14 @@ BEGIN
     END IF;
   END IF;
 END;
-;
+$$;
 
 CREATE OR REPLACE FUNCTION public.is_authorized_lara_phone(p_phone text)
 RETURNS boolean
 LANGUAGE plpgsql
 STABLE SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp'
-AS $
+AS $$
 DECLARE
   v_lara_phone text;
   v_clean_incoming text;
@@ -112,4 +112,4 @@ BEGIN
 
   RETURN false;
 END;
-$;
+$$;

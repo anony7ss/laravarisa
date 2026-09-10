@@ -1,6 +1,38 @@
 import { z } from 'zod';
 
 const cleanText = (max: number) => z.string().trim().min(1).max(max);
+const httpsUrl = (fallback = '') =>
+  z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((value) => !value || /^https:\/\//i.test(value), 'Use uma URL HTTPS válida.')
+    .default(fallback);
+const publicAssetUrl = (fallback: string) =>
+  z
+    .string()
+    .trim()
+    .max(2000)
+    .refine(
+      (value) => !value || value.startsWith('/') || /^https:\/\//i.test(value),
+      'Use um caminho local ou URL HTTPS válida.',
+    )
+    .default(fallback);
+const galleryPath = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .refine(
+    (value) =>
+      (value.startsWith('/') || /^https:\/\//i.test(value) || /^[a-zA-Z0-9][a-zA-Z0-9/_ .-]*$/.test(value)) &&
+      !Array.from(value).some((character) => character.charCodeAt(0) < 32) &&
+      !value.includes('<') &&
+      !value.includes('>') &&
+      !value.includes('"') &&
+      !value.includes("'"),
+    'Caminho de imagem inválido.',
+  );
 
 export const leadSchema = z.object({
   name: cleanText(80).min(2),
@@ -34,12 +66,12 @@ export const leadUpdateSchema = z.object({
 export const clientSchema = z.object({
   name: cleanText(80).min(2),
   email: z
-    .union([z.literal(''), z.string().trim().email().max(254)])
+    .union([z.literal(''), z.email().trim().max(254)])
     .default(''),
   phone: z.string().trim().max(24).default(''),
   notes: z.string().trim().max(3000).default(''),
   origin: z.string().trim().max(32).default('manual').optional(),
-  created_from_lead: z.string().uuid().nullable().optional(),
+  created_from_lead: z.uuid().nullable().optional(),
   lash_mapping: z.string().trim().max(100).nullable().optional(),
   lash_curl: z.string().trim().max(50).nullable().optional(),
   lash_thickness: z.string().trim().max(50).nullable().optional(),
@@ -69,8 +101,8 @@ export const serviceSchema = z.object({
 export const gallerySchema = z.object({
   title: cleanText(100).min(2),
   subtitle: z.string().trim().max(160).default(''),
-  image_path: cleanText(500),
-  before_image_path: z.string().trim().max(500).nullable().optional(),
+  image_path: galleryPath,
+  before_image_path: galleryPath.nullable().optional(),
   alt_text: cleanText(220).min(5),
   object_position: z.string().trim().max(40).default('50% 50%'),
   zoom: z.coerce.number().min(1).max(2.5).default(1),
@@ -79,13 +111,13 @@ export const gallerySchema = z.object({
 });
 
 export const appointmentBaseSchema = z.object({
-  client_id: z.string().uuid().nullable().optional(),
-  lead_id: z.string().uuid().nullable().optional(),
-  service_id: z.string().uuid().nullable().optional(),
+  client_id: z.uuid().nullable().optional(),
+  lead_id: z.uuid().nullable().optional(),
+  service_id: z.uuid().nullable().optional(),
   client_name: cleanText(80).min(2),
   client_phone: z.string().trim().max(24).default(''),
-  starts_at: z.string().datetime({ offset: true }),
-  ends_at: z.string().datetime({ offset: true }),
+  starts_at: z.iso.datetime({ offset: true }),
+  ends_at: z.iso.datetime({ offset: true }),
   status: z.enum([
     'scheduled',
     'confirmed',
@@ -117,6 +149,7 @@ export const anamnesisSchema = z.object({
   eye_surgery: z.boolean().default(false),
   thyroid_issues: z.boolean().default(false),
   signature: cleanText(150).min(2),
+  consent_terms: z.literal(true),
 });
 
 export const settingsSchema = z.object({
@@ -124,7 +157,7 @@ export const settingsSchema = z.object({
   promo_text: z.string().trim().max(280).default(''),
   promo_conditions: z.string().trim().max(500).default(''),
   promo_link_text: z.string().trim().max(80).default(''),
-  promo_link_url: z.string().trim().max(255).default(''),
+  promo_link_url: z.string().trim().max(255).refine((value) => !value || value.startsWith('/') || /^https:\/\//i.test(value), 'Link inválido.').default(''),
   // Operating rules & hours
   booking_enabled: z.boolean().default(true),
   booking_closed_message: z.string().trim().max(500).default(''),
@@ -148,13 +181,13 @@ export const settingsSchema = z.object({
   booking_alert: z.string().trim().max(300).default(''),
   studio_name: z.string().trim().max(100).default('Lara Varisa - Lash Designer'),
   studio_instagram: z.string().trim().max(100).default('@laravarisa.lashes'),
-  studio_instagram_url: z.string().trim().max(255).default('https://www.instagram.com/laravarisa.lashes/'),
+  studio_instagram_url: httpsUrl('https://www.instagram.com/laravarisa.lashes/'),
   studio_email: z.string().trim().max(120).default('contato@laravarisa.com.br'),
   studio_address: z.string().trim().max(255).default('Atendimento presencial na Zona Norte'),
   studio_city: z.string().trim().max(255).default('Porto Alegre, RS — Endereço completo enviado no agendamento'),
   studio_hours: z.string().trim().max(255).default('Segunda a sábado · com agendamento'),
-  studio_map_url: z.string().trim().max(1000).default('https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'),
-  studio_directions_url: z.string().trim().max(1000).default('https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'),
+  studio_map_url: httpsUrl('https://www.google.com/maps/embed?origin=mfe&pb=!1m2!2m1!1sZona+Norte,+Porto+Alegre+-+RS'),
+  studio_directions_url: httpsUrl('https://www.google.com/maps/search/?api=1&query=Zona+Norte%2C+Porto+Alegre+-+RS'),
   // Reminders (Lembretes Automáticos)
   reminder_active: z.boolean().default(true),
   reminder_hours_before: z.coerce.number().int().min(1).max(168).default(24),
@@ -165,7 +198,7 @@ export const settingsSchema = z.object({
   // Post-Care & Satisfaction Survey (Pós-Atendimento & Google Review)
   post_care_active: z.boolean().default(true),
   post_care_hours_after: z.coerce.number().int().min(1).max(168).default(24),
-  google_review_url: z.string().trim().max(500).default(''),
+  google_review_url: httpsUrl(''),
   post_care_message_template: z.string().trim().max(1500).default(''),
   // Status change notifications
   notify_on_status_change: z.boolean().default(true),
@@ -186,8 +219,8 @@ export const settingsSchema = z.object({
   booking_border_color: z.string().trim().max(30).default('#cfcfc9'),
   booking_font_heading: z.string().trim().max(50).default('Anton'),
   booking_font_body: z.string().trim().max(50).default('DM Sans'),
-  booking_cover_url: z.string().trim().max(500000).default('/lara-lashes-optimized.webp'),
-  booking_avatar_url: z.string().trim().max(500000).default('/logo-emblem.png'),
+  booking_cover_url: publicAssetUrl('/lara-lashes-optimized.webp'),
+  booking_avatar_url: publicAssetUrl('/logo-emblem.png'),
   booking_title: z.string().trim().max(100).default('Lara Varisa'),
   booking_subtitle: z.string().trim().max(150).default('Lash Designer ︱ Especialista no Olhar'),
   booking_location_label: z.string().trim().max(150).default('Zona Norte, Porto Alegre - RS'),
@@ -221,10 +254,8 @@ export const shortLinkSchema = z.object({
     .min(2, 'O slug deve ter pelo menos 2 caracteres')
     .max(60, 'O slug deve ter no máximo 60 caracteres')
     .regex(/^[a-zA-Z0-9_-]+$/, 'O slug deve conter apenas letras, números, hífen (-) ou sublinhado (_)'),
-  target_url: z.string().trim().url('URL de destino inválida').max(2000),
+  target_url: z.url('URL de destino inválida').max(2000).refine((value) => /^https?:\/\//i.test(value), 'A URL precisa usar HTTP ou HTTPS.'),
   phone: z.string().trim().max(30).optional().default(''),
   message: z.string().trim().max(1500).optional().default(''),
   is_active: z.boolean().optional().default(true),
 });
-
-

@@ -3,13 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  images: {
-    unoptimized: true,
-  },
   async headers() {
     const cspHeader = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://unpkg.com;
+      script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://unpkg.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https:;
       font-src 'self' https://fonts.gstatic.com data:;
@@ -48,10 +45,6 @@ const nextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload',
-          },
-          {
-            key: 'Set-Cookie',
-            value: 'nl-hud:public:v1=hidden; Path=/; Max-Age=31536000; SameSite=Lax',
           },
         ],
       },

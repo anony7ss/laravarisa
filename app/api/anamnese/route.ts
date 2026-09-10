@@ -6,8 +6,13 @@ import {
   jsonError,
   NO_STORE_HEADERS,
   sanitizeText,
+  verifyTurnstile,
 } from '@/lib/security';
 import { createPublicSupabase } from '@/lib/supabase/server';
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' ? value : '';
+}
 
 export async function POST(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -34,18 +39,24 @@ export async function POST(request: Request) {
   }
 
   const rawData = {
-    client_name: sanitizeText(String(body.client_name || '')),
-    client_phone: sanitizeText(String(body.client_phone || '')),
+    client_name: sanitizeText(stringValue(body.client_name)),
+    client_phone: sanitizeText(stringValue(body.client_phone)),
     has_allergies: body.has_allergies === 'true' || body.has_allergies === true,
     allergies_detail: body.allergies_detail
-      ? sanitizeText(String(body.allergies_detail))
+      ? sanitizeText(stringValue(body.allergies_detail))
       : null,
     pregnant: body.pregnant === 'true' || body.pregnant === true,
     eye_surgery: body.eye_surgery === 'true' || body.eye_surgery === true,
     thyroid_issues:
       body.thyroid_issues === 'true' || body.thyroid_issues === true,
-    signature: sanitizeText(String(body.signature || '')),
+    signature: sanitizeText(stringValue(body.signature)),
+    consent_terms: body.consent_terms === true,
   };
+
+  const turnstileToken = typeof body.turnstile_token === 'string' ? body.turnstile_token : '';
+  if (process.env.TURNSTILE_SECRET_KEY && !(await verifyTurnstile(turnstileToken, request))) {
+    return jsonError('Não foi possível validar o envio seguro.', 403);
+  }
 
   const parsed = anamnesisSchema.safeParse(rawData);
   if (!parsed.success) {
@@ -78,4 +89,3 @@ export async function POST(request: Request) {
     { status: 201, headers: NO_STORE_HEADERS },
   );
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -17,6 +17,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
+import { Turnstile } from '@/components/turnstile';
 
 interface HealthQuestionProps {
   label: string;
@@ -115,18 +116,10 @@ function AnamneseForm() {
   const [pregnant, setPregnant] = useState(false);
   const [eyeSurgery, setEyeSurgery] = useState(false);
   const [thyroidIssues, setThyroidIssues] = useState(false);
-  const [consentTerms, setConsentTerms] = useState(true);
+  const [consentTerms, setConsentTerms] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
-  useEffect(() => {
-    if (queryName && !clientName) {
-      setClientName(queryName);
-    }
-    if (queryPhone && !clientPhone) {
-      setClientPhone(formatPhone(queryPhone));
-    }
-  }, [queryName, queryPhone]);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault();
     setErrorMessage('');
 
@@ -153,6 +146,8 @@ function AnamneseForm() {
         eye_surgery: eyeSurgery,
         thyroid_issues: thyroidIssues,
         signature: clientName.trim(),
+        consent_terms: consentTerms,
+        turnstile_token: turnstileToken,
       };
 
       const res = await fetch('/api/anamnese', {
@@ -407,6 +402,7 @@ function AnamneseForm() {
                   Declaro que as informações acima são verdadeiras e autorizo a realização do procedimento com as orientações recebidas.
                 </span>
               </label>
+              <Turnstile onToken={setTurnstileToken} />
             </div>
 
             {/* Botão de Envio */}
@@ -465,4 +461,3 @@ export default function AnamnesePage() {
     </Suspense>
   );
 }
-

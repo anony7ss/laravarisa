@@ -92,16 +92,13 @@ export function SiteFooter() {
             <Link href="/termos" className="footer-policy-link">
               Termos de Agendamento
             </Link>
+            <span className="footer-policy-sep" aria-hidden="true">·</span>
+            <Link href="/politica-de-cookies" className="footer-policy-link">
+              Cookies
+            </Link>
           </div>
           <div className="footer-legal-bottom">
             <div className="flex items-center gap-2">
-              <img
-                src="/logo-emblem.png"
-                alt="Lara Varisa"
-                width="20"
-                height="20"
-                className="w-5 h-5 object-contain inline-block"
-              />
               <span className="footer-copyright">
                 © {new Date().getFullYear()} Lara Varisa · Porto Alegre, RS
               </span>

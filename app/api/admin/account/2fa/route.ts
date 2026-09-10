@@ -1,6 +1,7 @@
 import { getStaffContext } from '@/lib/admin-auth';
 import { hasValidOrigin, jsonError, NO_STORE_HEADERS } from '@/lib/security';
 import { serverCache } from '@/lib/memory-cache';
+import { createOtpCode, hashOtpCode, safeCompareOtpCode } from '@/lib/two-factor';
 
 function formatPhoneForWhatsApp(phone: string): string {
   let cleaned = phone.replace(/\D/g, '');
@@ -40,14 +41,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = createOtpCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const targetPhone = formatPhoneForWhatsApp(profile.phone);
 
   const { error: updateErr } = await staff.supabase
     .from('profiles')
     .update({
-      two_factor_code: code,
+      two_factor_code: hashOtpCode(code),
       two_factor_expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     })
@@ -111,7 +112,7 @@ export async function PUT(request: Request) {
     return jsonError('Perfil não encontrado.', 404);
   }
 
-  if (!profile.two_factor_code || profile.two_factor_code !== code.trim()) {
+  if (!profile.two_factor_code || !safeCompareOtpCode(code.trim(), profile.two_factor_code)) {
     return jsonError('Código de verificação inválido.', 422);
   }
 

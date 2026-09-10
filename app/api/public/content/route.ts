@@ -24,7 +24,7 @@ export async function GET() {
       .eq('active', true)
       .order('sort_order'),
     supabase
-      .from('site_settings')
+      .from('public_site_settings')
       .select('*')
       .eq('id', 'global')
       .single(),
@@ -46,14 +46,14 @@ export async function GET() {
     intensity: item.intensity,
   }));
   const gallery = (galleryResult.data ?? []).map((item) => {
-    const isExternalOrLocal = /^https?:\/\//.test(item.image_path) || item.image_path.startsWith('/');
+    const isExternalOrLocal = /^https:\/\//i.test(item.image_path) || item.image_path.startsWith('/');
     const src = isExternalOrLocal
       ? item.image_path
       : supabase.storage.from('gallery').getPublicUrl(item.image_path).data.publicUrl;
     
     let beforeSrc = null;
     if (item.before_image_path) {
-      const isBeforeExternalOrLocal = /^https?:\/\//.test(item.before_image_path) || item.before_image_path.startsWith('/');
+      const isBeforeExternalOrLocal = /^https:\/\//i.test(item.before_image_path) || item.before_image_path.startsWith('/');
       beforeSrc = isBeforeExternalOrLocal
         ? item.before_image_path
         : supabase.storage.from('gallery').getPublicUrl(item.before_image_path).data.publicUrl;

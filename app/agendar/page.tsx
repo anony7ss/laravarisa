@@ -11,7 +11,6 @@ import {
   MapPin,
   Clock3,
   Check,
-  CheckCircle2,
   ArrowLeft,
   ArrowRight,
   Loader2,
@@ -68,6 +67,13 @@ const FullscreenLightbox = dynamic(
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
 
+function getDefaultBookingDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export type BookingResult = {
   id: string;
   service_name: string;
@@ -104,15 +110,9 @@ function AgendarContent() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() === 0) d.setDate(d.getDate() + 1);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
+  // Set the relative date after hydration so the server and browser render the
+  // same initial markup and the booking screen never flashes a different day.
+  const [selectedDateStr, setSelectedDateStr] = useState<string>('');
 
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
 
@@ -179,6 +179,10 @@ function AgendarContent() {
     booking_promo_tag?: string;
     booking_guarantee_text?: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!selectedDateStr) setSelectedDateStr(getDefaultBookingDate());
+  }, [selectedDateStr]);
 
   useEffect(() => {
     let mounted = true;
@@ -399,7 +403,7 @@ function AgendarContent() {
   const fontBody = siteSettings?.booking_font_body || 'DM Sans';
 
   const coverUrl = siteSettings?.booking_cover_url || '/lara-lashes-optimized.webp';
-  const avatarUrl = siteSettings?.booking_avatar_url || '/logo-emblem.png';
+  const avatarUrl = siteSettings?.booking_avatar_url || '/icons/icon-192x192.png';
   const studioTitle = siteSettings?.booking_title || 'Lara Varisa';
   const studioSubtitle = siteSettings?.booking_subtitle || 'Lash Designer ︱ Especialista no Olhar';
   const locationText = siteSettings?.booking_location_label || 'Zona Norte, Porto Alegre - RS';
@@ -540,6 +544,8 @@ function AgendarContent() {
                 <img
                   src={avatarUrl}
                   alt={studioTitle}
+                  width={84}
+                  height={84}
                   className="w-full h-full object-cover"
                   loading="eager"
                   decoding="async"
