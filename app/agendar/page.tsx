@@ -238,6 +238,12 @@ function AgendarContent() {
     booking_guarantee_text?: string;
   } | null>(null);
 
+  const [isClientMounted, setIsClientMounted] = useState(false);
+
+  useEffect(() => {
+    setIsClientMounted(true);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -618,14 +624,17 @@ function AgendarContent() {
                 />
               </div>
 
-              {/* Status Aberto / Pausado */}
+              {/* Status Aberto / Fechado / Pausado */}
               <div
+                suppressHydrationWarning
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold shadow-xs"
                 style={{
                   backgroundColor: customCardBg,
                   borderColor: customBorder,
                   borderWidth: 1,
-                  color: siteSettings?.booking_enabled === false
+                  color: !isClientMounted
+                    ? (siteSettings?.booking_enabled === false ? '#f59e0b' : '#10b981')
+                    : siteSettings?.booking_enabled === false
                     ? '#f59e0b'
                     : studioSchedule.isOpenNow
                     ? '#10b981'
@@ -633,19 +642,26 @@ function AgendarContent() {
                 }}
               >
                 <span
+                  suppressHydrationWarning
                   className={`w-1.5 h-1.5 rounded-full ${
-                    siteSettings?.booking_enabled === false
+                    !isClientMounted
+                      ? (siteSettings?.booking_enabled === false ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse')
+                      : siteSettings?.booking_enabled === false
                       ? 'bg-amber-500'
                       : studioSchedule.isOpenNow
                       ? 'bg-emerald-500 animate-pulse'
                       : 'bg-rose-500'
                   }`}
                 />
-                {siteSettings?.booking_enabled === false
-                  ? 'PAUSADO'
-                  : studioSchedule.isOpenNow
-                  ? 'ABERTO AGORA'
-                  : 'FECHADO AGORA'}
+                <span suppressHydrationWarning>
+                  {!isClientMounted
+                    ? (siteSettings?.booking_enabled === false ? 'PAUSADO' : 'ABERTO AGORA')
+                    : siteSettings?.booking_enabled === false
+                    ? 'PAUSADO'
+                    : studioSchedule.isOpenNow
+                    ? 'ABERTO AGORA'
+                    : 'FECHADO AGORA'}
+                </span>
               </div>
             </div>
 
@@ -2370,6 +2386,7 @@ function AgendarContent() {
                     Horário de Funcionamento
                   </span>
                   <span
+                    suppressHydrationWarning
                     className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold"
                     style={{
                       backgroundColor: studioSchedule.isOpenNow ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
@@ -2377,10 +2394,13 @@ function AgendarContent() {
                     }}
                   >
                     <span
+                      suppressHydrationWarning
                       className="w-1.5 h-1.5 rounded-full"
                       style={{ backgroundColor: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626' }}
                     />
-                    {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                    <span suppressHydrationWarning>
+                      {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                    </span>
                   </span>
                 </div>
                 <p className="m-0 opacity-85">{studioSchedule.openDaysLabel}: {studioSchedule.hoursLabel}</p>
@@ -2524,6 +2544,7 @@ function AgendarContent() {
                     </h3>
                   </div>
                   <span
+                    suppressHydrationWarning
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                       studioSchedule.isOpenNow
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -2531,11 +2552,14 @@ function AgendarContent() {
                     }`}
                   >
                     <span
+                      suppressHydrationWarning
                       className={`w-1.5 h-1.5 rounded-full ${
                         studioSchedule.isOpenNow ? 'bg-emerald-500' : 'bg-rose-500'
                       }`}
                     />
-                    {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                    <span suppressHydrationWarning>
+                      {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
+                    </span>
                   </span>
                 </div>
 
@@ -2675,7 +2699,7 @@ function AgendarContent() {
 
       <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
         <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© {new Date().getFullYear()} Lara Varisa Studio</span>
+          <span suppressHydrationWarning>© {new Date().getFullYear()} Lara Varisa Studio</span>
           <div className="flex items-center gap-3 text-[11px]">
             <Link href="/termos" className="hover:text-[var(--color-obsidian)] transition-colors">Termos</Link>
             <span>·</span>
