@@ -652,7 +652,7 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                   )}
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--admin-muted)', margin: 0, lineHeight: 1.35 }}>
-                  Avatar lateral, status &ldquo;ABERTO AGORA&rdquo;, abas sublinhadas e cards compactos.
+                  Avatar lateral, abas sublinhadas e cards compactos.
                 </p>
                 <span style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: 'auto' }}>
                   ★ Idêntico ao preview mobile
@@ -1424,25 +1424,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         </div>
-
-                        {/* Status Aberto */}
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            padding: '4px 9px',
-                            borderRadius: '999px',
-                            background: cardBg,
-                            border: `1px solid ${borderColor}`,
-                            fontSize: '10.5px',
-                            fontWeight: 600,
-                            color: '#10b981',
-                          }}
-                        >
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                          ABERTO AGORA
-                        </div>
                       </div>
 
                       {/* Nome e Especialidade */}
@@ -2077,26 +2058,8 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                           <span style={{ fontSize: '10.5px', color: accentColor, display: 'block', marginTop: '4px' }}>Estacionamento privativo e recepção climatizada</span>
                         </div>
 
-                        <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 700, color: primaryColor }}>Horário de Funcionamento</span>
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '2px 7px',
-                                borderRadius: '999px',
-                                fontSize: '9.5px',
-                                fontWeight: 600,
-                                background: studioSchedule.isOpenNow ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                                color: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626',
-                              }}
-                            >
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: studioSchedule.isOpenNow ? '#16a34a' : '#dc2626' }} />
-                              {studioSchedule.isOpenNow ? 'Aberto Agora' : 'Fechado Agora'}
-                            </span>
-                          </div>
+                        <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: 700, color: primaryColor, fontSize: '11px' }}>Horário de Funcionamento</span>
                           <p style={{ margin: 0, opacity: 0.85 }}>{studioSchedule.openDaysLabel}: {studioSchedule.hoursLabel}</p>
                           <p style={{ margin: '2px 0 0 0', opacity: 0.7, fontSize: '10.5px' }}>{studioSchedule.closedDaysLabel}</p>
                         </div>
