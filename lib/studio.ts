@@ -1,6 +1,6 @@
-// O número comercial é configuração de ambiente/site_settings. Nunca use um
-// número de exemplo: isso poderia direcionar uma cliente para o contato errado.
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '';
+// Número comercial padrão do estúdio Lara Varisa (5551989601662).
+const DEFAULT_STUDIO_WHATSAPP = '5551989601662';
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || DEFAULT_STUDIO_WHATSAPP;
 
 export function whatsappUrl(message: string, phone = WHATSAPP_NUMBER) {
   const digits = (phone || '').replace(/\D/g, '');
@@ -14,7 +14,7 @@ export const studio = {
   bookingUrl: whatsappUrl('Olá, Lara! Quero agendar meu horário.'),
   whatsapp: 'Agendar pelo WhatsApp',
   whatsappNumber: WHATSAPP_NUMBER,
-  whatsappFormatted: '',
+  whatsappFormatted: '(51) 98960-1662',
   instagram: '@laravarisa.lashes',
   instagramUrl: 'https://www.instagram.com/laravarisa.lashes/',
   email: 'contato@laravarisa.com.br',

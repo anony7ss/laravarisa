@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next';
-
+import { SITE_URL } from '@/lib/site-url';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://laravarisa.com.br';
+  const baseUrl = SITE_URL;
 
   const routes = [
     {

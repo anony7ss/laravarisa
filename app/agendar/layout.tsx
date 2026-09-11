@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { PwaInstaller } from '@/components/pwa/pwa-installer';
+import { SITE_URL } from '@/lib/site-url';
 
 export const viewport: Viewport = {
   themeColor: '#121211',
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   title: 'Agendamento ︱ Lara Varisa · Lash Designer',
   description:
     'Reserve seu horário online em poucos toques com a Lash Designer Lara Varisa na Zona Norte de Porto Alegre. Procedimentos personalizados e acabamento impecável.',
-  metadataBase: new URL('https://laravarisa.com.br'),
+  metadataBase: new URL(SITE_URL),
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     title: 'Agendamento ︱ Lara Varisa · Lash Designer',
     description:
       'Escolha seu procedimento de cílios e garanta seu horário online com confirmação instantânea na Zona Norte de Porto Alegre.',
-    url: 'https://laravarisa.com.br/agendar',
+    url: `${SITE_URL}/agendar`,
     siteName: 'Lara Varisa Studio',
     images: [
       {

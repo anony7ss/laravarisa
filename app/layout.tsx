@@ -17,13 +17,14 @@ import { WhatsAppButton } from '@/components/whatsapp-button';
 import { PromoBanner } from '@/components/promo-banner';
 import { ScrollToTop } from '@/components/scroll-to-top';
 import { PublicThemeGuard } from '@/components/public-theme-guard';
+import { SITE_URL } from '@/lib/site-url';
 
 export const metadata: Metadata = {
   title: 'Lara Varisa ︱ Lash Designer',
   description:
     'Lash design exclusivo na Zona Norte de Porto Alegre. Especialista em extensão de cílios e Lash Lift, realçando a beleza do seu olhar.',
   robots: { index: true, follow: true },
-  metadataBase: new URL('https://laravarisa.com.br'),
+  metadataBase: new URL(SITE_URL),
   icons: {
     icon: [
       { url: '/logo-emblem.png?v=4', type: 'image/png' },
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Lara Varisa ︱ Lash Designer',
     description: 'Especialista em extensão de cílios e Lash Lift na Zona Norte de Porto Alegre, realçando a beleza do seu olhar.',
-    url: 'https://laravarisa.com.br',
+    url: SITE_URL,
     siteName: 'Lara Varisa Studio',
     locale: 'pt_BR',
     type: 'website',
@@ -86,7 +87,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'LocalBusiness',
               name: 'Lara Varisa Studio',
-              image: 'https://laravarisa.com.br/lara-lashes-optimized.webp',
+              image: `${SITE_URL}/lara-lashes-optimized.webp`,
               description:
                 'Lash design exclusivo na Zona Norte de Porto Alegre. Técnicas modernas que realçam a essência do seu olhar.',
               address: {
@@ -100,7 +101,7 @@ export default function RootLayout({
                 latitude: -29.9939,
                 longitude: -51.1444, // Coordenadas aproximadas da Zona Norte POA
               },
-              url: 'https://laravarisa.com.br',
+              url: SITE_URL,
               priceRange: '$$',
             }),
           }}

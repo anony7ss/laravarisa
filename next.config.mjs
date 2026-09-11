@@ -51,10 +51,18 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload',
           },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Netlify-CDN-Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
         ],
       },
       {
-        source: '/:all*(svg|jpg|png|webp|avif|woff2|woff)',
+        source: '/:all*(svg|jpg|png|webp|avif|woff2|woff|ico)',
         headers: [
           {
             key: 'Cache-Control',
