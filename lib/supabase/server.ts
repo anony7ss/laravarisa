@@ -18,6 +18,10 @@ export async function createServerSupabase(options?: { remember?: boolean }) {
           items.forEach(({ name, value, options: itemOptions }) =>
             cookieStore.set(name, value, {
               ...itemOptions,
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              path: '/',
               ...(rememberMaxAge ? { maxAge: rememberMaxAge } : {}),
             }),
           );
