@@ -625,17 +625,27 @@ function AgendarContent() {
                   backgroundColor: customCardBg,
                   borderColor: customBorder,
                   borderWidth: 1,
-                  color: siteSettings?.booking_enabled !== false ? '#10b981' : '#f59e0b',
+                  color: siteSettings?.booking_enabled === false
+                    ? '#f59e0b'
+                    : studioSchedule.isOpenNow
+                    ? '#10b981'
+                    : '#ef4444',
                 }}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    siteSettings?.booking_enabled !== false
+                    siteSettings?.booking_enabled === false
+                      ? 'bg-amber-500'
+                      : studioSchedule.isOpenNow
                       ? 'bg-emerald-500 animate-pulse'
-                      : 'bg-amber-500'
+                      : 'bg-rose-500'
                   }`}
                 />
-                {siteSettings?.booking_enabled !== false ? 'ABERTO AGORA' : 'PAUSADO'}
+                {siteSettings?.booking_enabled === false
+                  ? 'PAUSADO'
+                  : studioSchedule.isOpenNow
+                  ? 'ABERTO AGORA'
+                  : 'FECHADO AGORA'}
               </div>
             </div>
 

@@ -93,6 +93,26 @@ export async function testarConexaoIA() {
     });
     iaStatusCache = { conectada: true, modelo: modeloAtual };
     setAiStatus({ connected: true, model: modeloAtual });
+
+    // Pré-aquece o prefixo do prompt do sistema na GPU em background para zerar cold start
+    getSystemPrompt('Cliente', '').then((sysPrompt) => {
+      openai.chat.completions.create(
+        {
+          model: modeloAtual,
+          messages: [
+            { role: 'system', content: sysPrompt },
+            { role: 'user', content: 'ping' },
+          ],
+          max_tokens: 5,
+        },
+        {
+          headers: {
+            'x-opencode-session': 'wa_lara_vip_clients',
+          },
+        }
+      ).catch(() => {});
+    }).catch(() => {});
+
     return iaStatusCache;
   } catch (err) {
     // Se o modelo especificado tiver restrição regional (China opt-in), tenta automaticamente qwen3.8-flash
@@ -334,7 +354,10 @@ REGRAS:
      Informe todos os horários livres daquele período específico solicitado!
    - Se houver poucos horários (ex: 2 ou 3 no dia todo): informe todos eles com clareza.
    - Se não houver nenhum horário livre no dia: avise com delicadeza e informe a próxima data que possui horários disponíveis.
-2. CONFIRMAÇÃO IMEDIATA:
+2. AGENDAMENTO DIRETO E ULTRARRÁPIDO:
+   - Se a cliente já solicitar diretamente com dia, horário e procedimento (ex: "quero agendar para amanhã as 12, fio a fio", "marca sexta às 15h volume russo"):
+     NÃO perca tempo consultando horários antes! Chame DIRETO e IMEDIATAMENTE a ferramenta "criarAgendamento(service_id, starts_at, client_name)" em 1 único turno!
+     A própria ferramenta valida a disponibilidade e conflitos no banco de dados atomicamente e confirma de forma ultrarrápida. Se por acaso o horário estiver ocupado, ela retornará erro de horário ocupado e você oferecerá os horários mais próximos.
    - Quando a cliente responder com o horário desejado (ex: "17h", "16h30", "às 14h"):
      Chame IMEDIATAMENTE a ferramenta "criarAgendamento(service_id, starts_at, client_name)".
      Assim que confirmado, envie a confirmação clara e acolhedora:
@@ -1029,9 +1052,8 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
         },
         {
           headers: {
-            // Sessão estável permite cache de prompt do provedor e reduz o
-            // tempo de resposta sem misturar histórico de clientes.
-            'x-opencode-session': isLara ? 'wa_lara_admin' : `wa_${jidLimpo}`,
+            // Sessão estável e compartilhada maximiza cache de prefixo na GPU
+            'x-opencode-session': isLara ? 'wa_lara_admin' : 'wa_lara_vip_clients',
           },
         }
       );
@@ -1080,6 +1102,35 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
 
           acoesExecutadas.push({ nome: nomeFuncao, args, resultado });
 
+          // Ultra-Velocidade Instantânea: se o agendamento foi gravado com sucesso no banco
+          // e a mensagem da cliente é um pedido direto de agendamento (sem dúvidas pendentes),
+          // confirmamos imediatamente sem esperar outra rodada completa de LLM.
+          if (!isLara && nomeFuncao === 'criarAgendamento' && (resultado?.ok || resultado?.sucesso)) {
+            const temPerguntaExtra = /[?]|(quanto\s+(custa|fica|sai|vale))|(qual\s+o?\s*valor)|(como\s+funciona)|(d[uú]vida)/i.test(texto);
+            if (!temPerguntaExtra) {
+              const agendamento = resultado.agendamento || {};
+              const servicoNome = agendamento.service_name || 'o procedimento';
+              const dataObj = agendamento.starts_at ? new Date(agendamento.starts_at) : null;
+              let dataHoraTxt = '';
+              if (dataObj && !Number.isNaN(dataObj.getTime())) {
+                const dataFmt = dataObj.toLocaleDateString('pt-BR', {
+                  timeZone: 'America/Sao_Paulo',
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: '2-digit',
+                });
+                const horaFmt = dataObj.toLocaleTimeString('pt-BR', {
+                  timeZone: 'America/Sao_Paulo',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                dataHoraTxt = `${dataFmt} às ${horaFmt}`;
+              }
+              respostaFinal = `Confirmado! Seu agendamento para ${servicoNome} foi marcado com sucesso${dataHoraTxt ? ` para ${dataHoraTxt}` : ''}. Te esperamos no estúdio! 🤍\n\nAh, e um lembrete carinhoso: venha sem rímel ou maquiagem nos olhos, tá? Até lá!`;
+              break;
+            }
+          }
+
           let serialized = '{}';
           try {
             serialized = JSON.stringify(resultado) || '{}';
@@ -1091,6 +1142,10 @@ export async function processarMensagemComIA(sock, jidOrMsg, textoParam, pushNam
             tool_call_id: String(toolCall?.id || `tool_${toolResults.length + 1}`).slice(0, 120),
             content: serialized.slice(0, MAX_TOOL_RESULT_CHARS),
           });
+        }
+
+        if (respostaFinal) {
+          break;
         }
 
         messages.push(...toolResults);
