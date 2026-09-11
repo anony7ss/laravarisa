@@ -21,6 +21,12 @@ import {
 } from 'lucide-react';
 import { adminRequest } from './api';
 import type { AppointmentRow, ClientRow, AnamnesisRow } from '@/lib/admin-types';
+import {
+  cleanPhoneDigits,
+  formatPhoneForDisplay,
+  normalizeCanonicalPhone,
+  areSamePhone,
+} from '@/lib/phone-utils';
 
 function renderOriginBadge(origin?: string) {
   const isWa = origin === 'whatsapp_bot' || origin === 'whatsapp';
@@ -90,6 +96,47 @@ export function ClientsManager({
   const [selectedAnamnese, setSelectedAnamnese] = useState<AnamnesisRow | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'manutencao' | 'inativas' | 'em_dia'>('all');
 
+  // Deduplicar clientes duplicados por telefone ou email (defesa ativa no CRM)
+  const dedupedItems = useMemo(() => {
+    const list: ClientRow[] = [];
+    const mergedIds = new Set<string>();
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (mergedIds.has(item.id)) continue;
+
+      const merged = { ...item };
+      for (let j = i + 1; j < items.length; j++) {
+        const other = items[j];
+        if (mergedIds.has(other.id)) continue;
+
+        const samePhone = Boolean(merged.phone && other.phone && areSamePhone(merged.phone, other.phone));
+        const sameEmail = Boolean(
+          merged.email &&
+            other.email &&
+            merged.email.trim().toLowerCase() === other.email.trim().toLowerCase(),
+        );
+
+        if (samePhone || sameEmail) {
+          mergedIds.add(other.id);
+          if (!merged.email && other.email) merged.email = other.email;
+          if (!merged.lash_mapping && other.lash_mapping) merged.lash_mapping = other.lash_mapping;
+          if (!merged.lash_curl && other.lash_curl) merged.lash_curl = other.lash_curl;
+          if (!merged.lash_thickness && other.lash_thickness) merged.lash_thickness = other.lash_thickness;
+          if (!merged.lash_length && other.lash_length) merged.lash_length = other.lash_length;
+          if (!merged.lash_adhesive && other.lash_adhesive) merged.lash_adhesive = other.lash_adhesive;
+          if (!merged.lash_notes && other.lash_notes) merged.lash_notes = other.lash_notes;
+          // Prefer formatted/standard phone (e.g. web format (51) 98974-1970 over raw 555189741970)
+          if (other.phone && (!merged.phone || (!merged.phone.includes('(') && other.phone.includes('(')))) {
+            merged.phone = other.phone;
+          }
+        }
+      }
+      list.push(merged);
+    }
+    return list;
+  }, [items]);
+
   // Mapping dos atendimentos por cliente
   const clientStatsMap = useMemo(() => {
     const map = new Map<
@@ -104,12 +151,11 @@ export function ClientsManager({
 
     const now = new Date().getTime();
 
-    for (const client of items) {
-      const cPhone = cleanDigits(client.phone);
+    for (const client of dedupedItems) {
       const clientAppts = appointments.filter(
         (a) =>
           a.client_id === client.id ||
-          (cPhone && cleanDigits(a.client_phone) === cPhone),
+          Boolean(client.phone && a.client_phone && areSamePhone(client.phone, a.client_phone)),
       );
 
       const completed = clientAppts.filter((a) => a.status === 'completed');
@@ -145,23 +191,28 @@ export function ClientsManager({
     }
 
     return map;
-  }, [items, appointments]);
+  }, [dedupedItems, appointments]);
 
   // Match de anamnese por telefone
   const anamneseMap = useMemo(() => {
     const map = new Map<string, AnamnesisRow>();
     for (const an of anamneses) {
-      const p = cleanDigits(an.client_phone);
+      const p = cleanPhoneDigits(an.client_phone);
       if (p) {
         map.set(p, an);
+        const can = normalizeCanonicalPhone(p);
+        if (can) {
+          map.set(can, an);
+        }
       }
     }
     return map;
   }, [anamneses]);
 
   const filtered = useMemo(() => {
-    return items.filter((item) => {
-      const matchesQuery = `${item.name} ${item.email} ${item.phone} ${item.lash_mapping || ''}`
+    return dedupedItems.filter((item) => {
+      const formattedPhone = formatPhoneForDisplay(item.phone);
+      const matchesQuery = `${item.name} ${item.email} ${item.phone} ${formattedPhone} ${item.lash_mapping || ''}`
         .toLowerCase()
         .includes(query.toLowerCase());
 
@@ -171,20 +222,20 @@ export function ClientsManager({
       if (filterStatus === 'all') return true;
       return stats?.status === filterStatus;
     });
-  }, [items, query, filterStatus, clientStatsMap]);
+  }, [dedupedItems, query, filterStatus, clientStatsMap]);
 
   const counts = useMemo(() => {
     let manutencao = 0;
     let inativas = 0;
     let em_dia = 0;
-    for (const item of items) {
+    for (const item of dedupedItems) {
       const s = clientStatsMap.get(item.id)?.status;
       if (s === 'manutencao') manutencao++;
       else if (s === 'inativa') inativas++;
       else if (s === 'em_dia') em_dia++;
     }
-    return { all: items.length, manutencao, inativas, em_dia };
-  }, [items, clientStatsMap]);
+    return { all: dedupedItems.length, manutencao, inativas, em_dia };
+  }, [dedupedItems, clientStatsMap]);
 
   const [botSendingMap, setBotSendingMap] = useState<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
 
@@ -318,7 +369,7 @@ export function ClientsManager({
   }
 
   function getWhatsAppInviteLink(client: ClientRow, daysSince?: number | null) {
-    const phone = cleanDigits(client.phone);
+    const phone = normalizeCanonicalPhone(client.phone) || cleanPhoneDigits(client.phone);
     if (!phone) return null;
     const firstName = client.name.split(' ')[0];
 
@@ -772,8 +823,13 @@ export function ClientsManager({
               <tbody>
                 {filtered.map((item) => {
                   const stats = clientStatsMap.get(item.id);
-                  const pClean = cleanDigits(item.phone);
-                  const clientAnamnese = pClean ? anamneseMap.get(pClean) : null;
+                  const pClean = cleanPhoneDigits(item.phone);
+                  const pWa = normalizeCanonicalPhone(item.phone) || pClean;
+                  const clientAnamnese = item.phone
+                    ? anamneseMap.get(pClean) ||
+                      anamneseMap.get(pWa) ||
+                      anamneses.find((a) => areSamePhone(a.client_phone, item.phone))
+                    : null;
                   const waInvite = getWhatsAppInviteLink(item, stats?.daysSinceLast);
 
                   return (
@@ -998,7 +1054,15 @@ export function ClientsManager({
                       </td>
 
                       <td>{renderOriginBadge(item.origin)}</td>
-                      <td>{item.phone || '—'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {item.phone ? (
+                          <span style={{ fontSize: '13px', letterSpacing: '0.2px' }}>
+                            {formatPhoneForDisplay(item.phone)}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
 
                       <td>
                         <div className="admin-row-actions">
@@ -1008,7 +1072,7 @@ export function ClientsManager({
                               title="Chamar no WhatsApp"
                               target="_blank"
                               rel="noopener noreferrer"
-                              href={`https://wa.me/${pClean}?text=${encodeURIComponent(`Olá ${item.name.split(' ')[0]}, tudo bem? Aqui é do estúdio da Lara Varisa.`)}`}
+                              href={`https://wa.me/${pWa}?text=${encodeURIComponent(`Olá ${item.name.split(' ')[0]}, tudo bem? Aqui é do estúdio da Lara Varisa.`)}`}
                             >
                               <MessageCircle size={16} />
                             </a>
@@ -1063,7 +1127,7 @@ export function ClientsManager({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
                 <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
                   <p style={{ margin: 0, fontSize: '13px', color: 'var(--admin-muted)' }}>
-                    Telefone: <strong>{selectedAnamnese.client_phone}</strong> • Preenchida em: <strong>{new Date(selectedAnamnese.created_at).toLocaleDateString('pt-BR')}</strong>
+                    Telefone: <strong>{formatPhoneForDisplay(selectedAnamnese.client_phone)}</strong> • Preenchida em: <strong>{new Date(selectedAnamnese.created_at).toLocaleDateString('pt-BR')}</strong>
                   </p>
                 </div>
 
