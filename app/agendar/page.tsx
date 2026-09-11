@@ -199,7 +199,6 @@ function AgendarContent() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [successBooking, setSuccessBooking] = useState<BookingResult | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [showCareTips, setShowCareTips] = useState(false);
   const [showMyAppointments, setShowMyAppointments] = useState(false);
 
@@ -405,9 +404,8 @@ function AgendarContent() {
     const startDate = new Date(b.starts_at);
     const toGCalIso = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const gcalDates = `${toGCalIso(startDate)}/${toGCalIso(new Date(b.ends_at))}`;
-    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'LV';
     const gcalTitle = encodeURIComponent(`Lara Varisa · ${b.service_name}`);
-    const gcalDetails = encodeURIComponent(`Agendamento com Lara Varisa (Reserva #${code}). Chegar sem maquiagem nos olhos.`);
+    const gcalDetails = encodeURIComponent(`Agendamento com Lara Varisa (${b.service_name}). Chegar sem maquiagem nos olhos.`);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gcalTitle}&dates=${gcalDates}&details=${gcalDetails}&location=${encodeURIComponent('Zona Norte, Porto Alegre - RS')}`;
   }
 
@@ -418,7 +416,6 @@ function AgendarContent() {
       return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     };
 
-    const code = b.id ? b.id.slice(0, 8).toUpperCase() : 'LV';
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -426,12 +423,12 @@ function AgendarContent() {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      `UID:booking-${b.id}@laravarisa.com.br`,
+      `UID:booking-${b.id || Date.now()}@laravarisa.com.br`,
       `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
       `DTSTART:${toIcsDate(b.starts_at)}`,
       `DTEND:${toIcsDate(b.ends_at)}`,
       `SUMMARY:Lara Varisa · ${b.service_name}`,
-      `DESCRIPTION:Procedimento de ${b.service_name} com a Lash Designer Lara Varisa.\\nCliente: ${b.client_name}\\nReserva: #${code}\\nChegar sem maquiagem nos olhos.`,
+      `DESCRIPTION:Procedimento de ${b.service_name} com a Lash Designer Lara Varisa.\\nCliente: ${b.client_name}\\nChegar sem maquiagem nos olhos.`,
       'LOCATION:Zona Norte - Porto Alegre, RS',
       'STATUS:CONFIRMED',
       'BEGIN:VALARM',
@@ -447,7 +444,7 @@ function AgendarContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reserva-lara-varisa-${code.toLowerCase()}.ics`;
+    a.download = `agendamento-lara-varisa.ics`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1813,21 +1810,22 @@ function AgendarContent() {
 
                 {bookingStep === 4 && successBooking && (
                   isModernApp ? (
-                    <div className="text-center space-y-4 animate-in zoom-in-95 duration-200 py-4 max-w-md mx-auto">
+                    <div className="text-center space-y-4 animate-in zoom-in-95 duration-200 py-3 max-w-md mx-auto">
+                      {/* Ícone de Sucesso Elegante */}
                       <div
-                        className="w-13 h-13 mx-auto rounded-full flex items-center justify-center shadow-sm"
+                        className="w-14 h-14 mx-auto rounded-full flex items-center justify-center shadow-xs"
                         style={{
                           backgroundColor: customPrimary,
                           color: customAccent,
                           border: `2px solid ${customBorder}`,
                         }}
                       >
-                        <Check size={26} strokeWidth={2.5} />
+                        <Check size={28} strokeWidth={2.5} />
                       </div>
 
-                      <div>
+                      <div className="space-y-1">
                         <h2
-                          className="text-xl sm:text-2xl font-bold tracking-tight"
+                          className="text-2xl sm:text-3xl font-bold tracking-tight m-0"
                           style={{
                             color: customPrimary,
                             fontFamily: 'var(--booking-font-body), sans-serif',
@@ -1835,93 +1833,194 @@ function AgendarContent() {
                         >
                           Agendamento Confirmado!
                         </h2>
-                        <p className="text-xs sm:text-sm mt-1" style={{ color: customText, opacity: 0.8 }}>
-                          Parabéns, {(successBooking.client_name || clientData.name || '').trim().split(' ')[0]}! Sua sessão foi reservada com sucesso.
+                        <p className="text-xs sm:text-sm m-0" style={{ color: customText, opacity: 0.8 }}>
+                          Tudo pronto, {(successBooking.client_name || clientData.name || '').trim().split(' ')[0]}! Sua sessão foi reservada com sucesso.
                         </p>
                       </div>
 
-                      {/* Card de Resumo do Voucher */}
+                      {/* Card de Resumo Moderno */}
                       <div
-                        className="w-full p-4 rounded-2xl text-left flex flex-col gap-2.5 text-xs shadow-xs"
+                        className="w-full p-4 sm:p-5 rounded-2xl text-left flex flex-col gap-3.5 text-xs shadow-xs"
                         style={{
                           backgroundColor: customCardBg,
                           border: `1px solid ${customBorder}`,
                           color: customText,
                         }}
                       >
-                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-70 font-medium">Procedimento:</span>
-                          <span className="font-bold" style={{ color: customPrimary }}>
-                            {successBooking.service_name}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-70 font-medium">Data e Horário:</span>
-                          <span className="font-bold capitalize" style={{ color: customPrimary }}>
-                            {new Date(successBooking.starts_at).toLocaleDateString('pt-BR', {
-                              weekday: 'short',
-                              day: '2-digit',
-                              month: 'short',
-                            })} às {new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-70 font-medium">Valor:</span>
-                          <span className="font-bold" style={{ color: customAccentText }}>
-                            {selectedService?.price || 'R$ 80,00'}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between pb-2 border-b" style={{ borderColor: `${customBorder}60` }}>
-                          <span className="opacity-70 font-medium">Local:</span>
-                          <span className="font-semibold" style={{ color: customPrimary }}>
-                            {locationText}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-0.5">
-                          <span className="opacity-70 font-medium">Código de Reserva:</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold" style={{ color: customPrimary }}>
-                              #{((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}
+                        {/* Procedimento e Valor */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider block" style={{ color: customAccentText }}>
+                              Procedimento
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`).catch(() => undefined);
-                                setCopiedCode(true);
-                                setTimeout(() => setCopiedCode(false), 2000);
-                              }}
-                              className="p-1 rounded hover:bg-black/5 transition-colors cursor-pointer"
-                              title="Copiar código"
-                            >
-                              {copiedCode ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                            </button>
+                            <strong className="text-base sm:text-lg font-bold block mt-0.5 truncate" style={{ color: customPrimary }}>
+                              {successBooking.service_name}
+                            </strong>
+                            <div className="flex items-center gap-1.5 text-xs opacity-70 mt-1">
+                              <Clock3 size={13} className="shrink-0" />
+                              <span>Duração aprox. {successBooking.duration_label || selectedService?.duration || '1h30'}</span>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider block opacity-70">
+                              Valor
+                            </span>
+                            <span className="text-lg sm:text-xl font-bold block" style={{ color: customAccentText }}>
+                              {selectedService?.price || 'R$ 80,00'}
+                            </span>
+                            <span className="text-[10px] font-medium block opacity-70 mt-0.5">
+                              Pagamento no local
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Data & Horário Destacado */}
+                        <div
+                          className="p-3 rounded-xl flex items-center gap-3 border"
+                          style={{
+                            backgroundColor: `${customBorder}20`,
+                            borderColor: `${customBorder}60`,
+                          }}
+                        >
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-2xs"
+                            style={{
+                              backgroundColor: customPrimary,
+                              color: customAccent,
+                            }}
+                          >
+                            <CalendarDays size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[10px] uppercase font-semibold tracking-wider block opacity-70">
+                              Data & Horário
+                            </span>
+                            <span className="text-xs sm:text-sm font-bold capitalize block truncate" style={{ color: customPrimary }}>
+                              {new Date(successBooking.starts_at).toLocaleDateString('pt-BR', {
+                                weekday: 'short',
+                                day: '2-digit',
+                                month: 'short',
+                              })} às {new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Localização */}
+                        <div className="flex items-start gap-2.5 text-xs pt-0.5">
+                          <MapPin size={15} className="shrink-0 mt-0.5" style={{ color: customAccent }} />
+                          <div className="min-w-0 flex-1">
+                            <span className="font-semibold block truncate" style={{ color: customPrimary }}>
+                              {studioTitle} Studio
+                            </span>
+                            <span className="opacity-75 block text-[11px] mt-0.5">
+                              {locationText}
+                            </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Botões de Ação */}
-                      <div className="flex flex-col gap-2.5 pt-1">
+                      {/* Orientações para a sessão */}
+                      <div
+                        className="rounded-2xl border p-3 sm:p-3.5 text-left transition-all"
+                        style={{
+                          backgroundColor: customCardBg,
+                          borderColor: customBorder,
+                        }}
+                      >
                         <button
                           type="button"
-                          onClick={() => {
-                            triggerHaptic('light');
-                            setBookingStep(1);
-                            setSelectedSlot(null);
-                            setSuccessBooking(null);
-                          }}
-                          className="w-full py-3 px-4 rounded-xl font-semibold text-xs sm:text-sm border transition-all cursor-pointer hover:opacity-90 active:scale-[0.99]"
-                          style={{
-                            backgroundColor: customCardBg,
-                            borderColor: customBorder,
-                            color: customText,
-                          }}
+                          onClick={() => setShowCareTips(!showCareTips)}
+                          className="w-full flex items-center justify-between text-xs font-semibold cursor-pointer"
+                          style={{ color: customPrimary }}
                         >
-                          Fazer Novo Agendamento ↺
+                          <div className="flex items-center gap-2">
+                            <Sparkles size={14} style={{ color: customAccent }} />
+                            <span>Orientações para a sua sessão</span>
+                          </div>
+                          <ChevronDown size={14} className={`transition-transform duration-200 opacity-60 ${showCareTips ? 'rotate-180' : ''}`} />
                         </button>
+
+                        {showCareTips && (
+                          <div className="text-xs pt-2.5 mt-2.5 border-t space-y-1.5 leading-relaxed opacity-85" style={{ borderColor: `${customBorder}60`, color: customText }}>
+                            <p className="m-0">• Chegar com a região dos olhos limpa, sem rímel ou maquiagem.</p>
+                            <p className="m-0">• Tolerância de pontualidade de até 10 minutos.</p>
+                            <p className="m-0">• Evite café ou estimulantes antes da sessão para relaxar o olhar.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Botões de Ação */}
+                      <div className="space-y-2.5 pt-1">
+                        {/* Salvar na Agenda */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <a
+                            href={getGoogleCalLink(successBooking)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:opacity-90 active:scale-[0.98]"
+                            style={{
+                              backgroundColor: customCardBg,
+                              borderColor: customBorder,
+                              color: customPrimary,
+                            }}
+                          >
+                            <CalendarDays size={14} style={{ color: customAccent }} className="shrink-0" />
+                            <span>Google Agenda</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => downloadIcsCalendar(successBooking)}
+                            className="py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs hover:opacity-90 active:scale-[0.98]"
+                            style={{
+                              backgroundColor: customCardBg,
+                              borderColor: customBorder,
+                              color: customPrimary,
+                            }}
+                          >
+                            <Calendar size={14} style={{ color: customAccent }} className="shrink-0" />
+                            <span>Apple / iCal</span>
+                          </button>
+                        </div>
+
+                        {/* Botão de WhatsApp */}
+                        <a
+                          href={whatsappUrl(`Olá, Lara! Acabei de agendar pelo site: ${successBooking.service_name} para ${new Date(successBooking.starts_at).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} às ${new Date(successBooking.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-opacity hover:opacity-90 active:scale-[0.99] cursor-pointer"
+                          style={{ backgroundColor: customPrimary }}
+                        >
+                          <MessageCircle size={15} style={{ color: customAccent }} />
+                          <span>Avisar a Lara no WhatsApp</span>
+                        </a>
+
+                        {/* Ações Secundárias */}
+                        <div className="flex items-center justify-center gap-4 text-xs font-medium pt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowMyAppointments(true)}
+                            className="opacity-75 hover:opacity-100 transition-opacity cursor-pointer font-medium"
+                            style={{ color: customPrimary }}
+                          >
+                            Ver Meus Horários
+                          </button>
+                          <span className="opacity-30">·</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setBookingStep(1);
+                              setSelectedSlot(null);
+                              setSuccessBooking(null);
+                            }}
+                            className="opacity-75 hover:opacity-100 transition-opacity cursor-pointer font-medium"
+                            style={{ color: customPrimary }}
+                          >
+                            Fazer Novo Agendamento
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -1983,25 +2082,8 @@ function AgendarContent() {
                       </div>
 
                       <div className="pt-3 border-t border-[#f0f0ed] flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[#8c8c84] text-[11px]">Reserva:</span>
-                          <span className="font-mono font-bold text-[var(--color-obsidian)]">
-                            #{((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void navigator.clipboard.writeText(`#${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}`).catch(() => undefined);
-                              setCopiedCode(true);
-                              setTimeout(() => setCopiedCode(false), 2000);
-                            }}
-                            className="p-1 rounded-md text-[#8c8c84] hover:text-[var(--color-obsidian)] transition-colors cursor-pointer"
-                            title="Copiar código"
-                          >
-                            {copiedCode ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                          </button>
-                        </div>
-                        <span className="text-[11px] text-[#8c8c84]">Pagamento no local</span>
+                        <span className="text-[11px] text-[#8c8c84]">Confirmação garantida</span>
+                        <span className="text-[11px] font-medium text-[var(--color-obsidian)]">Pagamento no local</span>
                       </div>
                     </div>
 
@@ -2074,7 +2156,7 @@ function AgendarContent() {
 
                       <div className="pt-1">
                         <a
-                          href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} (Reserva #${((successBooking.id || 'LV').slice(0, 8)).toUpperCase()}).`)}
+                          href={whatsappUrl(`Olá, Lara! Fiz meu agendamento no site para ${successBooking.service_name} no dia ${new Date(successBooking.starts_at).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}.`)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-[11px] text-[#8c8c84] hover:text-[var(--color-ember)] transition-colors cursor-pointer"
