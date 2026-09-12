@@ -329,8 +329,7 @@ BEGIN
 
   v_ends_at := p_starts_at + make_interval(mins => v_service.duration_minutes);
 
-  IF v_claim_role <> 'service_role'
-     OR v_clean_origin = 'web' THEN
+  IF v_clean_origin = 'web' AND char_length(p_fingerprint_hash) = 64 THEN
     PERFORM pg_advisory_xact_lock(hashtextextended(p_fingerprint_hash, 1));
     DELETE FROM public.lead_rate_limits WHERE created_at < now() - interval '24 hours';
     IF (
