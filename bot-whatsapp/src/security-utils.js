@@ -128,28 +128,6 @@ export function isSupportedMediaBuffer(buffer, mediaType) {
   return false;
 }
 
-/**
- * Extrai de forma segura o código numérico OTP (de 4 a 8 dígitos, padrão 6) de mensagens.
- * Suporta formatos: *123456*, "123456", ou código isolado no corpo do texto.
- * 
- * @param {string} text
- * @returns {string|null}
- */
-export function extractOtpCode(text) {
-  if (typeof text !== 'string') return null;
-  // Procura primeiro código destacado em negrito: *123456*
-  const boldMatch = text.match(/\*(\d{4,8})\*/);
-  if (boldMatch) return boldMatch[1];
-
-  // Procura padrão de 6 dígitos numéricos isolados
-  const digit6Match = text.match(/\b(\d{6})\b/);
-  if (digit6Match) return digit6Match[1];
-
-  // Procura qualquer sequência de 4 a 8 dígitos isolada
-  const genericMatch = text.match(/\b(\d{4,8})\b/);
-  return genericMatch ? genericMatch[1] : null;
-}
-
 export default {
   sanitizeUntrustedText,
   sanitizeSearchTerm,
@@ -157,5 +135,4 @@ export default {
   readResponseBodyWithLimit,
   readAsyncIterableWithLimit,
   isSupportedMediaBuffer,
-  extractOtpCode,
 };
