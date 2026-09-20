@@ -413,6 +413,45 @@ export async function processarFallback(texto = '', context = {}) {
   // 2. COMANDOS GLOBAIS DE INTERRUPÇÃO E ATENDIMENTO HUMANO
   // =========================================================================
 
+  // 2.0 Suporte Operacional para a Lara (Modo Profissional) em contingência/fallback
+  if (context.isLara) {
+    const ehConsultaAgenda =
+      norm.includes('minha agenda') ||
+      norm.includes('agenda de hoje') ||
+      norm.includes('atendimentos de hoje') ||
+      norm.includes('atendimentos hoje') ||
+      norm.includes('quem atendo hoje') ||
+      norm.includes('quem eu atendo') ||
+      norm.includes('proximo atendimento');
+
+    if (ehConsultaAgenda) {
+      try {
+        const { consultarAgendaProfissional } = await import('./tools-professional.js');
+        const resAgenda = await consultarAgendaProfissional({
+          data: 'hoje',
+          actor_phone: context.actor_phone || telefone,
+        });
+        if (resAgenda && resAgenda.ok) {
+          if (resAgenda.total === 0) {
+            return sanitizarMensagemWhatsApp(
+              `Lara, sua agenda de hoje está 100% livre! Nenhum atendimento agendado no momento.`,
+              { isProfissional: true }
+            );
+          }
+          const itens = resAgenda.agendamentos
+            .map((a) => `• ${a.hora_inicio} - ${a.cliente} (${a.procedimento})`)
+            .join('\n');
+          return sanitizarMensagemWhatsApp(
+            `Lara, você tem *${resAgenda.total} atendimento(s)* hoje:\n\n${itens}\n\nPrevisão total: ${resAgenda.valor_total_previsto_fmt}`,
+            { isProfissional: true }
+          );
+        }
+      } catch (err) {
+        // segue para o fluxo geral de fallback
+      }
+    }
+  }
+
   // 2.1 Cancelar fluxo conversacional atual
   const ehComandoVoltarOuCancelar =
     norm === 'voltar' ||

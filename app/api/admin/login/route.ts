@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     await adminClient.from('whatsapp_outbox').insert({
       phone: cleanPhone,
       client_name: profile.full_name || 'Lara Varisa Admin',
-      message: `*Painel Lara Varisa - Código de Segurança*\n\nSeu código de login em 2 etapas é: *${otpCode}*\n\nVálido por 10 minutos. Se você não tentou fazer login, altere sua senha.`,
+      message: `🔒 *Painel Lara Varisa • Código de Segurança*\n\nSeu código de login em 2 etapas é: *${otpCode}*\n\n⏱️ Válido por 10 minutos. Se você não tentou fazer login, altere sua senha.`,
       message_type: '2fa_code',
       status: 'pending',
     });

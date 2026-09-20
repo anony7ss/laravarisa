@@ -4,10 +4,10 @@
 
 import { supabase } from './supabase.js';
 import config from './config.js';
-import { sendHumanizedMessage, sendHumanizedMedia } from './queue.js';
+import { sendHumanizedMessage, sendHumanizedMedia, sendOtpMessageWithButtons } from './queue.js';
 import { logAction, logError } from './terminal.js';
 import { resolverJidWhatsApp } from './phone-utils.js';
-import { isSupportedMediaBuffer, readResponseBodyWithLimit, sanitizeUntrustedText } from './security-utils.js';
+import { isSupportedMediaBuffer, readResponseBodyWithLimit, sanitizeUntrustedText, extractOtpCode } from './security-utils.js';
 
 let isProcessing = false;
 let realtimeSubscription = null;
@@ -100,6 +100,7 @@ export async function processarFilaOutbox(sock) {
       try {
         const isUrgent =
           item.message_type === 'direct' ||
+          item.message_type === '2fa_code' ||
           (typeof item.message === 'string' &&
             (item.message.includes('código') ||
               item.message.includes('Código') ||
@@ -116,6 +117,10 @@ export async function processarFilaOutbox(sock) {
           throw new Error('Mensagem vazia na fila');
         }
 
+        const otpCode = (item.message_type === '2fa_code' || isUrgent)
+          ? extractOtpCode(mensagem)
+          : null;
+
         if (item.media_type && item.media_type !== 'text') {
           if (item.media_type !== 'audio' && item.media_type !== 'image') {
             throw new Error('Tipo de mídia não autorizado');
@@ -128,6 +133,19 @@ export async function processarFilaOutbox(sock) {
             immediate: isUrgent,
             skipChatLog: item.message_type === 'direct',
             senderType: item.message_type === 'direct' ? 'admin_manual' : 'system',
+          });
+        } else if (otpCode) {
+          const adminUrl = `${(config.publicSiteUrl || 'https://laravarisa.netlify.app').replace(/\/+$/, '')}/admin/login`;
+          await sendOtpMessageWithButtons(sock, jid, {
+            code: otpCode,
+            text: mensagem,
+            title: 'Código de Verificação',
+            footer: 'Lara Varisa • Segurança',
+            url: adminUrl,
+          }, {
+            immediate: true,
+            skipChatLog: item.message_type === 'direct',
+            senderType: 'system',
           });
         } else {
           await sendHumanizedMessage(sock, jid, mensagem, {

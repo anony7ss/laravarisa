@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const authPath = path.resolve(__dirname, '../auth_info_baileys');
 
-import { logInfo, logSuccess, logWarn, logError } from './terminal.js';
+import { logInfo, logSuccess, logWarn, logError, startSpinner, stopSpinner } from './terminal.js';
 import { publicarStatusBot } from './web-sync.js';
 import { isLid, registrarMapeamentoLid, resolverLidParaTelefone } from './phone-utils.js';
 import { isSafeWhatsAppJid } from './security-utils.js';
@@ -231,6 +231,7 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      stopSpinner();
       console.log('\n+-----------------------------------------------+');
       console.log('|   >> ESCANEIE O QR CODE NO SEU WHATSAPP:      |');
       console.log('+-----------------------------------------------+\n');
@@ -246,7 +247,12 @@ export async function initWhatsApp(onMessageReceived, onConnectionUpdate) {
       });
     }
 
+    if (connection === 'connecting') {
+      startSpinner('WhatsApp', 'Sincronizando chaves e conectando...');
+    }
+
     if (connection === 'open') {
+      stopSpinner();
       consecutiveDisconnectCount = 0;
       const me = sock.user || sock.authState?.creds?.me;
       const rawJid = me?.id || '';

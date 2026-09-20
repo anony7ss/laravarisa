@@ -65,6 +65,21 @@ const FullscreenLightbox = dynamic(
   () => import('@/components/fullscreen-lightbox').then((mod) => mod.FullscreenLightbox),
   { ssr: false }
 );
+const ReviewModal = dynamic(
+  () => import('@/components/booking/review-modal').then((mod) => mod.ReviewModal),
+  { ssr: false }
+);
+const StudioMap = dynamic(
+  () => import('@/components/site/studio-map').then((mod) => mod.StudioMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full min-h-[180px] flex items-center justify-center bg-[#f0f0ed] text-[#8c8c84] text-xs">
+        Carregando mapa...
+      </div>
+    ),
+  }
+);
 
 const STORAGE_PHONE_KEY = 'lv_booking_phone';
 const STORAGE_NAME_KEY = 'lv_booking_name';
@@ -157,6 +172,7 @@ function AgendarContent() {
   const [gallery, setGallery] = useState<GalleryPhoto[]>(fallbackGalleryPhotos);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -563,6 +579,22 @@ function AgendarContent() {
         isOpen={showMyAppointments}
         onClose={() => setShowMyAppointments(false)}
         initialPhone={clientData.phone}
+      />
+
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        onSuccess={(newReview) => {
+          setTestimonials((prev) => [newReview, ...prev]);
+        }}
+        theme={{
+          isModernApp,
+          primary: customPrimary,
+          cardBg: customCardBg,
+          border: customBorder,
+          text: customText,
+          accentText: customAccentText,
+        }}
       />
 
       {/* HEADER BOUTIQUE COM BANNER & FOTO DINÂMICOS */}
@@ -2177,6 +2209,35 @@ function AgendarContent() {
         {activeTab === 'avaliacoes' && (
           isModernApp ? (
             <div className="max-w-xl lg:max-w-2xl mx-auto space-y-2.5 animate-in fade-in duration-200">
+              {/* Card de Ação: Avaliar */}
+              <div
+                className="p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3 shadow-xs"
+                style={{
+                  backgroundColor: customCardBg,
+                  borderColor: customBorder,
+                }}
+              >
+                <div className="min-w-0 space-y-0.5">
+                  <span className="text-xs sm:text-sm font-bold truncate block" style={{ color: customPrimary }}>
+                    Avaliações das Clientes
+                  </span>
+                  <p className="text-[11px] truncate opacity-80 m-0" style={{ color: customText }}>
+                    Já realizou seu procedimento? Deixe sua avaliação
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsReviewModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
+                  style={{ backgroundColor: customPrimary }}
+                >
+                  Avaliar
+                </button>
+              </div>
+
               {(testimonials.length > 0 ? testimonials : [
                 { id: '1', client_name: 'Mariana Souza', client_role: 'Cliente VIP · Volume Brasileiro', rating: 5, content: 'O isolamento dos fios é perfeito, não pesou nada nos meus olhos. Já virei cliente fiel!' },
                 { id: '2', client_name: 'Camila Becker', client_role: 'Atendimento no Estúdio · Fox Eyes', rating: 5, content: 'O estúdio é super acolhedor e limpo. A durabilidade da extensão passou de 3 semanas impecável.' },
@@ -2217,7 +2278,7 @@ function AgendarContent() {
             </div>
           ) : (
             <div className="space-y-4 lg:space-y-6 animate-in fade-in duration-200">
-            <div className="bg-white p-5 lg:p-7 rounded-3xl border border-[#d6d6cf] shadow-sm text-center space-y-2 max-w-xl lg:max-w-2xl mx-auto">
+            <div className="bg-white p-5 lg:p-7 rounded-3xl border border-[#d6d6cf] shadow-sm text-center space-y-3 max-w-xl lg:max-w-2xl mx-auto">
               <span className="text-3xl sm:text-4xl lg:text-5xl font-[family-name:var(--font-display)] text-[var(--color-obsidian)] font-bold">
                 5.0
               </span>
@@ -2230,19 +2291,30 @@ function AgendarContent() {
                 100% de satisfação e recomendação das nossas clientes
               </p>
 
-              {siteSettings?.google_review_url && (
-                <div className="pt-2">
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setIsReviewModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 rounded-full bg-[var(--color-obsidian)] text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 active:scale-95 transition-all shadow-xs cursor-pointer"
+                >
+                  Deixar minha avaliação
+                </button>
+
+                {siteSettings?.google_review_url && (
                   <a
                     href={siteSettings.google_review_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] text-xs font-semibold border border-[#d6d6cf] hover:border-[var(--color-obsidian)] transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[var(--color-limestone)] text-[var(--color-obsidian)] text-xs sm:text-sm font-semibold border border-[#d6d6cf] hover:border-[var(--color-obsidian)] transition-colors"
                   >
-                    <span>Escrever uma avaliação no Google</span>
+                    <span>Escrever no Google</span>
                     <ExternalLink size={12} />
                   </a>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-4">
@@ -2300,9 +2372,6 @@ function AgendarContent() {
                   Localização & Acesso
                 </span>
                 <p className="m-0 opacity-85 leading-relaxed">{locationText}</p>
-                <span className="text-[10.5px] font-medium block pt-1" style={{ color: customAccentText }}>
-                  Estacionamento privativo e recepção climatizada
-                </span>
               </div>
 
               {/* Horário de Funcionamento */}
@@ -2373,37 +2442,14 @@ function AgendarContent() {
                   </a>
                 </div>
 
-                {/* Mapa Google Maps Moderno e Bonito */}
+                {/* Mapa Interativo MapLibre */}
                 <div className="relative w-full h-48 sm:h-56 rounded-2xl overflow-hidden border shadow-inner mt-1" style={{ borderColor: customBorder, backgroundColor: '#f0f0ed' }}>
-                  <iframe
-                    src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
-                    width="100%"
-                    height="100%"
-                    style={{
-                      border: 0,
-                      filter: 'grayscale(20%) contrast(1.04) brightness(0.98)',
-                    }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Localização do Estúdio no Google Maps"
+                  <StudioMap
+                    className="w-full h-full"
+                    pinColor={customPrimary}
+                    studioName="Lara Varisa Studio"
+                    studioAddress={locationText}
                   />
-
-                  {/* Badge Elegante Flutuante no Topo */}
-                  <div className="absolute top-2.5 left-2.5 pointer-events-none">
-                    <div
-                      className="px-2.5 py-1 rounded-xl shadow-md backdrop-blur-md border flex items-center gap-1.5 text-[11px] font-semibold"
-                      style={{
-                        backgroundColor: `${customCardBg}f0`,
-                        borderColor: customBorder,
-                        color: customPrimary,
-                      }}
-                    >
-                      <div className="w-4 h-4 rounded-md flex items-center justify-center text-white shrink-0" style={{ backgroundColor: customPrimary }}>
-                        <MapPin size={10} />
-                      </div>
-                      <span>Lara Varisa Studio</span>
-                    </div>
-                  </div>
 
                   {/* Botão Flutuante para Traçar Rota no Google Maps */}
                   <a
@@ -2422,6 +2468,8 @@ function AgendarContent() {
               {/* Card de Instalação do App PWA */}
               <div className="pt-1">
                 <PwaInstallButton
+                  buttonBg={customPrimary}
+                  buttonText="#ffffff"
                   style={{
                     backgroundColor: customCardBg,
                     borderColor: customBorder,
@@ -2537,38 +2585,11 @@ function AgendarContent() {
                 </p>
 
                 <div className="relative w-full h-56 sm:h-64 lg:h-80 rounded-2xl overflow-hidden border border-[#d6d6cf] bg-[#f0f0ec] shadow-inner">
-                  <iframe
-                    src={siteSettings?.studio_map_url || 'https://maps.google.com/maps?q=-30.0125,-51.1685&hl=pt-BR&z=14&output=embed'}
-                    width="100%"
-                    height="100%"
-                    style={{
-                      border: 0,
-                      filter: 'grayscale(75%) contrast(1.08) brightness(0.97)',
-                    }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Localização do Estúdio"
+                  <StudioMap
+                    className="w-full h-full"
+                    studioName="Lara Varisa Studio"
+                    studioAddress="Zona Norte · Porto Alegre, RS"
                   />
-
-                  {/* MARCADOR DE LUXO DO ESTÚDIO */}
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div className="flex flex-col items-center -mt-4">
-                      <div className="relative flex items-center justify-center">
-                        <div className="absolute w-10 h-10 rounded-full bg-[var(--color-ember)]/30 animate-ping" />
-                        <div className="w-9 h-9 rounded-full bg-[var(--color-obsidian)] text-white shadow-xl border-2 border-white flex items-center justify-center relative z-10">
-                          <MapPin size={17} className="text-[var(--color-ember)]" />
-                        </div>
-                      </div>
-                      <div className="mt-1.5 px-3 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#d6d6cf] shadow-md text-center">
-                        <span className="text-[11px] font-bold text-[var(--color-obsidian)] block leading-none">
-                          Lara Varisa Studio
-                        </span>
-                        <span className="text-[9px] text-[#707068] block mt-0.5">
-                          Zona Norte · Porto Alegre
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* BOTÃO FLUTUANTE MAPS */}
                   <div className="absolute bottom-2.5 right-2.5 z-10">

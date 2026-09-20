@@ -2,6 +2,7 @@
  * Fila de envio humanizada com proteção anti-ban para Baileys
  */
 
+import { proto, generateWAMessageFromContent } from '@whiskeysockets/baileys';
 import { registrarMensagemChat } from './web-sync.js';
 import { sanitizarMensagemWhatsApp } from './format-cleaner.js';
 import { isSafeWhatsAppJid, isSupportedMediaBuffer } from './security-utils.js';
@@ -268,9 +269,123 @@ export async function reactToMessage(sock, key, emoji = '💕') {
   }
 }
 
+/**
+ * Envia mensagem OTP / 2FA com botão nativo interativo (cta_copy para copiar o código
+ * em 1 toque no celular e cta_url para abrir o painel com segurança).
+ * Inclui fallback automático resiliente para texto plano caso o cliente não suporte botões.
+ *
+ * @param {any} sock Socket Baileys
+ * @param {string} jid WhatsApp JID destinatário
+ * @param {object} params
+ * @param {string} params.code Código numérico OTP
+ * @param {string} [params.text] Texto descritivo da mensagem
+ * @param {string} [params.title] Cabeçalho / título da mensagem
+ * @param {string} [params.footer] Rodapé da mensagem
+ * @param {string} [params.url] Link para abrir o painel
+ * @param {object} [options] Opções de fila/envio
+ * @returns {Promise<any>}
+ */
+export async function sendOtpMessageWithButtons(sock, jid, { code, text, title, footer, url } = {}, options = {}) {
+  if (!sock || !jid) {
+    throw new Error('Parâmetros inválidos: sock e jid são obrigatórios');
+  }
+
+  const cleanCode = String(code || '').trim();
+  const adminUrl = url || 'https://laravarisa.netlify.app/admin/login';
+  const headerTitle = title || 'Código de Verificação';
+  const footerText = footer || 'Lara Varisa • Segurança';
+
+  const bodyText = text
+    ? sanitizarMensagemWhatsApp(text.slice(0, MAX_TEXT_CHARS), { maxEmojis: 1 })
+    : `🔒 *Painel Lara Varisa • Código de Segurança*\n\nSeu código de acesso em 2 etapas: *${cleanCode}*\n\n⏱️ Válido por 10 minutos. Não compartilhe este código.`;
+
+  return enqueue(jid, async () => {
+    let sent = null;
+
+    // Tentativa 1: Enviar mensagem interativa nativa com botões (cta_copy e cta_url)
+    try {
+      const buttons = [];
+
+      if (cleanCode) {
+        buttons.push({
+          name: 'cta_copy',
+          buttonParamsJson: JSON.stringify({
+            display_text: 'Copiar Código',
+            id: 'copy_otp_code',
+            copy_code: cleanCode,
+          }),
+        });
+      }
+
+      if (adminUrl) {
+        buttons.push({
+          name: 'cta_url',
+          buttonParamsJson: JSON.stringify({
+            display_text: 'Abrir Painel',
+            url: adminUrl,
+            merchant_url: adminUrl,
+          }),
+        });
+      }
+
+      const interactiveMessage = proto.Message.InteractiveMessage.create({
+        body: proto.Message.InteractiveMessage.Body.create({
+          text: bodyText,
+        }),
+        footer: proto.Message.InteractiveMessage.Footer.create({
+          text: footerText,
+        }),
+        header: proto.Message.InteractiveMessage.Header.create({
+          title: headerTitle,
+          hasMediaAttachment: false,
+        }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
+          buttons,
+        }),
+      });
+
+      const msg = generateWAMessageFromContent(
+        jid,
+        {
+          viewOnceMessage: {
+            message: {
+              messageContextInfo: {
+                deviceListMetadata: {},
+                deviceListMetadataVersion: 2,
+              },
+              interactiveMessage,
+            },
+          },
+        },
+        { userJid: sock.user?.id }
+      );
+
+      sent = await sock.relayMessage(jid, msg.message, { messageId: msg.key.id });
+    } catch (relayErr) {
+      console.warn(`[queue] Falha ao enviar interactiveMessage para ${jid}, usando fallback seguro para texto:`, relayErr?.message || relayErr);
+      sent = await sock.sendMessage(jid, { text: bodyText });
+    }
+
+    if (!options.skipChatLog) {
+      registrarMensagemChat({
+        phone: jid,
+        remoteJid: jid,
+        senderName: 'Lara Varisa',
+        fromMe: true,
+        senderType: options.senderType || 'system',
+        content: bodyText,
+        mediaType: 'text',
+      });
+    }
+
+    return sent;
+  });
+}
+
 export default {
   sendHumanizedMessage,
   sendHumanizedVoice,
   sendHumanizedMedia,
+  sendOtpMessageWithButtons,
   reactToMessage,
 };

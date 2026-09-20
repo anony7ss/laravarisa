@@ -2055,7 +2055,6 @@ export function BookingCustomizer({ settings, disabled = false }: BookingCustomi
                         <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
                           <span style={{ fontWeight: 700, color: primaryColor, display: 'block', marginBottom: '4px' }}>Localização & Acesso</span>
                           <p style={{ margin: 0, opacity: 0.85 }}>{locationLabel}</p>
-                          <span style={{ fontSize: '10.5px', color: accentColor, display: 'block', marginTop: '4px' }}>Estacionamento privativo e recepção climatizada</span>
                         </div>
 
                         <div style={{ padding: '12px', borderRadius: '12px', background: cardBg, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: '4px' }}>

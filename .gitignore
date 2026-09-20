@@ -34,6 +34,7 @@ bot-whatsapp/.env*
 bot-whatsapp/auth_info_baileys/
 bot-whatsapp/node_modules/
 bot-whatsapp/*.log
+bot-whatsapp/.bot_session.json
 
 
 # deployment and generated files

@@ -151,6 +151,4 @@ export function iniciarRotinasProgramadas(sock) {
   routineInterval = setInterval(() => {
     verificarRotinasAgendadas(sock).catch(() => {});
   }, 60 * 1000);
-
-  logInfo('Rotinas', 'Sistema autônomo de rotinas programadas da Lara inicializado (checagem a cada 60s).');
 }

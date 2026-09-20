@@ -9,6 +9,7 @@ import {
   Navigation,
 } from 'lucide-react';
 import { SiteFooter } from '@/components/site-footer';
+import { StudioMap } from '@/components/site/studio-map';
 import { studio } from '@/lib/studio';
 
 export const metadata: Metadata = {
@@ -51,12 +52,10 @@ export default function LocationPage() {
 
         <div className="location-layout">
           <div className="location-map">
-            <iframe
-              src={studio.mapEmbedUrl}
-              title="Mapa da região de atendimento"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
+            <StudioMap
+              className="w-full h-full min-h-[360px] rounded-3xl"
+              studioName="Lara Varisa Studio"
+              studioAddress={studio.address}
             />
           </div>
           <aside className="location-details">

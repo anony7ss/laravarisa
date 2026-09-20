@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   const { error: outboxErr } = await adminSupabase.from('whatsapp_outbox').insert({
     phone: targetPhone,
     client_name: profile.full_name || 'Lara Varisa Admin',
-    message: `*Painel Lara Varisa - Verificação 2FA*\n\nSeu código de segurança para autenticação em duas etapas é:\n\n*${code}*\n\nEle expira em 10 minutos. Se você não solicitou este código, ignore esta mensagem.`,
+    message: `🔒 *Painel Lara Varisa • Verificação em 2 Etapas*\n\nSeu código de ativação de segurança é: *${code}*\n\n⏱️ Válido por 10 minutos. Se você não solicitou este código, ignore esta mensagem.`,
     message_type: '2fa_code',
     status: 'pending',
   });

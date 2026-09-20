@@ -65,7 +65,11 @@ import {
   isChatAiPaused,
   registrarMensagemChat,
 } from './src/web-sync.js';
-import { renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError } from './src/terminal.js';
+import { clearScreen, renderBanner, updateStatus, logSuccess, logInfo, logWarn, logError, startSpinner, stopSpinner } from './src/terminal.js';
+import { autenticarAdminBot } from './src/auth.js';
+
+// Limpa imediatamente o terminal assim que o comando node . é executado
+clearScreen();
 import {
   isLid,
   telefonesCorrespondemBR,
@@ -100,6 +104,7 @@ let isShuttingDown = false;
 async function gracefulShutdown(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
+  stopSpinner();
   console.log(`\n🛑 [Sistema] Encerrando com segurança (${signal})...`);
 
   try {
@@ -288,7 +293,17 @@ function handleConnectionUpdate(sock, update) {
  */
 async function bootstrap() {
   try {
-    // 1. Testa silenciosamente a conexão com IA para determinar modo
+    clearScreen();
+
+    // 1. Autenticação com Supabase Auth (mesmas credenciais de admin do site)
+    const { profile } = await autenticarAdminBot();
+    const adminNome = profile?.full_name || 'Admin';
+    const adminRole = profile?.role || 'admin';
+    updateStatus('admin', `${adminNome} (${adminRole})`);
+
+    startSpinner('Sistema', 'Verificando conexão com motor IA e Supabase...');
+
+    // 2. Testa silenciosamente a conexão com IA para determinar modo
     const iaStatus = await testarConexaoIA();
     if (iaStatus.conectada) {
       updateStatus('ai', `Conectada (${iaStatus.modelo || 'OpenCode Go'})`);
@@ -296,8 +311,12 @@ async function bootstrap() {
       updateStatus('ai', 'Fallback Automático Ativo');
     }
 
+    stopSpinner();
+
     // 2. Renderiza painel inicial
     renderBanner(config);
+
+    startSpinner('WhatsApp', 'Iniciando conexão segura com WhatsApp...');
 
     // 3. Inicia sincronização web e escuta de comandos do painel admin
     iniciarHeartbeat();
@@ -308,6 +327,7 @@ async function bootstrap() {
     // 4. Inicializa conexão do WhatsApp
     await initWhatsApp(handleIncomingMessage, handleConnectionUpdate);
   } catch (error) {
+    stopSpinner();
     logError('Sistema', `Falha na inicialização: ${error?.message || error}`);
     setTimeout(bootstrap, 10000);
   }

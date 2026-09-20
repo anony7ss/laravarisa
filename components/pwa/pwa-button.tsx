@@ -1,17 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Smartphone, Share2, PlusSquare, X } from 'lucide-react';
+import { Smartphone, Share2, PlusSquare, X } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
 
 export function PwaInstallButton({
   className = '',
   style = {},
   variant = 'card',
+  buttonBg,
+  buttonText,
 }: {
   className?: string;
   style?: React.CSSProperties;
   variant?: 'card' | 'button' | 'pill';
+  buttonBg?: string;
+  buttonText?: string;
 }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -64,28 +68,25 @@ export function PwaInstallButton({
         <div
           onClick={handleClick}
           style={style}
-          className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer hover:opacity-95 active:scale-[0.99] flex items-center justify-between gap-3 ${className}`}
+          className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer hover:opacity-95 active:scale-[0.99] flex items-center justify-between gap-3 shadow-xs ${className}`}
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-[#cca352]/15 text-[#cca352] flex items-center justify-center shrink-0 border border-[#cca352]/30">
-              <Smartphone size={20} />
-            </div>
-            <div className="min-w-0">
-              <strong className="text-xs sm:text-sm font-bold block truncate">
-                Instalar Aplicativo no Celular
-              </strong>
-              <span className="text-[11px] opacity-75 block truncate">
-                Agendamento rápido em 1 toque na sua tela inicial
-              </span>
-            </div>
+          <div className="min-w-0 space-y-0.5">
+            <strong className="text-xs sm:text-sm font-bold block truncate">
+              Instalar Aplicativo no Celular
+            </strong>
+            <span className="text-[11px] opacity-75 block truncate">
+              Agendamento rápido em 1 toque na sua tela inicial
+            </span>
           </div>
           <button
             type="button"
-            className="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1.5 shadow-sm"
-            style={{ backgroundColor: '#cca352', color: '#121211' }}
+            className="px-4 py-2 rounded-xl text-xs font-semibold shrink-0 transition-transform active:scale-95 cursor-pointer shadow-xs"
+            style={{
+              backgroundColor: buttonBg || '#121211',
+              color: buttonText || '#ffffff',
+            }}
           >
-            <Download size={12} strokeWidth={2.5} />
-            <span>Baixar</span>
+            Instalar
           </button>
         </div>
       ) : variant === 'pill' ? (
@@ -141,35 +142,32 @@ export function PwaInstallButton({
               </button>
             </div>
 
-            <div className="space-y-2.5 pt-1 text-xs">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
-                  <Share2 size={16} />
-                </div>
-                <div>
-                  <strong className="block text-[#121211] font-semibold">1. Toque em Compartilhar</strong>
-                  <span className="text-[#707068]">No menu inferior do Safari no iPhone.</span>
-                </div>
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="p-3.5 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4] space-y-0.5">
+                <strong className="block text-[#121211] text-xs font-bold">
+                  1. Toque em Compartilhar
+                </strong>
+                <p className="text-[11.5px] text-[#707068] m-0 leading-relaxed">
+                  No menu inferior do Safari no iPhone.
+                </p>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
-                  <PlusSquare size={16} />
-                </div>
-                <div>
-                  <strong className="block text-[#121211] font-semibold">2. "Adicionar à Tela de Início"</strong>
-                  <span className="text-[#707068]">Role as opções e selecione o ícone com sinal de +.</span>
-                </div>
+              <div className="p-3.5 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4] space-y-0.5">
+                <strong className="block text-[#121211] text-xs font-bold">
+                  2. Adicionar à Tela de Início
+                </strong>
+                <p className="text-[11.5px] text-[#707068] m-0 leading-relaxed">
+                  Role a lista de opções e selecione o botão de adicionar (+).
+                </p>
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4]">
-                <div className="w-8 h-8 rounded-xl bg-[#cca352]/20 text-[#8f6d26] flex items-center justify-center shrink-0">
-                  <Smartphone size={16} />
-                </div>
-                <div>
-                  <strong className="block text-[#121211] font-semibold">3. Toque em "Adicionar"</strong>
-                  <span className="text-[#707068]">No canto superior direito para confirmar.</span>
-                </div>
+              <div className="p-3.5 rounded-2xl bg-[#f8f8f6] border border-[#e8e8e4] space-y-0.5">
+                <strong className="block text-[#121211] text-xs font-bold">
+                  3. Toque em Adicionar
+                </strong>
+                <p className="text-[11.5px] text-[#707068] m-0 leading-relaxed">
+                  No canto superior direito para confirmar o atalho.
+                </p>
               </div>
             </div>
 

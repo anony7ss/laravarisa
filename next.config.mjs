@@ -15,7 +15,8 @@ const nextConfig = {
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       img-src 'self' blob: data: https:;
       font-src 'self' https://fonts.gstatic.com data:;
-      connect-src 'self' https://challenges.cloudflare.com;
+      connect-src 'self' https://challenges.cloudflare.com https://*.cartocdn.com https://cartocdn.com https://*.basemaps.cartocdn.com https://tiles.basemaps.cartocdn.com https://basemaps.cartocdn.com https://*.supabase.co wss://*.supabase.co ws: wss:;
+      worker-src 'self' blob:;
       frame-src 'self' https://challenges.cloudflare.com https://www.google.com https://*.google.com https://maps.google.com;
       object-src 'none';
       base-uri 'self';
