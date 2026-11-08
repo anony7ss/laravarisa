@@ -31,6 +31,7 @@ export function LeadsManager({
   }, [items, query]);
 
   async function changeStatus(item: LeadRow, status: LeadRow['status']) {
+    if (role === 'viewer') return;
     setError('');
     try {
       const updated = await adminRequest<LeadRow>(
@@ -49,6 +50,7 @@ export function LeadsManager({
   }
 
   async function convert(item: LeadRow) {
+    if (role === 'viewer') return;
     setError('');
     try {
       await adminRequest('/api/admin/clients', {
@@ -70,6 +72,7 @@ export function LeadsManager({
   const [deletingLead, setDeletingLead] = useState<string | null>(null);
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     try {
       await adminRequest(`/api/admin/leads/${id}`, { method: 'DELETE' });
       setItems((current) => current.filter((item) => item.id !== id));

@@ -31,6 +31,7 @@ export function TestimonialsManager({
 
   async function save(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (role === 'viewer') return;
     setError('');
     const form = new FormData(event.currentTarget);
     const payload = {
@@ -58,6 +59,7 @@ export function TestimonialsManager({
   }
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     try {
       await adminRequest(`/api/admin/testimonials/${id}`, { method: 'DELETE' });
       setItems((list) => list.filter((i) => i.id !== id));

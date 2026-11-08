@@ -685,7 +685,7 @@ export function SettingsManager({
               name="booking_alert"
               defaultValue={settings?.booking_alert || ''}
               disabled={role !== 'admin'}
-              placeholder="Ex: ✨ Poucas vagas disponíveis para o final de semana!"
+              placeholder="Ex: 🤍 Poucas vagas disponíveis para o final de semana!"
             />
             <small style={{ color: 'var(--admin-muted)', fontSize: '10px' }}>
               Exibido no topo de /agendar para alertar suas clientes
@@ -1089,7 +1089,7 @@ export function SettingsManager({
               rows={6}
               defaultValue={
                 settings?.post_care_message_template ||
-                'Oi, {nome}! ✨ Passando para saber como estão seus cílios e se você está amando o resultado! 💕\n\nLembre-se dos cuidados básicos:\n• Evite vapor excessivo e água muito quente nos olhos\n• Penteie suavemente com a escovinha sempre que acordar\n• Lave a região com espuminha neutra\n\nSua opinião é super especial para nós! Se puder deixar uma avaliação com 5 estrelas no Google, nos ajuda demais:\n⭐ {link_avaliacao}\n\nQualquer dúvida estou por aqui! Um beijo! 🥰'
+                'Oi, {nome}! 🤍 Passando para saber como estão seus cílios e se você está amando o resultado! 💕\n\nLembre-se dos cuidados básicos:\n• Evite vapor excessivo e água muito quente nos olhos\n• Penteie suavemente com a escovinha sempre que acordar\n• Lave a região com espuminha neutra\n\nSua opinião é super especial para nós! Se puder deixar uma avaliação com 5 estrelas no Google, nos ajuda demais:\n⭐ {link_avaliacao}\n\nQualquer dúvida estou por aqui! Um beijo! 🥰'
               }
               disabled={role !== 'admin'}
               placeholder="Variáveis: {nome}, {procedimento}, {link_avaliacao}, {local}."

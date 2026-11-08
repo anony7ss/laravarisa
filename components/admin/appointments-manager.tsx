@@ -457,7 +457,7 @@ export function AppointmentsManager({
     });
     const timeFormatted = timeLabel(item.starts_at);
     const text = encodeURIComponent(
-      `Olá, ${item.client_name}! ✨ Aqui é da Lara Varisa · Lash Designer. Passando para confirmar seu horário agendado para o dia ${dateFormatted} às ${timeFormatted}. Podemos confirmar sua presença? 💖`,
+      `Olá, ${item.client_name}! 🤍 Aqui é da Lara Varisa · Lash Designer. Passando para confirmar seu horário agendado para o dia ${dateFormatted} às ${timeFormatted}. Podemos confirmar sua presença? 💖`,
     );
     return `https://wa.me/${phone}?text=${text}`;
   }

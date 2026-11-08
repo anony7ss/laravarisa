@@ -204,7 +204,7 @@ function ChatAudioPlayer({ src, isMe }: { src: string; isMe: boolean }) {
 }
 
 const QUICK_REPLIES = [
-  'Olá! ✨ Em que posso te ajudar hoje?',
+  'Olá! 🤍 Em que posso te ajudar hoje?',
   'Seu agendamento está confirmado com sucesso! Te espero no estúdio. 💕',
   'Dados para pagamento: confira a chave PIX cadastrada antes de enviar.',
   'Localização e instruções de chegada: confira os dados atualizados do estúdio.',

@@ -33,6 +33,7 @@ export function ServicesManager({
   const current = editing ?? emptyService;
   async function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (role === 'viewer') return;
     setError('');
     const form = new FormData(event.currentTarget);
     const payload = {
@@ -65,6 +66,7 @@ export function ServicesManager({
     }
   }
   async function toggle(item: ServiceRow) {
+    if (role === 'viewer') return;
     try {
       const saved = await adminRequest<ServiceRow>(
         `/api/admin/services/${item.id}`,
@@ -81,6 +83,7 @@ export function ServicesManager({
   const [deletingService, setDeletingService] = useState<string | null>(null);
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     try {
       await adminRequest(`/api/admin/services/${id}`, { method: 'DELETE' });
       setItems((list) => list.filter((item) => item.id !== id));

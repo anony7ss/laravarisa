@@ -41,6 +41,7 @@ export function GalleryManager({
   const [beforePath, setBeforePath] = useState('');
   const current = editing ?? emptyGallery;
   async function upload(file: File, isBefore = false) {
+    if (role === 'viewer') return;
     if (isBefore) setBeforeUploading(true);
     else setUploading(true);
     setError('');
@@ -61,6 +62,7 @@ export function GalleryManager({
     }
   }
   async function save(event: SyntheticEvent<HTMLFormElement>) {
+    if (role === 'viewer') return;
     event.preventDefault();
     setError('');
     const form = new FormData(event.currentTarget);
@@ -101,6 +103,7 @@ export function GalleryManager({
   const [deletingImage, setDeletingImage] = useState<string | null>(null);
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     try {
       await adminRequest(`/api/admin/gallery/${id}`, { method: 'DELETE' });
       setItems((list) => list.filter((i) => i.id !== id));

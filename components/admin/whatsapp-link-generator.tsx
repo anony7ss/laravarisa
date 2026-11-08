@@ -105,8 +105,10 @@ function generateRandomSlug(): string {
 
 export function WhatsAppLinkGenerator({
   defaultPhone = '',
+  role = 'viewer',
 }: {
   defaultPhone?: string;
+  role?: string;
 }) {
   const [countryCode, setCountryCode] = useState('55');
   const [phone, setPhone] = useState(() => {
@@ -272,6 +274,7 @@ export function WhatsAppLinkGenerator({
 
   // Salvar / Criar Shortlink no Banco de Dados
   const handleSaveShortLink = async () => {
+    if (role === 'viewer') return;
     if (!directWaUrl) {
       setSaveStatus({ type: 'error', message: 'Preencha o telefone para criar o link.' });
       return;
@@ -319,6 +322,7 @@ export function WhatsAppLinkGenerator({
 
   // Excluir Shortlink
   const handleDeleteShortLink = async (id: string, itemSlug: string) => {
+    if (role !== 'admin') return;
     if (!confirm(`Deseja realmente remover o shortlink "/w/${itemSlug}"?`)) return;
     triggerHaptic('medium');
     try {
@@ -771,48 +775,50 @@ export function WhatsAppLinkGenerator({
             </div>
 
             {/* BOTÃO DE SALVAR NO BANCO */}
-            <div>
-              <button
-                type="button"
-                onClick={handleSaveShortLink}
-                disabled={isSaving || !cleanSlug || !directWaUrl}
-                className="admin-primary"
-                style={{ width: '100%', height: '42px', minHeight: '42px', fontSize: '13px', justifyContent: 'center' }}
-              >
-                {isSaving ? (
-                  <>
-                    <RotateCcw size={15} className="animate-spin" />
-                    <span>Salvando Shortlink...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={15} />
-                    <span>Criar e Ativar Shortlink (/w/{cleanSlug || '...'})</span>
-                  </>
-                )}
-              </button>
-
-              {saveStatus && (
-                <div
-                  style={{
-                    marginTop: '10px',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    background: saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: saveStatus.type === 'success' ? '#15803d' : '#b91c1c',
-                    border: `1px solid ${saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+            {role !== 'viewer' && (
+              <div>
+                <button
+                  type="button"
+                  onClick={handleSaveShortLink}
+                  disabled={isSaving || !cleanSlug || !directWaUrl}
+                  className="admin-primary"
+                  style={{ width: '100%', height: '42px', minHeight: '42px', fontSize: '13px', justifyContent: 'center' }}
                 >
-                  {saveStatus.type === 'success' ? <Check size={14} /> : null}
-                  <span>{saveStatus.message}</span>
-                </div>
-              )}
-            </div>
+                  {isSaving ? (
+                    <>
+                      <RotateCcw size={15} className="animate-spin" />
+                      <span>Salvando Shortlink...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={15} />
+                      <span>Criar e Ativar Shortlink (/w/{cleanSlug || '...'})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {saveStatus && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  background: saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  color: saveStatus.type === 'success' ? '#15803d' : '#b91c1c',
+                  border: `1px solid ${saveStatus.type === 'success' ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {saveStatus.type === 'success' ? <Check size={14} /> : null}
+                <span>{saveStatus.message}</span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -1183,21 +1189,23 @@ export function WhatsAppLinkGenerator({
                             <ExternalLink size={12} />
                           </a>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteShortLink(item.id, item.slug)}
-                            className="admin-secondary"
-                            style={{
-                              height: '30px',
-                              minHeight: '30px',
-                              padding: '0 8px',
-                              fontSize: '11px',
-                              color: '#b91c1c',
-                            }}
-                            title="Excluir Shortlink"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {role === 'admin' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteShortLink(item.id, item.slug)}
+                              className="admin-secondary"
+                              style={{
+                                height: '30px',
+                                minHeight: '30px',
+                                padding: '0 8px',
+                                fontSize: '11px',
+                                color: '#b91c1c',
+                              }}
+                              title="Excluir Shortlink"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

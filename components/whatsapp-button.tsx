@@ -8,7 +8,7 @@ export function WhatsAppButton() {
   const pathname = usePathname();
   // Don't show in admin area, booking portal, or anamnese form
   if (pathname?.startsWith('/admin') || pathname?.startsWith('/agendar') || pathname?.startsWith('/anamnese')) return null;
-  const destination = whatsappUrl('Olá, Lara! Gostaria de tirar uma dúvida sobre os procedimentos de cílios ✨');
+  const destination = whatsappUrl('Olá, Lara! Gostaria de tirar uma dúvida sobre os procedimentos de cílios 🤍');
   const isExternal = destination.startsWith('https://wa.me/');
 
   return (

@@ -245,6 +245,7 @@ export function ClientsManager({
     messageTemplate: string,
     campaignName: string,
   ) {
+    if (role === 'viewer') return;
     const pClean = cleanDigits(client.phone);
     if (!pClean) {
       setError('Cliente sem número de telefone cadastrado.');
@@ -299,6 +300,7 @@ export function ClientsManager({
   const [formLashNotes, setFormLashNotes] = useState(current.lash_notes || '');
 
   function handleOpenEdit(client: ClientRow) {
+    if (role === 'viewer') return;
     setEditing(client);
     setCreating(false);
     setActiveTab('cadastro');
@@ -311,6 +313,7 @@ export function ClientsManager({
   }
 
   function handleOpenCreate() {
+    if (role === 'viewer') return;
     setEditing(null);
     setCreating(true);
     setActiveTab('cadastro');
@@ -324,6 +327,7 @@ export function ClientsManager({
 
   async function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (role === 'viewer') return;
     setError('');
     const form = new FormData(event.currentTarget);
     const payload = {
@@ -359,6 +363,7 @@ export function ClientsManager({
   const [deletingClient, setDeletingClient] = useState<string | null>(null);
 
   async function remove(id: string) {
+    if (role !== 'admin') return;
     try {
       await adminRequest(`/api/admin/clients/${id}`, { method: 'DELETE' });
       setItems((list) => list.filter((item) => item.id !== id));
@@ -385,17 +390,16 @@ export function ClientsManager({
 
   return (
     <>
-      {role !== 'viewer' && (
-        <div className="admin-toolbar" style={{ flexWrap: 'wrap', gap: '12px' }}>
-          <div className="admin-search-wrap" style={{ flex: 1, minWidth: '220px' }}>
-            <Search size={17} />
-            <input
-              className="admin-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar clientes por nome, telefone ou mapping..."
-            />
-          </div>
+      <div className="admin-toolbar" style={{ flexWrap: 'wrap', gap: '12px' }}>
+        <div className="admin-search-wrap" style={{ flex: 1, minWidth: '220px' }}>
+          <Search size={17} />
+          <input
+            className="admin-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar clientes por nome, telefone ou mapping..."
+          />
+        </div>
 
           <div
             style={{
@@ -540,13 +544,14 @@ export function ClientsManager({
             </button>
           </div>
 
-          <button className="admin-primary" onClick={handleOpenCreate}>
-            <Plus size={17} /> Nova cliente
-          </button>
+          {role !== 'viewer' && (
+            <button className="admin-primary" onClick={handleOpenCreate}>
+              <Plus size={17} /> Nova cliente
+            </button>
+          )}
         </div>
-      )}
 
-      {(creating || editing) && (
+      {role !== 'viewer' && (creating || editing) && (
         <section className="admin-panel">
           <div className="admin-panel-head">
             <div>
@@ -856,7 +861,7 @@ export function ClientsManager({
                               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#eab308' }} />
                               Manutenção ({stats.daysSinceLast}d)
                             </span>
-                            {item.phone && (
+                            {role !== 'viewer' && item.phone && (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -902,7 +907,7 @@ export function ClientsManager({
                               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
                               Inativa (+{stats.daysSinceLast}d)
                             </span>
-                            {item.phone && (
+                            {role !== 'viewer' && item.phone && (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -958,7 +963,7 @@ export function ClientsManager({
                               Curv. {item.lash_curl || 'D'} • {item.lash_thickness || '0.07'} • {item.lash_length || '8-13mm'}
                             </div>
                           </div>
-                        ) : (
+                        ) : role !== 'viewer' ? (
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(item)}
@@ -966,6 +971,8 @@ export function ClientsManager({
                           >
                             + Adicionar mapping
                           </button>
+                        ) : (
+                          <span style={{ color: 'var(--admin-muted)', fontSize: '11px' }}>—</span>
                         )}
                       </td>
 
@@ -992,7 +999,7 @@ export function ClientsManager({
                             <ClipboardList size={12} />
                             {clientAnamnese.has_allergies ? '⚠️ Alergia!' : '✓ Preenchida'}
                           </button>
-                        ) : item.phone ? (
+                        ) : role !== 'viewer' && item.phone ? (
                           <button
                             type="button"
                             onClick={() => {

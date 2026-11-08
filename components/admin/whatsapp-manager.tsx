@@ -236,6 +236,7 @@ export function WhatsAppManager({
 
   const handleSaveLaraSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (role !== 'admin') return;
     setSavingLaraSettings(true);
     setLaraFeedback(null);
     try {
@@ -653,6 +654,7 @@ export function WhatsAppManager({
       {activeTab === 'links' && (
         <WhatsAppLinkGenerator
           defaultPhone={session.phone_connected || session.lara_phone || ''}
+          role={role}
         />
       )}
 
@@ -801,7 +803,7 @@ export function WhatsAppManager({
                   <button
                     type="button"
                     className="admin-secondary admin-danger wa-btn-mobile-full"
-                    style={{ fontSize: '13px' }}
+                    style={{ display: role === 'admin' ? 'inline-flex' : 'none', fontSize: '13px' }}
                     onClick={() => setShowConfirmDisconnect(true)}
                   >
                     <LogOut size={14} />
@@ -851,7 +853,7 @@ export function WhatsAppManager({
                 className="admin-secondary wa-btn-mobile-full"
                 onClick={() => handleAction('refresh')}
                 disabled={loadingAction}
-                style={{ minHeight: '38px', padding: '0 18px', fontSize: '12px' }}
+                style={{ display: role === 'admin' ? 'inline-flex' : 'none', minHeight: '38px', padding: '0 18px', fontSize: '12px' }}
               >
                 <RefreshCw size={13} className={loadingAction ? 'animate-spin' : ''} />
                 Gerar Novo QR Code
@@ -1674,7 +1676,7 @@ export function WhatsAppManager({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px' }}>✨</span>
+                <span style={{ fontSize: '16px' }}>💼</span>
                 <strong style={{ fontSize: '13px', color: 'var(--admin-ink)' }}>Modo Profissional Ativado no WhatsApp</strong>
                 <span
                   style={{
@@ -1742,8 +1744,8 @@ export function WhatsAppManager({
               <button
                 type="submit"
                 className="admin-primary wa-btn-mobile-full"
-                disabled={savingLaraSettings}
-                style={{ minHeight: '40px', padding: '0 22px', fontSize: '13px' }}
+                disabled={role !== 'admin' || savingLaraSettings}
+                style={{ display: role === 'admin' ? 'inline-flex' : 'none', minHeight: '40px', padding: '0 22px', fontSize: '13px' }}
               >
                 {savingLaraSettings ? (
                   <>

@@ -235,7 +235,7 @@ export function NotificationCenter({
                       : '';
                 const firstName = (item.clientName || 'Cliente').split(' ')[0];
                 const waText = encodeURIComponent(
-                  `Olá, ${firstName}! Passando para saber como estão seus cílios e te lembrar da sua manutenção na Lara Varisa Studio ✨`,
+                  `Olá, ${firstName}! Passando para saber como estão seus cílios e te lembrar da sua manutenção na Lara Varisa Studio 🤍`,
                 );
                 const waUrl = cleanPhone
                   ? `https://wa.me/${cleanPhone}?text=${waText}`

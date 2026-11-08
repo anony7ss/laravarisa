@@ -347,7 +347,7 @@ export function DisparosManager({
   }, []);
 
   const handleSendBroadcast = async () => {
-    if (selectedClients.length === 0) return;
+    if (role === 'viewer' || selectedClients.length === 0) return;
     setSubmitting(true);
     setFeedback(null);
     setConfirmModalOpen(false);
@@ -391,6 +391,7 @@ export function DisparosManager({
   };
 
   const handleClearOutbox = async () => {
+    if (role !== 'admin') return;
     setClearingOutbox(true);
     setClearConfirmOpen(false);
     try {
@@ -872,7 +873,7 @@ export function DisparosManager({
               </select>
             </div>
 
-            <div className="disparos-batch-actions">
+            <div className="disparos-batch-actions" style={{ display: role === 'viewer' ? 'none' : 'flex' }}>
               <button
                 type="button"
                 className="admin-secondary disparos-select-all-btn"
@@ -945,14 +946,14 @@ export function DisparosManager({
                 return (
                   <div
                     key={client.id}
-                    onClick={() => hasValidPhone && toggleSelectOne(client.id)}
+                    onClick={() => role !== 'viewer' && hasValidPhone && toggleSelectOne(client.id)}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
                       padding: '10px 12px',
                       borderBottom: '1px solid var(--admin-line)',
-                      cursor: hasValidPhone ? 'pointer' : 'not-allowed',
+                      cursor: role === 'viewer' ? 'default' : hasValidPhone ? 'pointer' : 'not-allowed',
                       opacity: hasValidPhone ? 1 : 0.45,
                       background: isSelected ? 'rgba(252, 80, 0, 0.08)' : 'transparent',
                       transition: 'background 0.15s ease',
@@ -1207,7 +1208,7 @@ export function DisparosManager({
               </div>
             </div>
 
-            <div style={{ marginTop: '6px' }}>
+            <div style={{ marginTop: '6px', display: role === 'viewer' ? 'none' : 'block' }}>
               <button
                 type="button"
                 className="admin-primary"
@@ -1311,11 +1312,12 @@ export function DisparosManager({
               type="button"
               className="admin-secondary"
               onClick={() => setClearConfirmOpen(true)}
-              disabled={recent.length === 0 || clearingOutbox}
+              disabled={role !== 'admin' || recent.length === 0 || clearingOutbox}
               style={{
                 fontSize: '12px',
                 padding: '0 12px',
                 minHeight: '32px',
+                display: role === 'admin' ? 'inline-flex' : 'none',
                 color: '#ef4444',
                 borderColor: 'rgba(239, 68, 68, 0.3)',
                 background: 'rgba(239, 68, 68, 0.05)',
