@@ -611,12 +611,22 @@ body:has(.admin-shell) {
 .admin-mobile-head {
   display: none;
 }
+/* Animação de entrada — executada a cada troca de módulo */
+@keyframes adminPageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .admin-page {
   width: 100%;
   max-width: 1560px;
   margin: 0 auto;
   padding: 40px clamp(20px, 3.5vw, 56px) 80px;
   box-sizing: border-box;
+  animation: adminPageEnter 0.18s ease-out both;
+}
+/* Skeleton: mesma animação, sem o fadeIn pois já aparece via loading.tsx */
+.admin-page-skeleton {
+  animation-duration: 0.1s;
 }
 .admin-page-title {
   display: flex;
