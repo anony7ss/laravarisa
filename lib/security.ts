@@ -186,15 +186,10 @@ export function hasValidOrigin(request: Request): boolean {
     }
 
     // 5. Same host as the incoming request host / x-forwarded-host (for vercel / netlify / production)
+    // Se a origem corresponde ao próprio host da requisição, é same-origin → sempre permitir.
     const reqHost = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').toLowerCase().split(':')[0];
     if (reqHost && hostname === reqHost) {
-      if (
-        hostname.endsWith('.vercel.app') ||
-        hostname.endsWith('.netlify.app') ||
-        hostname.endsWith('laravarisa.com.br')
-      ) {
-        return true;
-      }
+      return true;
     }
 
     // Hosts privados só são aceitos durante desenvolvimento local. Em produção,

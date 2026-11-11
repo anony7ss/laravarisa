@@ -4375,3 +4375,17 @@ h2 {
   line-height: 1.4;
   flex-shrink: 0;
 }
+
+
+/* ============================================================
+   iOS Safari: previne zoom automático ao focar em inputs
+   O iOS faz zoom quando font-size < 16px. Garantimos >= 16px
+   em todos os campos do site sem alterar o layout visual.
+   ============================================================ */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}

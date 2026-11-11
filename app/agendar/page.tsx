@@ -535,6 +535,8 @@ function AgendarContent() {
           --booking-border: ${customBorder};
           --booking-font-heading: '${fontHeading}', var(--font-dm-sans), sans-serif;
           --booking-font-body: '${fontBody}', var(--font-dm-sans), sans-serif;
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
         }
         .booking-custom-root h1,
         .booking-custom-root .font-\\[family-name\\:var\\(--font-display\\)\\] {
