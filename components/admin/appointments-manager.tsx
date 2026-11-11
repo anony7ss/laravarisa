@@ -1046,12 +1046,11 @@ export function AppointmentsManager({
             {totalCancelledCount > 0 && role === 'admin' && (
               <button
                 type="button"
-                className="admin-secondary"
-                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.25)' }}
+                className="admin-clear-cancelled-btn"
                 onClick={() => setClearCancelledModalOpen(true)}
                 title="Excluir permanentemente todos os cancelados e faltas"
               >
-                <Trash2 size={13} />
+                <Trash2 size={13} style={{ flexShrink: 0 }} />
                 <span>Limpar cancelados ({totalCancelledCount})</span>
               </button>
             )}

@@ -1168,6 +1168,13 @@ body:has(.admin-shell) {
     gap: 8px;
     width: 100%;
   }
+  .admin-clear-cancelled-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+    min-height: 36px;
+    font-size: 12px;
+  }
   .admin-block-button,
   .admin-toolbar-actions .admin-primary {
     width: 100%;
@@ -1385,6 +1392,33 @@ a.admin-stat-card:hover {
 
 .admin-block-button svg {
   color: #f59e0b;
+}
+
+.admin-clear-cancelled-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 38px;
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.06);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.admin-clear-cancelled-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .admin-mode-toggle {
