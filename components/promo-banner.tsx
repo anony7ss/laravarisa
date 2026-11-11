@@ -30,7 +30,12 @@ export function PromoBanner() {
 
   return (
     <>
-      <div className="relative bg-[#121211] text-[#f7f6f2] border-b border-white/10 px-8 py-2 min-h-[38px] flex items-center justify-center text-[11.5px] sm:text-xs font-medium tracking-wide z-30">
+      <div
+        className="relative bg-[#121211] text-[#f7f6f2] border-b border-white/10 px-8 py-2 min-h-[38px] flex items-center justify-center text-[11.5px] sm:text-xs font-medium tracking-wide z-30"
+        style={{
+          paddingTop: 'calc(0.5rem + env(safe-area-inset-top, 0px))',
+        }}
+      >
         <div className="flex items-center justify-center gap-2 flex-wrap text-center max-w-xl mx-auto leading-tight">
           <span className="text-white font-semibold">
             {displayText}

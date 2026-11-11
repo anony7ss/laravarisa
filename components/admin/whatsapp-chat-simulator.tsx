@@ -29,6 +29,10 @@ import {
   Eye,
   X,
   FileText,
+  MoreVertical,
+  Trash2,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import type { WhatsAppSession } from './whatsapp-manager';
 import {
@@ -48,6 +52,7 @@ export interface ChatContact {
   aiPaused: boolean;
   aiPausedUntil: string | null;
   clientId: string | null;
+  archived?: boolean;
 }
 
 export interface ChatMessage {
@@ -217,7 +222,8 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [searchContact, setSearchContact] = useState('');
-  const [filterAi, setFilterAi] = useState<'all' | 'active' | 'paused'>('all');
+  const [filterAi, setFilterAi] = useState<'all' | 'active' | 'paused' | 'archived'>('all');
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
 
   // Controle de visualização mobile ('list' ou 'chat')
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -246,6 +252,55 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
   // Envio de Mídia / Anexos (Fotos)
   const [attachmentPreview, setAttachmentPreview] = useState<{ file: File; base64: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleArchiveChat = async (phone: string, archive: boolean) => {
+    try {
+      setChatMenuOpen(false);
+      const res = await fetch('/api/admin/whatsapp/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'archive_chat', phone, archived: archive }),
+      });
+      if (res.ok) {
+        setContacts((prev) =>
+          prev.map((c) => (areSamePhone(c.phone, phone) ? { ...c, archived: archive } : c))
+        );
+      }
+    } catch {}
+  };
+
+  const handleDeleteChat = async (phone: string) => {
+    if (!window.confirm('Deseja realmente apagar esta conversa? Todas as mensagens serão excluídas permanentemente.')) {
+      return;
+    }
+    try {
+      setChatMenuOpen(false);
+      const res = await fetch('/api/admin/whatsapp/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_chat', phone }),
+      });
+      if (res.ok) {
+        setContacts((prev) => prev.filter((c) => !areSamePhone(c.phone, phone)));
+        if (selectedPhone && areSamePhone(selectedPhone, phone)) {
+          setMessages([]);
+          const remaining = contacts.filter((c) => !areSamePhone(c.phone, phone));
+          if (remaining.length > 0) {
+            setSelectedPhone(remaining[0].phone);
+          } else {
+            setSelectedPhone(null);
+          }
+        }
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!chatMenuOpen) return;
+    const close = () => setChatMenuOpen(false);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [chatMenuOpen]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -355,6 +410,7 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
         aiPaused: false,
         aiPausedUntil: null,
         clientId: null,
+        archived: false,
       } as ChatContact;
     }
     return null;
@@ -363,6 +419,8 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
   const filteredContacts = useMemo(() => {
     return contacts.filter((c) => {
       if (!c) return false;
+      if (filterAi === 'archived') return Boolean(c.archived);
+      if (c.archived) return false;
       if (filterAi === 'active' && c.aiPaused) return false;
       if (filterAi === 'paused' && !c.aiPaused) return false;
 
@@ -751,6 +809,7 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
               { id: 'all', label: 'Todas' },
               { id: 'active', label: 'IA Ativa' },
               { id: 'paused', label: 'Pausadas' },
+              { id: 'archived', label: 'Arquivadas' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -876,6 +935,27 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
                             }}
                           >
                             HUMANO
+                          </span>
+                        )}
+
+                        {c.archived && (
+                          <span
+                            title="Conversa arquivada"
+                            style={{
+                              fontSize: '9px',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              color: 'var(--admin-muted, #8b8b83)',
+                              flexShrink: 0,
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                          >
+                            <Archive size={9} />
+                            ARQUIVADA
                           </span>
                         )}
                       </div>

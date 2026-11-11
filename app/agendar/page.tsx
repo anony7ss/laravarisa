@@ -512,20 +512,6 @@ function AgendarContent() {
         fontFamily: `var(--booking-font-body)`,
       }}
     >
-      {/* ── iOS Safe Area: cobre Dynamic Island / notch com a cor do banner ── */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 'env(safe-area-inset-top)',
-          backgroundColor: '#1c1b18',
-          zIndex: 9999,
-          pointerEvents: 'none',
-        }}
-      />
       {/* GOOGLE FONTS DINÂMICAS (Apenas se configurado fonte diferente da padrão embutida) */}
       {!(fontHeading === 'DM Sans' && fontBody === 'DM Sans') && (
         <link
@@ -536,9 +522,6 @@ function AgendarContent() {
 
       {/* CSS CUSTOM PROPERTIES DINÂMICAS */}
       <style>{`
-        html, body {
-          background-color: #1c1b18 !important;
-        }
         .booking-custom-root {
           --color-pumice: ${customBg};
           --color-obsidian: ${customPrimary};
@@ -622,7 +605,13 @@ function AgendarContent() {
       {isModernApp ? (
         <header className="w-full bg-[var(--booking-bg)]">
           {/* Banner com fade inferior suave para o fundo da página */}
-          <div className="relative h-36 sm:h-44 md:h-52 w-full overflow-hidden bg-[#1c1b18]">
+          <div
+            className="relative w-full overflow-hidden bg-[#1c1b18]"
+            style={{
+              height: 'calc(9rem + env(safe-area-inset-top, 0px))',
+              minHeight: 'calc(9rem + env(safe-area-inset-top, 0px))',
+            }}
+          >
             <Image
               src={coverUrl}
               alt={studioTitle}
@@ -639,7 +628,12 @@ function AgendarContent() {
               }}
             />
 
-            <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
+            <div
+              className="absolute inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10"
+              style={{
+                top: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+              }}
+            >
               <div className="max-w-xl lg:max-w-4xl mx-auto flex items-center justify-end">
                 <button
                   type="button"
@@ -752,7 +746,13 @@ function AgendarContent() {
         </header>
       ) : (
         <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
-          <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
+          <div
+            className="relative w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden"
+            style={{
+              height: 'calc(7.5rem + env(safe-area-inset-top, 0px))',
+              minHeight: 'calc(7.5rem + env(safe-area-inset-top, 0px))',
+            }}
+          >
             <Image
               src={coverUrl}
               alt={studioTitle}
@@ -764,7 +764,12 @@ function AgendarContent() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-            <div className="absolute top-3 inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10">
+            <div
+              className="absolute inset-x-3 sm:inset-x-6 lg:inset-x-8 z-10"
+              style={{
+                top: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+              }}
+            >
               <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-end">
                 <button
                   type="button"

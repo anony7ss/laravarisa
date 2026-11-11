@@ -419,4 +419,13 @@ export const whatsappChatActionSchema = z.discriminatedUnion('action', [
     ai_paused: z.boolean(),
     pause_duration_hours: z.number().int().min(1).max(168).nullable().optional(),
   }),
+  z.object({
+    action: z.literal('delete_chat'),
+    phone: whatsappPhone,
+  }),
+  z.object({
+    action: z.literal('archive_chat'),
+    phone: whatsappPhone,
+    archived: z.boolean().default(true),
+  }),
 ]);

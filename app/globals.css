@@ -92,7 +92,8 @@ body:has(.admin-root:not(.dark)),
   margin-inline: auto;
 }
 .header {
-  height: 110px;
+  min-height: 110px;
+  padding-top: env(safe-area-inset-top, 0px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2399,6 +2400,7 @@ h2 {
   align-items: center;
   gap: 20px;
   min-height: 100px;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .back-link {
   display: flex;

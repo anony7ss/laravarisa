@@ -35,10 +35,11 @@ type ChatContactPayload = {
   aiPaused: boolean;
   aiPausedUntil: string | null;
   clientId: string | null;
+  archived?: boolean;
 };
 
 type ClientLookupRow = { id: string; name: string; phone: string; notes?: string | null; created_at: string };
-type ChatControlRow = { phone: string; ai_paused: boolean; ai_paused_until: string | null };
+type ChatControlRow = { phone: string; ai_paused: boolean; ai_paused_until: string | null; paused_reason?: string | null };
 
 export async function GET(request: Request) {
   if (!hasValidOrigin(request)) return jsonError('Origem inválida.', 403);
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
       .limit(600),
     supabase
       .from('whatsapp_chat_control')
-      .select('phone, ai_paused, ai_paused_until, updated_at'),
+      .select('phone, ai_paused, ai_paused_until, paused_reason, updated_at'),
     supabase
       .from('clients')
       .select('id, name, phone, created_at'),
@@ -191,6 +192,7 @@ export async function GET(request: Request) {
         aiPaused: isAiPaused,
         aiPausedUntil: control?.ai_paused_until || null,
         clientId: matchedClient?.id || null,
+        archived: Boolean(control?.paused_reason === 'ARCHIVED'),
       });
     } else {
       const existing = contactsMap.get(canonical);
@@ -413,6 +415,55 @@ export async function POST(request: Request) {
       ok: true,
       control: controlData,
     }, { headers: NO_STORE_HEADERS });
+  }
+
+  // AÇÃO 3: Apagar conversa inteira
+  if (action === 'delete_chat') {
+    const searchVariants = getPhoneSearchVariants(cleanPhone);
+    const { data: lidRows } = await supabase
+      .from('whatsapp_lid_mapping')
+      .select('lid')
+      .in('phone', searchVariants);
+    if (lidRows) {
+      for (const row of lidRows) {
+        if (row.lid) searchVariants.push(cleanPhoneDigits(row.lid));
+      }
+    }
+
+    await Promise.all([
+      supabase.from('whatsapp_messages').delete().in('phone', searchVariants),
+      supabase.from('whatsapp_chat_control').delete().in('phone', searchVariants),
+    ]);
+
+    await supabase.from('whatsapp_logs').insert({
+      level: 'action',
+      tag: 'Apagar Chat',
+      message: `Conversa apagada para o telefone ${cleanPhone}`,
+    });
+
+    return Response.json({ ok: true, deleted: true }, { headers: NO_STORE_HEADERS });
+  }
+
+  // AÇÃO 4: Arquivar ou Desarquivar conversa
+  if (action === 'archive_chat') {
+    const isArchived = Boolean(body.archived);
+
+    await supabase
+      .from('whatsapp_chat_control')
+      .upsert({
+        phone: cleanPhone,
+        client_name: isArchived ? '__ARCHIVED__' : '',
+        paused_reason: isArchived ? 'ARCHIVED' : null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'phone' });
+
+    await supabase.from('whatsapp_logs').insert({
+      level: 'action',
+      tag: 'Arquivar Chat',
+      message: `Conversa ${isArchived ? 'arquivada' : 'desarquivada'} para o telefone ${cleanPhone}`,
+    });
+
+    return Response.json({ ok: true, archived: isArchived }, { headers: NO_STORE_HEADERS });
   }
 
   return jsonError('Ação desconhecida.', 422);
