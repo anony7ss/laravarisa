@@ -14,6 +14,8 @@ import {
   MessageCircle,
   Kanban,
   CheckCircle2,
+  DollarSign,
+  Calendar,
   RotateCcw,
   Check,
   Globe,
@@ -878,6 +880,12 @@ export function AppointmentsManager({
     { weekday: 'long', day: '2-digit', month: 'long' },
   );
 
+  const todayStr = dateKey(today);
+  const todayList = useMemo(() => groupedItems.get(todayStr) ?? [], [groupedItems, todayStr]);
+  const todayConfirmed = useMemo(() => todayList.filter((i) => i.status === 'confirmed').length, [todayList]);
+  const todayPending = useMemo(() => todayList.filter((i) => i.status === 'scheduled').length, [todayList]);
+  const totalPendingAll = useMemo(() => items.filter((i) => i.status === 'scheduled').length, [items]);
+
   const panelTitle = useMemo(() => {
     switch (quickFilter) {
       case 'today':
@@ -896,317 +904,205 @@ export function AppointmentsManager({
 
   return (
     <>
-      <section className="admin-calendar-toolbar">
-        <div className={`admin-calendar-period ${mainMode === 'kanban' ? 'is-kanban' : ''}`}>
-          {mainMode === 'calendar' && calendarView === 'month' && (
-            <>
-              <button onClick={() => changeMonth(-1)} aria-label="Mês anterior">
-                <ChevronLeft size={18} />
-              </button>
-              <div>
-                <small>CALENDÁRIO MENSAL</small>
-                <h2>
-                  {month.toLocaleDateString('pt-BR', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </h2>
-              </div>
-              <button onClick={() => changeMonth(1)} aria-label="Próximo mês">
-                <ChevronRight size={18} />
-              </button>
-              <button className="admin-today-button" onClick={goToday}>
-                Hoje
-              </button>
-            </>
-          )}
+            {/* CARDS DE MÉTRICAS (PADRÃO DAS OUTRAS PÁGINAS DO PAINEL) */}
+      <section className="admin-stat-grid" style={{ marginBottom: '20px' }}>
+        <div className="admin-stat-card" style={{ cursor: 'pointer' }} onClick={() => goToday()}>
+          <span>
+            <Calendar size={18} />
+          </span>
+          <strong>{todayList.length}</strong>
+          <p>Hoje · {todayConfirmed} confirmados, {todayPending} pendentes</p>
+        </div>
 
-          {mainMode === 'calendar' && calendarView === 'week' && (
-            <>
-              <button onClick={() => changeWeek(-1)} aria-label="Semana anterior">
-                <ChevronLeft size={18} />
-              </button>
-              <div style={{ width: 'auto', minWidth: '220px' }}>
-                <small>VISÃO SEMANAL</small>
-                <h2 style={{ fontSize: '18px' }}>
-                  {formatWeekTitle(currentWeekDays)}
-                </h2>
-              </div>
-              <button onClick={() => changeWeek(1)} aria-label="Próxima semana">
-                <ChevronRight size={18} />
-              </button>
-              <button className="admin-today-button" onClick={goToday}>
-                Hoje
-              </button>
-            </>
-          )}
+        <div 
+          className="admin-stat-card" 
+          onClick={() => setQuickFilter('scheduled')}
+          style={{ cursor: 'pointer' }}
+          title="Filtrar agendamentos pendentes de confirmação"
+        >
+          <span style={totalPendingAll > 0 ? { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' } : undefined}>
+            <Clock3 size={18} />
+          </span>
+          <strong style={totalPendingAll > 0 ? { color: '#f59e0b' } : undefined}>{totalPendingAll}</strong>
+          <p>Aguardando confirmação</p>
+        </div>
 
-          {mainMode === 'calendar' && calendarView === 'day' && (
-            <>
-              <button onClick={() => changeDay(-1)} aria-label="Dia anterior">
-                <ChevronLeft size={18} />
-              </button>
-              <div style={{ width: 'auto', minWidth: '230px' }}>
-                <small>VISÃO DIÁRIA</small>
-                <h2 style={{ fontSize: '18px' }}>
-                  {formatDayTitle(selectedDateObj)}
-                </h2>
-              </div>
-              <button onClick={() => changeDay(1)} aria-label="Próximo dia">
-                <ChevronRight size={18} />
-              </button>
-              <button className="admin-today-button" onClick={goToday}>
-                Hoje
-              </button>
-            </>
-          )}
+        <div className="admin-stat-card" style={{ cursor: 'pointer' }} onClick={() => setQuickFilter('next7')}>
+          <span>
+            <CheckCircle2 size={18} />
+          </span>
+          <strong>{next7Count}</strong>
+          <p>Próximos 7 dias de atendimentos</p>
+        </div>
 
-          {mainMode === 'kanban' && (
-            <div className="admin-kanban-title">
-              <small>QUADRO</small>
-              <h2>Kanban da Agenda</h2>
-            </div>
-          )}
+        <div className="admin-stat-card">
+          <span>
+            <DollarSign size={18} />
+          </span>
+          <strong>{weekRevenue > 0 ? `R$ ${weekRevenue.toLocaleString('pt-BR')}` : 'R$ 0'}</strong>
+          <p>Previsão da semana</p>
+        </div>
+      </section>
+
+      {/* BARRA DE CONTROLE PRINCIPAL UNIFICADA (CLEAN E INTUITIVA) */}
+      <section className="admin-calendar-toolbar" style={{ marginBottom: '16px' }}>
+        <div className="admin-calendar-period">
+          <button 
+            type="button"
+            onClick={() => {
+              if (mainMode === 'calendar') {
+                if (calendarView === 'month') changeMonth(-1);
+                else if (calendarView === 'week') changeWeek(-1);
+                else changeDay(-1);
+              }
+            }}
+            aria-label="Anterior"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div>
+            <small style={{ letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '10px', color: 'var(--admin-muted)' }}>
+              {mainMode === 'kanban' ? 'QUADRO DE STATUS' : calendarView === 'month' ? 'CALENDÁRIO MENSAL' : calendarView === 'week' ? 'VISÃO SEMANAL' : 'VISÃO DIÁRIA'}
+            </small>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--admin-ink)' }}>
+              {mainMode === 'kanban' 
+                ? 'Kanban da Agenda' 
+                : calendarView === 'month' 
+                  ? month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+                  : calendarView === 'week'
+                    ? formatWeekTitle(currentWeekDays)
+                    : formatDayTitle(selectedDateObj)}
+            </h2>
+          </div>
+
+          <button 
+            type="button"
+            onClick={() => {
+              if (mainMode === 'calendar') {
+                if (calendarView === 'month') changeMonth(1);
+                else if (calendarView === 'week') changeWeek(1);
+                else changeDay(1);
+              }
+            }}
+            aria-label="Próximo"
+          >
+            <ChevronRight size={16} />
+          </button>
+
+          <button type="button" className="admin-today-button" onClick={goToday}>
+            Hoje
+          </button>
         </div>
 
         <div className="admin-toolbar-actions">
-          {mainMode === 'calendar' && (
-            <div className="admin-calendar-subview-toggle" role="group" aria-label="Visualização do calendário">
-              <button
-                type="button"
-                className={calendarView === 'month' ? 'active' : ''}
-                onClick={() => changeCalendarView('month')}
-                aria-pressed={calendarView === 'month'}
-              >
-                <CalendarDays size={13} />
-                <span>Mês</span>
-              </button>
-              <button
-                type="button"
-                className={calendarView === 'week' ? 'active' : ''}
-                onClick={() => changeCalendarView('week')}
-                aria-pressed={calendarView === 'week'}
-              >
-                <CalendarRange size={13} />
-                <span>Semana</span>
-              </button>
-              <button
-                type="button"
-                className={calendarView === 'day' ? 'active' : ''}
-                onClick={() => changeCalendarView('day')}
-                aria-pressed={calendarView === 'day'}
-              >
-                <Clock3 size={13} />
-                <span>Dia</span>
-              </button>
-            </div>
-          )}
-
+          {/* Segmented Control Unificado: Mês | Semana | Dia | Kanban */}
           <div className="admin-mode-toggle" role="group" aria-label="Modo de visualização">
             <button
               type="button"
-              className={mainMode === 'calendar' ? 'active' : ''}
-              onClick={() => changeMainMode('calendar')}
-              aria-pressed={mainMode === 'calendar'}
+              className={mainMode === 'calendar' && calendarView === 'month' ? 'active' : ''}
+              onClick={() => {
+                changeMainMode('calendar');
+                changeCalendarView('month');
+              }}
             >
-              <CalendarDays size={14} />
-              <span>Calendário</span>
+              <CalendarDays size={13} />
+              <span>Mês</span>
+            </button>
+            <button
+              type="button"
+              className={mainMode === 'calendar' && calendarView === 'week' ? 'active' : ''}
+              onClick={() => {
+                changeMainMode('calendar');
+                changeCalendarView('week');
+              }}
+            >
+              <CalendarRange size={13} />
+              <span>Semana</span>
+            </button>
+            <button
+              type="button"
+              className={mainMode === 'calendar' && calendarView === 'day' ? 'active' : ''}
+              onClick={() => {
+                changeMainMode('calendar');
+                changeCalendarView('day');
+              }}
+            >
+              <Clock3 size={13} />
+              <span>Dia</span>
             </button>
             <button
               type="button"
               className={mainMode === 'kanban' ? 'active' : ''}
               onClick={() => changeMainMode('kanban')}
-              aria-pressed={mainMode === 'kanban'}
             >
-              <Kanban size={14} />
+              <Kanban size={13} />
               <span>Kanban</span>
             </button>
           </div>
 
-          {role !== 'viewer' && (
-            <div className="admin-toolbar-buttons">
+          {/* Botões de Ação */}
+          <div className="admin-toolbar-buttons">
+            {totalCancelledCount > 0 && role === 'admin' && (
               <button
                 type="button"
-                className="admin-secondary admin-block-button"
-                onClick={() => openBlockModal()}
-                title="Bloquear período para almoço, consulta ou compromisso pessoal"
+                className="admin-secondary"
+                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.25)' }}
+                onClick={() => setClearCancelledModalOpen(true)}
+                title="Excluir permanentemente todos os cancelados e faltas"
               >
-                <Lock size={14} /> Bloquear horário
+                <Trash2 size={13} />
+                <span>Limpar cancelados ({totalCancelledCount})</span>
               </button>
-              <button className="admin-primary" onClick={() => openCreate()}>
-                <Plus size={17} /> Novo horário
-              </button>
-            </div>
-          )}
+            )}
+
+            {role !== 'viewer' && (
+              <>
+                <button
+                  type="button"
+                  className="admin-secondary admin-block-button"
+                  onClick={() => openBlockModal()}
+                  title="Bloquear período para almoço, consulta ou compromisso pessoal"
+                >
+                  <Lock size={13} />
+                  <span>Bloquear horário</span>
+                </button>
+                <button 
+                  type="button" 
+                  className="admin-primary" 
+                  onClick={() => openCreate()}
+                >
+                  <Plus size={16} />
+                  <span>Novo horário</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
-      {mainMode === 'kanban' ? (
-        <div className="admin-calendar-summary" aria-label="Filtros do Kanban">
-          <button
-            type="button"
-            className={`admin-filter-pill ${kanbanScope === 'today' ? 'active' : ''}`}
-            onClick={() => changeKanbanScope('today')}
-          >
-            Hoje ({kanbanCounts.today})
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${kanbanScope === 'next7' ? 'active' : ''}`}
-            onClick={() => changeKanbanScope('next7')}
-          >
-            Próximos 7 dias ({kanbanCounts.next7})
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${kanbanScope === 'month' ? 'active' : ''}`}
-            onClick={() => changeKanbanScope('month')}
-          >
-            Este mês ({kanbanCounts.month})
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${kanbanScope === 'all' ? 'active' : ''}`}
-            onClick={() => changeKanbanScope('all')}
-          >
-            Todos ({items.length})
-          </button>
-          {totalCancelledCount > 0 && role === 'admin' && (
+      {/* SUB-FILTROS ESPECÍFICOS DO KANBAN QUANDO ATIVO */}
+      {mainMode === 'kanban' && (
+        <div className="admin-calendar-summary" style={{ marginBottom: '16px' }} aria-label="Filtros do Kanban">
+          {[
+            { id: 'today', label: `Hoje (${kanbanCounts.today})` },
+            { id: 'next7', label: `Próximos 7 dias (${kanbanCounts.next7})` },
+            { id: 'month', label: `Este mês (${kanbanCounts.month})` },
+            { id: 'all', label: `Todos (${items.length})` },
+          ].map((scope) => (
             <button
+              key={scope.id}
               type="button"
-              className="admin-filter-pill danger"
-              onClick={() => setClearCancelledModalOpen(true)}
-              title="Excluir permanentemente todos os cancelados e faltas"
+              className={`admin-filter-pill ${kanbanScope === scope.id ? 'active' : ''}`}
+              onClick={() => changeKanbanScope(scope.id as any)}
             >
-              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
+              {scope.label}
             </button>
-          )}
-        </div>
-      ) : calendarView === 'week' ? (
-        <div className="admin-calendar-summary" aria-label="Resumo da semana">
-          <span className="admin-filter-pill active">
-            <strong>Semana:</strong> {weekItems.length} atendimentos
-          </span>
-          <button
-            type="button"
-            className="admin-filter-pill"
-            onClick={() => goToday()}
-          >
-            Hoje
-          </button>
-          <span className="admin-filter-pill">
-            <i className="confirmed" />
-            <strong>{weekConfirmed}</strong> confirmados
-          </span>
-          <span className="admin-filter-pill">
-            <i className="scheduled" />
-            <strong>{weekPending}</strong> aguardando
-          </span>
-          {weekRevenue > 0 && (
-            <span className="admin-filter-pill" style={{ color: 'var(--admin-ink)', fontWeight: 600 }}>
-              Receita prevista: R$ {weekRevenue}
-            </span>
-          )}
-          {totalCancelledCount > 0 && role === 'admin' && (
-            <button
-              type="button"
-              className="admin-filter-pill danger"
-              onClick={() => setClearCancelledModalOpen(true)}
-              title="Excluir permanentemente todos os cancelados e faltas"
-            >
-              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
-            </button>
-          )}
-        </div>
-      ) : calendarView === 'day' ? (
-        <div className="admin-calendar-summary" aria-label="Resumo do dia">
-          <span className="admin-filter-pill active">
-            <strong>Dia:</strong> {dayItems.length} atendimentos
-          </span>
-          <button
-            type="button"
-            className="admin-filter-pill"
-            onClick={() => goToday()}
-          >
-            Hoje
-          </button>
-          <span className="admin-filter-pill">
-            <i className="confirmed" />
-            <strong>{dayConfirmed}</strong> confirmados
-          </span>
-          <span className="admin-filter-pill">
-            <i className="scheduled" />
-            <strong>{dayPending}</strong> aguardando
-          </span>
-          {dayRevenue > 0 && (
-            <span className="admin-filter-pill" style={{ color: 'var(--admin-ink)', fontWeight: 600 }}>
-              Receita prevista: R$ {dayRevenue}
-            </span>
-          )}
-          {totalCancelledCount > 0 && role === 'admin' && (
-            <button
-              type="button"
-              className="admin-filter-pill danger"
-              onClick={() => setClearCancelledModalOpen(true)}
-              title="Excluir permanentemente todos os cancelados e faltas"
-            >
-              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="admin-calendar-summary" aria-label="Filtros rápidos e resumo">
-          <button
-            type="button"
-            className={`admin-filter-pill ${quickFilter === 'selected' ? 'active' : ''}`}
-            onClick={() => setQuickFilter('selected')}
-          >
-            Dia ({selectedItems.length})
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${quickFilter === 'today' ? 'active' : ''}`}
-            onClick={() => goToday()}
-          >
-            Hoje
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${quickFilter === 'next7' ? 'active' : ''}`}
-            onClick={() => setQuickFilter('next7')}
-          >
-            Próximos 7 dias ({next7Count})
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${quickFilter === 'scheduled' ? 'active' : ''}`}
-            onClick={() => setQuickFilter('scheduled')}
-          >
-            <i className="scheduled" />
-            <strong>{pending}</strong> aguardando
-          </button>
-          <button
-            type="button"
-            className={`admin-filter-pill ${quickFilter === 'confirmed' ? 'active' : ''}`}
-            onClick={() => setQuickFilter('confirmed')}
-          >
-            <i className="confirmed" />
-            <strong>{confirmed}</strong> confirmados
-          </button>
-          {totalCancelledCount > 0 && role === 'admin' && (
-            <button
-              type="button"
-              className="admin-filter-pill danger"
-              onClick={() => setClearCancelledModalOpen(true)}
-              title="Excluir permanentemente todos os cancelados e faltas"
-            >
-              <Trash2 size={12} /> Limpar cancelados ({totalCancelledCount})
-            </button>
-          )}
+          ))}
         </div>
       )}
 
-      {error && !creating && !editing && (
+{error && !creating && !editing && (
         <p className="admin-form-error">{error}</p>
       )}
 
