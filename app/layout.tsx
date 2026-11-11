@@ -11,6 +11,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  themeColor: '#1c1b18',
 };
 
 import { CookieBanner } from '@/components/cookie-banner';
@@ -60,9 +61,12 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/logo-emblem.png?v=4" sizes="any" />
         <link rel="shortcut icon" href="/logo-emblem.png?v=4" />
         <link rel="apple-touch-icon" href="/logo-emblem.png?v=4" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#1c1b18" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}else{document.documentElement.classList.remove('dark');document.documentElement.style.backgroundColor='';document.documentElement.style.color='';document.documentElement.style.colorScheme='';if(document.body){document.body.classList.remove('dark');document.body.style.backgroundColor='';document.body.style.color='';}}}catch(e){}})();`,
+            __html: `(function(){try{if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);var p=window.location.pathname;if(p.startsWith('/admin')){var s=localStorage.getItem('admin-theme');var c=(document.cookie.match(/(?:^|; )admin-theme=([^;]*)/)||[])[1];var isDark=s==='dark'||c==='dark'||(s!=='light'&&c!=='light');if(isDark){document.documentElement.classList.add('dark');document.documentElement.style.backgroundColor='#11110f';document.documentElement.style.color='#f7f7f2';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.add('dark');document.body.style.backgroundColor='#11110f';}}}else if(p.startsWith('/agendar')){document.documentElement.classList.remove('dark');document.documentElement.style.backgroundColor='#1c1b18';document.documentElement.style.colorScheme='dark';if(document.body){document.body.classList.remove('dark');document.body.style.backgroundColor='#1c1b18';}}else{document.documentElement.classList.remove('dark');document.documentElement.style.backgroundColor='';document.documentElement.style.color='';document.documentElement.style.colorScheme='';if(document.body){document.body.classList.remove('dark');document.body.style.backgroundColor='';document.body.style.color='';}}}catch(e){}})();`,
           }}
         />
         <link

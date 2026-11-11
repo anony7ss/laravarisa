@@ -536,6 +536,9 @@ function AgendarContent() {
 
       {/* CSS CUSTOM PROPERTIES DINÂMICAS */}
       <style>{`
+        html, body {
+          background-color: #1c1b18 !important;
+        }
         .booking-custom-root {
           --color-pumice: ${customBg};
           --color-obsidian: ${customPrimary};
@@ -2649,7 +2652,7 @@ export default function AgendarPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[var(--color-pumice)] flex items-center justify-center text-xs text-[#8c8c84]">
+        <div className="min-h-screen bg-[#1c1b18] flex items-center justify-center text-xs text-[#8c8c84]">
           Carregando portal de agendamento...
         </div>
       }

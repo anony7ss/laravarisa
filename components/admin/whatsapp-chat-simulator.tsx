@@ -272,9 +272,9 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 1. Carrega lista de contatos
-  const loadContacts = async () => {
+  const loadContacts = async (silent = false) => {
     try {
-      setLoadingContacts(true);
+      if (!silent) setLoadingContacts(true);
       const res = await fetch('/api/admin/whatsapp/chat');
       const data = await res.json();
       if (data.contacts && Array.isArray(data.contacts)) {
@@ -286,7 +286,7 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
     } catch {
       // Silencioso
     } finally {
-      setLoadingContacts(false);
+      if (!silent) setLoadingContacts(false);
     }
   };
 
@@ -295,9 +295,9 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
   }, []);
 
   // 2. Carrega mensagens da conversa selecionada
-  const loadConversation = async (phone: string) => {
+  const loadConversation = async (phone: string, silent = false) => {
     try {
-      setLoadingMessages(true);
+      if (!silent) setLoadingMessages(true);
       const res = await fetch(`/api/admin/whatsapp/chat?phone=${encodeURIComponent(phone)}`);
       const data = await res.json();
       if (data.messages) {
@@ -306,7 +306,7 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
     } catch {
       // Silencioso
     } finally {
-      setLoadingMessages(false);
+      if (!silent) setLoadingMessages(false);
     }
   };
 
@@ -322,8 +322,8 @@ export function WhatsAppChatSimulator({ session, role }: { session: WhatsAppSess
     if (!selectedPhone) return;
     const timer = window.setInterval(() => {
       if (!document.hidden) {
-        loadContacts();
-        loadConversation(selectedPhone);
+        loadContacts(true);
+        loadConversation(selectedPhone, true);
       }
     }, 4000);
 

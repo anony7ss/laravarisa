@@ -1042,11 +1042,12 @@ body:has(.admin-shell) {
     border-bottom: 1px solid var(--admin-line);
   }
   .admin-mobile-head button {
-    width: 40px;
-    height: 40px;
-    border: 1px solid var(--admin-line);
-    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    border: none;
     background: transparent;
+    color: var(--admin-ink);
+    cursor: pointer;
   }
   .admin-mobile-head strong {
     font-family: Georgia, serif;
@@ -1528,25 +1529,23 @@ a.admin-stat-card:hover {
 
 .admin-bell-btn {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--admin-line);
-  background: var(--admin-card);
-  border-radius: 10px;
+  border: none;
+  background: transparent;
   color: var(--admin-ink);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
   text-decoration: none;
   flex-shrink: 0;
 }
 
 .admin-bell-btn:hover {
-  background: var(--admin-soft);
-  color: var(--admin-ink);
-  border-color: var(--admin-muted);
+  background: transparent;
+  opacity: 0.75;
 }
 
 .admin-bell-badge {
@@ -3174,20 +3173,21 @@ body:has([role="dialog"]) .admin-mobile-nav {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--admin-line);
-    border-radius: 10px;
-    background: var(--admin-card);
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
     color: var(--admin-ink);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: opacity 0.2s ease;
     text-decoration: none;
     flex-shrink: 0;
   }
   .admin-mobile-head .admin-bell-btn:hover,
   .admin-mobile-head-link:hover,
   .admin-mobile-menu-btn:hover {
-    background: var(--admin-soft);
-    color: var(--admin-ink);
+    background: transparent !important;
+    opacity: 0.75;
   }
   .admin-mobile-head span {
     display: flex;
