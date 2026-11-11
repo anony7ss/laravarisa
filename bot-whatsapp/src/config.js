@@ -25,7 +25,7 @@ export const config = {
   groqWhisperModel: process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo',
   studioName: process.env.STUDIO_NAME || 'Lara Lash & Sobrancelhas',
   studioCity: process.env.STUDIO_CITY || 'Porto Alegre - RS',
-  publicSiteUrl: process.env.PUBLIC_SITE_URL || process.env.SITE_URL || 'https://laravarisa.netlify.app',
+  publicSiteUrl: process.env.PUBLIC_SITE_URL || process.env.SITE_URL || 'https://laravarisa.vercel.app',
 };
 
 export function getMissingRuntimeConfig() {

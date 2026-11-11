@@ -119,6 +119,8 @@ export async function readFormData(
 const TRUSTED_PRODUCTION_HOSTNAMES = new Set([
   'laravarisa.com.br',
   'www.laravarisa.com.br',
+  'laravarisa.vercel.app',
+  'www.laravarisa.vercel.app',
   'laravarisa.netlify.app',
 ]);
 
@@ -152,9 +154,47 @@ export function hasValidOrigin(request: Request): boolean {
       return true;
     }
 
-    // 2. Netlify deploy previews for THIS app only (e.g. deploy-preview-12--laravarisa.netlify.app)
+    // 2. Vercel deployments and previews for laravarisa
+    if (
+      /^laravarisa(-[a-z0-9-]+)?\.vercel\.app$/.test(hostname) ||
+      /^[a-z0-9-]+-laravarisa(-[a-z0-9-]+)?\.vercel\.app$/.test(hostname)
+    ) {
+      return true;
+    }
+
+    // 3. Dynamic environment URL checks (e.g. NEXT_PUBLIC_SITE_URL, VERCEL_URL, VERCEL_PROJECT_PRODUCTION_URL)
+    const envHosts = [
+      process.env.NEXT_PUBLIC_SITE_URL,
+      process.env.SITE_URL,
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL : undefined,
+      process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : undefined,
+    ];
+
+    for (const raw of envHosts) {
+      if (!raw) continue;
+      try {
+        const u = new URL(raw.startsWith('http') ? raw : 'https://' + raw);
+        if (hostname === u.hostname.toLowerCase()) {
+          return true;
+        }
+      } catch {}
+    }
+
+    // 4. Netlify deploy previews for THIS app only (e.g. deploy-preview-12--laravarisa.netlify.app)
     if (/^[a-z0-9-]+--laravarisa\.netlify\.app$/.test(hostname)) {
       return true;
+    }
+
+    // 5. Same host as the incoming request host / x-forwarded-host (for vercel / netlify / production)
+    const reqHost = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').toLowerCase().split(':')[0];
+    if (reqHost && hostname === reqHost) {
+      if (
+        hostname.endsWith('.vercel.app') ||
+        hostname.endsWith('.netlify.app') ||
+        hostname.endsWith('laravarisa.com.br')
+      ) {
+        return true;
+      }
     }
 
     // Hosts privados só são aceitos durante desenvolvimento local. Em produção,
