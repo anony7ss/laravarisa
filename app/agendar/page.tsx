@@ -535,7 +535,13 @@ function AgendarContent() {
           --booking-border: ${customBorder};
           --booking-font-heading: '${fontHeading}', var(--font-dm-sans), sans-serif;
           --booking-font-body: '${fontBody}', var(--font-dm-sans), sans-serif;
+        }
+        /* Safe area: banner do header preenche atrás do Dynamic Island / notch */
+        .booking-header-banner {
           padding-top: env(safe-area-inset-top);
+        }
+        /* Safe area: footer preenche atrás da barra home */
+        .booking-footer-safe {
           padding-bottom: env(safe-area-inset-bottom);
         }
         .booking-custom-root h1,
@@ -603,7 +609,7 @@ function AgendarContent() {
       {isModernApp ? (
         <header className="w-full bg-[var(--booking-bg)]">
           {/* Banner com fade inferior suave para o fundo da página */}
-          <div className="relative h-36 sm:h-44 md:h-52 w-full overflow-hidden bg-[#1c1b18]">
+          <div className="booking-header-banner relative h-36 sm:h-44 md:h-52 w-full overflow-hidden bg-[#1c1b18]">
             <Image
               src={coverUrl}
               alt={studioTitle}
@@ -733,7 +739,7 @@ function AgendarContent() {
         </header>
       ) : (
         <header className="w-full bg-[var(--booking-bg)] border-b border-[var(--booking-border)]">
-          <div className="relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
+          <div className="booking-header-banner relative h-28 sm:h-36 lg:h-44 w-full bg-gradient-to-b from-[#1c1b18] via-[#24231f] to-[#141412] overflow-hidden">
             <Image
               src={coverUrl}
               alt={studioTitle}
@@ -2613,7 +2619,7 @@ function AgendarContent() {
       )}
       </main>
 
-      <footer className="w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
+      <footer className="booking-footer-safe w-full border-t border-[#cfcfc9] bg-[var(--color-pumice)]/90 py-5 text-center text-xs text-[#8c8c84]">
         <div className="max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span suppressHydrationWarning>© {new Date().getFullYear()} Lara Varisa Studio</span>
           <div className="flex items-center gap-3 text-[11px]">
